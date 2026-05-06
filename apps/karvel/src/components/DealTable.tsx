@@ -60,7 +60,7 @@ export function DealTable({ deals, onRowClick, selectedId, currency = "EUR" }: P
                   <td className={`${tdClass} max-w-[200px] truncate`}>
                     <button onClick={(e) => { e.stopPropagation(); navigate(`/?selected=${encodeURIComponent(deal.opportunityName)}`); }} className="text-primary underline underline-offset-2 hover:opacity-80">{deal.opportunityName}</button>
                   </td>
-                  <td className={tdClass}>{formatAmount(deal.amount, currency)}</td>
+                  <td className={tdClass}>{formatAmount(deal.dealAmount, currency)}</td>
                   <td className={tdClass}>{formatDate(deal.reportDate)}</td>
                 </tr>
               ))}

@@ -56,19 +56,12 @@ The app keeps its full type. The base type becomes the contract that's enforceab
 
 | Entity | Karvel | Agent-app | Notes |
 |---|---|---|---|
-| `Client` | ✅ Done (commit `7c6108f`) | ✅ Done (commit `7c6108f`) | Karvel renamed `name` → `fullName`; both extend `BaseClient` |
-| `Opportunity` | ✅ Done (commit `f7e9830`) | ✅ Done (commit `f7e9830`) | Karvel mocks rewritten with lowercase enums + `neighborhoods`; new `apps/karvel/src/lib/labels.ts` for display strings |
-| `Deal` | ⏳ **Deferred** — see below | ✅ Done | Agent-app extends `BaseDeal`; mock currency `€` → `EUR`; `finalised` → `ready-for-invoicing` |
+| `Client` | ✅ Done | ✅ Done | Both extend `BaseClient`. Karvel renamed `name` → `fullName`. Karvel `status` lowercased to `"active" \| "inactive"`. |
+| `Opportunity` | ✅ Done | ✅ Done | Both extend `BaseOpportunity`. Karvel mocks rewritten with lowercase enums + `neighborhoods` array. |
+| `Deal` | ✅ **Done** | ✅ Done | Both extend `BaseDeal`. Karvel mocks fully migrated: lowercase enums (status / type / market / businessUnit / country / invoice / payable), `amount` → `dealAmount`, ISO country codes. |
 
-### Karvel Deal — why deferred
+**End state achieved: data shape is now shared across both apps.** Both apps speak the same canonical contract for `Client`, `Opportunity`, and `Deal`. The shared schema lives in [packages/shared-domain/src/](packages/shared-domain/src/) and is the single source of truth for what becomes the real DB schema.
 
-Karvel uses Title-Case multi-word enum values (`"Reported"`, `"Pending Details"`, `"Ready For Invoicing"`, `"Buy+Sell"`, `"REBU"`, `"UAE"`) across:
-- 29 mock records in [apps/karvel/src/data/mockDeals.ts](apps/karvel/src/data/mockDeals.ts)
-- ~17 component files (filters, tables, dialogs, badges)
-- Field name divergence: karvel uses `amount`, canonical uses `dealAmount`
+## Display strings
 
-The risk: enum values overlap across `DealStatus` / `InvoiceStatus` / `PayableStatus` (e.g. `"Paid"` exists in all three) — a global find-and-replace would corrupt records. Each file needs context-aware editing.
-
-**Estimated effort:** ~30 minutes of focused editing + iterative build fixing. Worth doing as a dedicated task, not bundled into a multi-step session.
-
-**Karvel's `Deal` is unchanged** until that migration runs. The shared contract is structurally agreed on (`BaseDeal` exists in `packages/shared-domain/`), karvel just doesn't extend it yet.
+Lowercase canonical values are *data*. Human-readable labels live in [apps/karvel/src/lib/labels.ts](apps/karvel/src/lib/labels.ts) — `dealTypeLabel`, `dealStatusLabel`, `marketLabel`, `businessUnitLabel`, `countryLabel`, `invoiceStatusLabel`, `payableStatusLabel`, `opportunityTypeLabel`, `opportunityStatusLabel`. UI components import these and render the label, never the raw value.

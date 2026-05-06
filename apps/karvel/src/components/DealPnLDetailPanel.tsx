@@ -19,12 +19,12 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
   const [draft, setDraft] = useState<Deal>({ ...deal });
   const [baseline, setBaseline] = useState<Deal>({ ...deal });
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => 
-    deal.status === "Pending Receivables"
+    deal.status === "pending-receivables"
       ? { "deal-info": true, revenue: true, cogs: true, receivables: false, payables: true, comments: true }
       : {}
   );
   const [uploadedDocs, setUploadedDocs] = useState<Set<number>>(new Set());
-  const isPendingDetails = draft.status === "Pending Details";
+  const isPendingDetails = draft.status === "pending-details";
 
   useEffect(() => {
     const d = { ...deal };
@@ -103,8 +103,8 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
   };
 
   const handleSave = () => onSave?.(draft);
-  const isREBU = draft.businessUnit === "REBU";
-  const isMBU = draft.businessUnit === "Mortgage";
+  const isREBU = draft.businessUnit === "rebu";
+  const isMBU = draft.businessUnit === "mortgage";
 
   // Compute missing required fields for highlighting
   const missingRevenue = useMemo(() => {
@@ -174,8 +174,8 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
         {/* DEAL INFORMATION                           */}
         {/* ═══════════════════════════════════════════ */}
         <CollapsibleSection title="Deal Information" id="deal-info" collapsed={collapsedSections} toggle={toggleSection}>
-          <SelectField label="Business Unit" value={draft.businessUnit} options={["REBU", "Mortgage"] as BusinessUnit[]} onChange={(v) => update("businessUnit", v)} />
-          <SelectField label="Country" value={draft.country} options={["UAE", "Spain", "KSA"] as Country[]} onChange={(v) => update("country", v)} />
+          <SelectField label="Business Unit" value={draft.businessUnit} options={["rebu", "mortgage"] as BusinessUnit[]} onChange={(v) => update("businessUnit", v)} />
+          <SelectField label="Country" value={draft.country} options={["ae", "es", "sa"] as Country[]} onChange={(v) => update("country", v)} />
           {isMBU && (
             <SelectField label="Channel" value={draft.channel || MBU_CHANNELS[0]} options={MBU_CHANNELS} onChange={(v) => update("channel", v)} />
           )}
@@ -183,9 +183,9 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
           <EditField label="Report Date" value={draft.reportDate} type="date" onChange={(v) => update("reportDate", v)} />
           <ReadonlyField label="Deal ID" value={draft.id} />
           <EditField label="OF/Case Number" value={draft.ofCaseNumber || ""} onChange={(v) => update("ofCaseNumber", v)} />
-          <SelectField label="Type" value={draft.type} options={["Buy", "Sell", "Rent", "Lease", "Buy+Sell", "Mortgage", "Rent+Lease"] as DealType[]} onChange={(v) => update("type", v)} />
-          <SelectField label="Status" value={draft.status} options={["Reported", "Pending Details", "Under Review", "Ready For Invoicing", "Pending Receivables", "Pending Payment", "Paid"] as DealStatus[]} onChange={(v) => update("status", v)} />
-          <SelectField label="Market" value={draft.market} options={["Primary", "Secondary", "Leasing"] as DealMarket[]} onChange={(v) => update("market", v)} />
+          <SelectField label="Type" value={draft.type} options={["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"] as DealType[]} onChange={(v) => update("type", v)} />
+          <SelectField label="Status" value={draft.status} options={["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"] as DealStatus[]} onChange={(v) => update("status", v)} />
+          <SelectField label="Market" value={draft.market} options={["primary", "secondary", "leasing"] as DealMarket[]} onChange={(v) => update("market", v)} />
           <EditField label="Opportunity" value={draft.opportunityName} onChange={(v) => update("opportunityName", v)} />
 
           {/* REBU: Property Details sub-group */}
@@ -219,7 +219,7 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
               <EditField label="Seller Name" value={draft.sellerName || ""} onChange={(v) => update("sellerName", v)} critical={isPendingDetails && !draft.sellerName} />
               <EditField label="Seller Tax ID" value={draft.sellerTaxId || ""} onChange={(v) => update("sellerTaxId", v)} critical={isPendingDetails && !draft.sellerTaxId} />
               <EditField label="Seller Email" value={draft.sellerEmail || ""} onChange={(v) => update("sellerEmail", v)} />
-              <SelectField label="Payment Mode" value={draft.paymentMode || "Cash"} options={["Cash", "Mortgage"] as PaymentMode[]} onChange={(v) => update("paymentMode", v)} />
+              <SelectField label="Payment Mode" value={draft.paymentMode || "cash"} options={["cash", "mortgage"] as PaymentMode[]} onChange={(v) => update("paymentMode", v)} />
             </>
           )}
 
@@ -243,7 +243,7 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
               <NumericField label="Take Rate (%)" value={draft.takeRate} onChange={(v) => update("takeRate", v)} missing={missingRevenue.has("takeRate")} critical={isPendingDetails && !draft.takeRate} />
               <ComputedField label="Huspy Revenue" value={fmt(draft.huspyRevenue)} />
               <NumericField label="Conveyance Revenue" value={draft.conveyanceRevenue} onChange={(v) => update("conveyanceRevenue", v)} />
-              <ComputedField label="Total Revenue" value={fmt(draft.amount)} highlight />
+              <ComputedField label="Total Revenue" value={fmt(draft.dealAmount)} highlight />
             </>
           ) : (
             <>
@@ -289,7 +289,7 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
               </button>
 
               {/* --- Rebates (Primary market) --- */}
-              {draft.market === "Primary" && (
+              {draft.market === "primary" && (
                 <>
                   <SubSectionHeader title="Rebates" />
                   <NumericField label="Rebate (%)" value={draft.rebatePercentage} onChange={(v) => update("rebatePercentage", v)} />
@@ -299,7 +299,7 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
               )}
 
               {/* --- Subsidy (Secondary market) --- */}
-              {draft.market === "Secondary" && (
+              {draft.market === "secondary" && (
                 <>
                   <SubSectionHeader title="Subsidy" />
                   <NumericField label="Subsidy Amount" value={draft.subsidyAmount} onChange={(v) => update("subsidyAmount", v)} />
@@ -379,10 +379,10 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
         {!isPendingDetails && (
         <CollapsibleSection title="Receivables" id="receivables" collapsed={collapsedSections} toggle={toggleSection}>
           <EditField label="Invoice Number" value={draft.invoiceNumber || ""} onChange={(v) => update("invoiceNumber", v)} />
-          <SelectField label="Invoice Status" value={draft.invoiceStatus || "Created"} options={["Created", "Sent", "Overdue", "Paid", "Paid Partial", "Cancelled"] as InvoiceStatus[]} onChange={(v) => update("invoiceStatus", v)} />
+          <SelectField label="Invoice Status" value={draft.invoiceStatus || "created"} options={["created", "sent", "overdue", "paid", "paid-partial", "cancelled"] as InvoiceStatus[]} onChange={(v) => update("invoiceStatus", v)} />
           <ComputedField label="Invoice Amount" value={draft.invoiceNumber ? fmt(draft.huspyRevenue) : "—"} />
           <EditField label="Invoice Date" value={draft.invoiceDate || ""} type="date" placeholder="Select date" onChange={(v) => update("invoiceDate", v)} />
-          {draft.invoiceStatus === "Paid" && (
+          {draft.invoiceStatus === "paid" && (
             <>
               <EditField label="Payment Received Date" value={draft.paymentReceivedDate || ""} type="date" placeholder="Select date" onChange={(v) => update("paymentReceivedDate", v)} />
               <EditField label="Payment Received Amount" value={String(draft.paymentReceivedAmount ?? "")} type="number" onChange={(v) => update("paymentReceivedAmount", parseFloat(v as string) || 0)} />
@@ -415,8 +415,8 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
                 </div>
                 <ComputedField label="Expected Amount" value={fmt(payable.expectedAmount)} />
                 <EditField label="Ref Number" value={payable.refNumber || ""} onChange={(v) => updatePayable(idx, "refNumber", v)} />
-                <SelectField label="Status" value={payable.status} options={["Pending", "Approved", "Paid", "Rejected"] as PayableStatus[]} onChange={(v) => updatePayable(idx, "status", v as PayableStatus)} />
-                {payable.status === "Paid" && (
+                <SelectField label="Status" value={payable.status} options={["pending", "approved", "paid", "rejected"] as PayableStatus[]} onChange={(v) => updatePayable(idx, "status", v as PayableStatus)} />
+                {payable.status === "paid" && (
                   <>
                     <EditField label="Paid Date" value={payable.paidDate || ""} type="date" placeholder="Select date" onChange={(v) => updatePayable(idx, "paidDate", v)} />
                     <EditField label="Paid Amount" value={String(payable.paidAmount ?? "")} type="number" onChange={(v) => updatePayable(idx, "paidAmount", parseFloat(v as string) || 0)} />
@@ -467,10 +467,10 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
 
         {/* Submit Button */}
         <div className="sticky bottom-0 pt-4 pb-2 bg-card border-t border-border -mx-6 px-6 space-y-2">
-          {draft.status === "Under Review" && (
+          {draft.status === "under-review" && (
             <button
               onClick={() => {
-                const approved = { ...draft, status: "Ready For Invoicing" as DealStatus };
+                const approved = { ...draft, status: "ready-for-invoicing" as DealStatus };
                 onSave?.(approved);
               }}
               className="w-full py-2.5 bg-[hsl(var(--deal-ready-invoicing))] text-primary-foreground rounded-md text-[13px] font-semibold hover:opacity-90 transition-opacity"

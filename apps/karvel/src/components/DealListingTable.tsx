@@ -18,14 +18,14 @@ interface ColumnFilter {
   values: Set<string>;
 }
 
-const ALL_STATUSES: DealStatus[] = ["Reported", "Pending Details", "Under Review", "Ready For Invoicing", "Pending Receivables", "Pending Payment", "Paid"];
-const ALL_BUS: BusinessUnit[] = ["REBU", "Mortgage"];
+const ALL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"];
+const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
 
 const thBase = "px-4 py-3 font-semibold text-foreground text-[13px] whitespace-nowrap border-b border-border bg-muted/20";
 const tdClass = "px-4 py-3 text-[13px] text-foreground font-medium whitespace-nowrap";
 
 function BUBadge({ bu }: { bu: string }) {
-  const cls = bu === "REBU"
+  const cls = bu === "rebu"
     ? "bg-blue-500/15 text-blue-700 dark:text-blue-400"
     : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${cls}`}>{bu}</span>;

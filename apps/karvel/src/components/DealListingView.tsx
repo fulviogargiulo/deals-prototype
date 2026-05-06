@@ -35,7 +35,7 @@ export function DealListingView({ deals, currency = "EUR", dateRange, onDealClic
   });
 
   const totalDeals = filtered.length;
-  const totalVolume = filtered.reduce((sum, d) => sum + (d.dealPrice || d.amount), 0);
+  const totalVolume = filtered.reduce((sum, d) => sum + (d.dealPrice || d.dealAmount), 0);
   const totalRevenue = filtered.reduce((sum, d) => sum + (d.huspyRevenue || 0), 0);
   const avgRevenuePercent = totalVolume > 0 ? (totalRevenue / totalVolume) * 100 : 0;
 

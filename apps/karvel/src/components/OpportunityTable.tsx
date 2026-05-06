@@ -45,7 +45,7 @@ export function OpportunityTable({ opportunities, onRowClick, selectedId }: Prop
             {paginated.map((opp) => (
               <tr key={opp.id} onClick={() => onRowClick?.(opp)} className={`border-b border-border hover:bg-muted/30 transition-colors cursor-pointer ${selectedId === opp.id ? "bg-muted/50" : ""}`}>
                 <td className={tdIdClass}>{opp.id.slice(0, 16)}...</td>
-                <td className={tdClass}>{opp.city}</td>
+                <td className={tdClass}>{opp.neighborhoods[0] ?? "-"}</td>
                 <td className="px-5 py-3.5"><TypeBadge type={opp.type} /></td>
                 <td className={`${tdClass} max-w-[200px] truncate`}>{opp.title}</td>
                 <td className="px-5 py-3.5"><StatusBadge status={opp.status} /></td>

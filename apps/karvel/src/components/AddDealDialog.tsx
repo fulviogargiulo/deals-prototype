@@ -17,11 +17,11 @@ interface Props {
   onDealCreated: (deal: Deal) => void;
 }
 
-const DEAL_TYPES: DealType[] = ["Buy", "Sell", "Rent", "Lease", "Buy+Sell", "Mortgage", "Rent+Lease"];
-const MARKETS: DealMarket[] = ["Primary", "Secondary", "Leasing"];
-const BUS: BusinessUnit[] = ["REBU", "Mortgage"];
-const COUNTRIES: Country[] = ["UAE", "Spain", "KSA"];
-const PAYMENT_MODES: PaymentMode[] = ["Cash", "Mortgage"];
+const DEAL_TYPES: DealType[] = ["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"];
+const MARKETS: DealMarket[] = ["primary", "secondary", "leasing"];
+const BUS: BusinessUnit[] = ["rebu", "mortgage"];
+const COUNTRIES: Country[] = ["ae", "es", "sa"];
+const PAYMENT_MODES: PaymentMode[] = ["cash", "mortgage"];
 
 const MOCK_DOCUMENTS = [
   { name: "Signed SPA", status: "available" },
@@ -112,9 +112,9 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
   const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
 
   const [form, setForm] = useState<FormData>({
-    type: "Buy", market: "Primary", businessUnit: "REBU", country: "UAE", ofCaseNumber: "", channel: "",
+    type: "buy", market: "primary", businessUnit: "rebu", country: "ae", ofCaseNumber: "", channel: "",
     buildingName: "", unitNumber: "", community: "", subCommunity: "", propertyType: "", projectName: "", fullAddress: "",
-    buyerName: "", buyerPhone: "", buyerEmail: "", sellerName: "", sellerEmail: "", sellerTaxId: "", paymentMode: "Cash",
+    buyerName: "", buyerPhone: "", buyerEmail: "", sellerName: "", sellerEmail: "", sellerTaxId: "", paymentMode: "cash",
     dealPrice: "", takeRate: "1.5",
     conveyanceAgentName: "", conveyanceAgentRate: "25",
     agentName: "", agentShare: "50", agentCommissionRate: "40",
@@ -143,8 +143,8 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     setForm(prev => ({
       ...prev,
       type: opp.type as DealType,
-      market: opp.type === "rent" || opp.type === "lease" ? "Leasing" : "Primary",
-      country: opp.neighborhoods[0] === "Madrid" || opp.neighborhoods[0] === "Valencia" ? "Spain" : "UAE",
+      market: opp.type === "rent" || opp.type === "lease" ? "leasing" : "primary",
+      country: opp.neighborhoods[0] === "Madrid" || opp.neighborhoods[0] === "Valencia" ? "es" : "ae",
       agentName: opp.agentName,
       buyerName: opp.clientName,
       buyerPhone: opp.clientPhone,
@@ -199,7 +199,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     const deal: Deal = {
       id,
       type: form.type,
-      status: "Reported",
+      status: "reported",
       market: form.market,
       businessUnit: form.businessUnit,
       country: form.country,
@@ -207,7 +207,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       clientName: form.buyerName || "Unknown Client",
       agentName: form.agentName || "Unknown Agent",
       opportunityName: selectedOpp?.title || manualOppId || "",
-      amount: dealPrice,
+      dealAmount: dealPrice,
       reportDate: new Date().toISOString().split("T")[0],
       ofCaseNumber: form.ofCaseNumber || undefined,
       buildingName: form.buildingName || undefined,
@@ -295,9 +295,9 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     setSelectedOpp(null);
     setCreatedDealId("");
     setForm({
-      type: "Buy", market: "Primary", businessUnit: "REBU", country: "UAE", ofCaseNumber: "", channel: "",
+      type: "buy", market: "primary", businessUnit: "rebu", country: "ae", ofCaseNumber: "", channel: "",
       buildingName: "", unitNumber: "", community: "", subCommunity: "", propertyType: "", projectName: "", fullAddress: "",
-      buyerName: "", buyerPhone: "", buyerEmail: "", sellerName: "", sellerEmail: "", sellerTaxId: "", paymentMode: "Cash",
+      buyerName: "", buyerPhone: "", buyerEmail: "", sellerName: "", sellerEmail: "", sellerTaxId: "", paymentMode: "cash",
       dealPrice: "", takeRate: "1.5",
       conveyanceAgentName: "", conveyanceAgentRate: "25",
       agentName: "", agentShare: "50", agentCommissionRate: "40",
@@ -491,7 +491,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                       <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="text-[13px] text-foreground flex-1">{doc.name}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${doc.status === "available" ? "bg-[hsl(var(--deal-paid))]/15 text-[hsl(var(--deal-paid))]" : "bg-[hsl(var(--deal-pending-details))]/15 text-[hsl(var(--deal-pending-details))]"}`}>
-                        {doc.status === "available" ? "Available" : "Pending"}
+                        {doc.status === "available" ? "Available" : "pending"}
                       </span>
                     </div>
                   ))}

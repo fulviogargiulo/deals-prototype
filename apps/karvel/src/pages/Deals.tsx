@@ -12,16 +12,16 @@ import { DateRangePicker, DateRange, TimePeriod, getPresetRange } from "@/compon
 import { BulkUploadDialog } from "@/components/BulkUploadDialog";
 import { AddDealDialog } from "@/components/AddDealDialog";
 
-const COUNTRIES: Country[] = ["UAE", "Spain", "KSA"];
-const BUSINESS_UNITS: BusinessUnit[] = ["REBU", "Mortgage"];
-const MARKET_TYPES: DealMarket[] = ["Primary", "Secondary", "Leasing"];
+const COUNTRIES: Country[] = ["ae", "es", "sa"];
+const BUSINESS_UNITS: BusinessUnit[] = ["rebu", "mortgage"];
+const MARKET_TYPES: DealMarket[] = ["primary", "secondary", "leasing"];
 const CHANNELS = ["MA/Broker", "BBG/Commercial", "B2C/Digital", "REA", "REA Purchase", "BYOB", "Direct Sales"];
-const DEAL_STATUSES: DealStatus[] = ["Reported", "Pending Details", "Under Review", "Ready For Invoicing", "Pending Receivables", "Pending Payment", "Paid"];
+const DEAL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"];
 
 export const countryCurrencyMap: Record<Country, string> = {
-  UAE: "AED",
-  Spain: "EUR",
-  KSA: "SAR",
+  ae: "AED",
+  es: "EUR",
+  sa: "SAR",
 };
 
 type ViewMode = "listing" | "pnl" | "finance";
@@ -63,7 +63,7 @@ const Deals = () => {
     ? countryCurrencyMap[selectedCountries[0] as Country]
     : "EUR";
 
-  const showChannel = selectedBUs.includes("Mortgage") && selectedCountries.includes("UAE");
+  const showChannel = selectedBUs.includes("mortgage") && selectedCountries.includes("ae");
 
   const filtered = allDeals.filter((deal) => {
     if (selectedCountries.length > 0 && selectedCountries.length < COUNTRIES.length) {

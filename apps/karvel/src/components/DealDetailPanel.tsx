@@ -46,7 +46,7 @@ export function DealDetailPanel({ deal, onClose }: Props) {
           <DetailRow label="Client Name" value={deal.clientName} />
           <DetailRow label="Agent Name" value={deal.agentName} />
           <DetailRow label="Opportunity" value={deal.opportunityName} />
-          <DetailRow label="Amount" value={formatAmount(deal.amount)} />
+          <DetailRow label="Amount" value={formatAmount(deal.dealAmount)} />
           <DetailRow label="Report Date" value={formatDate(deal.reportDate)} />
         </div>
       </div>

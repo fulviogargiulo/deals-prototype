@@ -15,13 +15,13 @@ interface Props {
 }
 
 const STAGE_ORDER: { key: DealStatus; label: string }[] = [
-  { key: "Reported", label: "Reported" },
-  { key: "Pending Details", label: "Pending Details" },
-  { key: "Under Review", label: "Under Review" },
-  { key: "Ready For Invoicing", label: "Invoicing" },
-  { key: "Pending Receivables", label: "Receivables" },
-  { key: "Pending Payment", label: "Payment" },
-  { key: "Paid", label: "Paid" },
+  { key: "reported", label: "reported" },
+  { key: "pending-details", label: "pending-details" },
+  { key: "under-review", label: "under-review" },
+  { key: "ready-for-invoicing", label: "Invoicing" },
+  { key: "pending-receivables", label: "Receivables" },
+  { key: "pending-payment", label: "Payment" },
+  { key: "paid", label: "paid" },
 ];
 
 function getStageIndex(status: DealStatus): number {
@@ -89,23 +89,23 @@ function DetailRow({ label, value }: { label: string; value: string | React.Reac
 
 const invoiceStatusColor = (s?: InvoiceStatus | string) => {
   switch (s) {
-    case "Paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "Paid Partial": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "Sent": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "Overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "Created": return "bg-muted text-muted-foreground";
-    case "Cancelled": return "bg-muted text-muted-foreground line-through";
+    case "paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
+    case "paid-partial": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "sent": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
+    case "overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "created": return "bg-muted text-muted-foreground";
+    case "cancelled": return "bg-muted text-muted-foreground line-through";
     default: return "bg-muted text-muted-foreground";
   }
 };
 
 const payableStatusColor = (s?: PayableStatus | string) => {
   switch (s) {
-    case "Paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "Approved": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "Pending": return "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
-    case "Rejected": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "Overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
+    case "approved": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
+    case "pending": return "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
+    case "rejected": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
     default: return "bg-muted text-muted-foreground";
   }
 };
@@ -114,7 +114,7 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
   const navigate = useNavigate();
   const stageDates = getStageDates(deal);
   const currentIdx = getStageIndex(deal.status);
-  const isPendingDetails = deal.status === "Pending Details";
+  const isPendingDetails = deal.status === "pending-details";
   const [noteValue, setNoteValue] = useState(deal.latestNote || "");
 
   // Editable missing fields state for Pending Details
@@ -229,7 +229,7 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
 
               // Find dispute entries in statusHistory that relate to this stage
               const disputeEntry = deal.statusHistory?.find(
-                (h) => h.to === stage.key && (h.from === "Ready For Invoicing" || h.from === "Pending Details") && h.note
+                (h) => h.to === stage.key && (h.from === "ready-for-invoicing" || h.from === "pending-details") && h.note
               );
 
               return (
@@ -298,7 +298,7 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
 
 
         {/* PnL Summary for Under Review+ deals */}
-        {deal.status !== "Reported" && deal.status !== "Pending Details" && (
+        {deal.status !== "reported" && deal.status !== "pending-details" && (
           <Section title="P&L Summary" defaultOpen={true}>
             <div className="space-y-0.5">
               <DetailRow label="Total Revenue" value={formatAmount(deal.huspyRevenue + deal.conveyanceRevenue, currency)} />
@@ -322,8 +322,8 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
           </Section>
         )}
 
-        {deal.status !== "Reported" && deal.status !== "Pending Details" && (
-          <Section title="Receivables" defaultOpen={deal.status === "Pending Receivables"}>
+        {deal.status !== "reported" && deal.status !== "pending-details" && (
+          <Section title="Receivables" defaultOpen={deal.status === "pending-receivables"}>
             <div className="space-y-1.5">
               {(deal.receivables || []).length === 0 ? (
                 <span className="text-[12px] text-muted-foreground italic">No receivable entities yet.</span>
@@ -356,8 +356,8 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
           </Section>
         )}
 
-        {deal.status !== "Reported" && deal.status !== "Pending Details" && (
-          <Section title="Payables" defaultOpen={deal.status === "Pending Payment"}>
+        {deal.status !== "reported" && deal.status !== "pending-details" && (
+          <Section title="Payables" defaultOpen={deal.status === "pending-payment"}>
             <div className="space-y-1.5">
               {(deal.payables || []).length === 0 ? (
                 <span className="text-[12px] text-muted-foreground italic">No payable entities yet.</span>
@@ -372,7 +372,7 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
                       <span className="text-[12px] text-foreground font-medium">{payable.entityLabel}</span>
                       <div className="flex justify-end">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${payableStatusColor(payable.status)}`}>
-                          {payable.status === "Pending" ? "Created" : payable.status}
+                          {payable.status === "pending" ? "created" : payable.status}
                         </span>
                       </div>
                     </div>

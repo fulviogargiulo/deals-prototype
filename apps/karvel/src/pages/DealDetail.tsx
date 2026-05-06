@@ -9,13 +9,13 @@ import { toast } from "sonner";
 import { RequiredDocumentsSection } from "@/components/RequiredDocumentsSection";
 
 const STAGE_ORDER: { key: DealStatus; label: string }[] = [
-  { key: "Reported", label: "Reported" },
-  { key: "Pending Details", label: "Pending Details" },
-  { key: "Under Review", label: "Under Review" },
-  { key: "Ready For Invoicing", label: "Invoicing" },
-  { key: "Pending Receivables", label: "Receivables" },
-  { key: "Pending Payment", label: "Payment" },
-  { key: "Paid", label: "Paid" },
+  { key: "reported", label: "reported" },
+  { key: "pending-details", label: "pending-details" },
+  { key: "under-review", label: "under-review" },
+  { key: "ready-for-invoicing", label: "Invoicing" },
+  { key: "pending-receivables", label: "Receivables" },
+  { key: "pending-payment", label: "Payment" },
+  { key: "paid", label: "paid" },
 ];
 
 const MBU_CHANNELS = ["MA/Broker", "BBG/Commercial", "B2C/Digital", "REA", "REA Purchase", "BYOB", "Direct Sales"];
@@ -27,7 +27,7 @@ function getStageIndex(status: DealStatus): number {
 function getStageDates(deal: Deal): Record<string, string | null> {
   const dates: Record<string, string | null> = {};
   STAGE_ORDER.forEach((stage) => { dates[stage.key] = null; });
-  dates["Reported"] = new Date(deal.reportDate).toISOString();
+  dates["reported"] = new Date(deal.reportDate).toISOString();
   if (deal.statusHistory) {
     for (const entry of deal.statusHistory) {
       if (dates[entry.to] === null) dates[entry.to] = entry.timestamp;
@@ -199,11 +199,11 @@ const DealDetail = () => {
   const fmt = (amount: number) => formatAmount(amount, currency);
   const stageDates = getStageDates(draft);
   const currentIdx = getStageIndex(draft.status);
-  const showFinancials = draft.status !== "Reported";
-  const isPendingDetails = draft.status === "Pending Details";
+  const showFinancials = draft.status !== "reported";
+  const isPendingDetails = draft.status === "pending-details";
   const netPnL = draft.huspyRevenue + draft.conveyanceRevenue - draft.cogsInternal - draft.cogsExternal - draft.cogsReferrals;
-  const isREBU = draft.businessUnit === "REBU";
-  const isMBU = draft.businessUnit === "Mortgage";
+  const isREBU = draft.businessUnit === "rebu";
+  const isMBU = draft.businessUnit === "mortgage";
 
   const update = (field: keyof Deal, value: string | number) => {
     setDraft((prev) => prev ? recalculateDeal({ ...prev, [field]: value } as Deal) : prev);
@@ -285,7 +285,7 @@ const DealDetail = () => {
   };
 
   const handleApprove = () => {
-    const approved = { ...draft, status: "Ready For Invoicing" as DealStatus };
+    const approved = { ...draft, status: "ready-for-invoicing" as DealStatus };
     setDraft(approved);
     setBaseline(approved);
     toast.success("Deal approved and moved to Ready For Invoicing");
@@ -308,7 +308,7 @@ const DealDetail = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {draft.status === "Under Review" && (
+          {draft.status === "under-review" && (
             <button
               onClick={handleApprove}
               className="px-4 py-2 bg-[hsl(var(--deal-ready-invoicing))] text-primary-foreground rounded-md text-[13px] font-semibold hover:opacity-90 transition-opacity"
@@ -335,8 +335,8 @@ const DealDetail = () => {
             {/* Deal Information */}
             <Section title="Deal Information" defaultOpen={true}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0.5">
-                <SelectField label="Business Unit" value={draft.businessUnit} options={["REBU", "Mortgage"] as BusinessUnit[]} onChange={(v) => update("businessUnit", v)} />
-                <SelectField label="Country" value={draft.country} options={["UAE", "Spain", "KSA"] as Country[]} onChange={(v) => update("country", v)} />
+                <SelectField label="Business Unit" value={draft.businessUnit} options={["rebu", "mortgage"] as BusinessUnit[]} onChange={(v) => update("businessUnit", v)} />
+                <SelectField label="Country" value={draft.country} options={["ae", "es", "sa"] as Country[]} onChange={(v) => update("country", v)} />
                 {isMBU && (
                   <SelectField label="Channel" value={draft.channel || MBU_CHANNELS[0]} options={MBU_CHANNELS} onChange={(v) => update("channel", v)} />
                 )}
@@ -344,9 +344,9 @@ const DealDetail = () => {
                 <EditField label="Report Date" value={draft.reportDate} type="date" onChange={(v) => update("reportDate", v)} />
                 <DetailRow label="Deal ID" value={draft.id} />
                 <EditField label="OF/Case Number" value={draft.ofCaseNumber || ""} onChange={(v) => update("ofCaseNumber", v)} />
-                <SelectField label="Type" value={draft.type} options={["Buy", "Sell", "Rent", "Lease", "Buy+Sell", "Mortgage", "Rent+Lease"] as DealType[]} onChange={(v) => update("type", v)} />
-                <SelectField label="Status" value={draft.status} options={["Reported", "Pending Details", "Under Review", "Ready For Invoicing", "Pending Receivables", "Pending Payment", "Paid"] as DealStatus[]} onChange={(v) => update("status", v)} />
-                <SelectField label="Market" value={draft.market} options={["Primary", "Secondary", "Leasing"] as DealMarket[]} onChange={(v) => update("market", v)} />
+                <SelectField label="Type" value={draft.type} options={["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"] as DealType[]} onChange={(v) => update("type", v)} />
+                <SelectField label="Status" value={draft.status} options={["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"] as DealStatus[]} onChange={(v) => update("status", v)} />
+                <SelectField label="Market" value={draft.market} options={["primary", "secondary", "leasing"] as DealMarket[]} onChange={(v) => update("market", v)} />
                 <EditField label="Opportunity" value={draft.opportunityName} onChange={(v) => update("opportunityName", v)} />
               </div>
 
@@ -398,7 +398,7 @@ const DealDetail = () => {
                   <EditField label="Seller Name" value={draft.sellerName || ""} onChange={(v) => update("sellerName", v)} critical={isPendingDetails && !draft.sellerName} />
                   <EditField label="Seller Tax ID" value={draft.sellerTaxId || ""} onChange={(v) => update("sellerTaxId", v)} critical={isPendingDetails && !draft.sellerTaxId} />
                   <EditField label="Seller Email" value={draft.sellerEmail || ""} onChange={(v) => update("sellerEmail", v)} />
-                  <SelectField label="Payment Mode" value={draft.paymentMode || "Cash"} options={["Cash", "Mortgage"] as PaymentMode[]} onChange={(v) => update("paymentMode", v)} />
+                  <SelectField label="Payment Mode" value={draft.paymentMode || "cash"} options={["cash", "mortgage"] as PaymentMode[]} onChange={(v) => update("paymentMode", v)} />
                 </div>
 
                 {showFinancials && (
@@ -438,7 +438,7 @@ const DealDetail = () => {
                     </button>
                     </div>
 
-                    {draft.market === "Primary" && (
+                    {draft.market === "primary" && (
                       <div className="bg-muted/20 border border-border rounded-lg p-5 mb-5">
                         <p className="text-sm font-semibold text-foreground mb-4">Rebates</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0.5">
@@ -448,7 +448,7 @@ const DealDetail = () => {
                       </div>
                     )}
 
-                    {draft.market === "Secondary" && (
+                    {draft.market === "secondary" && (
                       <div className="bg-muted/20 border border-border rounded-lg p-5 mb-5">
                         <p className="text-sm font-semibold text-foreground mb-4">Subsidy</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0.5">
@@ -602,11 +602,11 @@ const DealDetail = () => {
                     <ComputedField label="Internal COGS" value={fmt(draft.cogsInternal)} />
                     <ComputedField label="External COGS" value={fmt(draft.cogsExternal)} />
                     <ComputedField label="Referral COGS" value={fmt(draft.cogsReferrals)} />
-                    {draft.market === "Primary" && <ComputedField label="Rebate COGS" value={fmt(draft.cogsRebates)} />}
-                    {draft.market === "Secondary" && <ComputedField label="Subsidy COGS" value={fmt(draft.cogsSubsidy)} />}
+                    {draft.market === "primary" && <ComputedField label="Rebate COGS" value={fmt(draft.cogsRebates)} />}
+                    {draft.market === "secondary" && <ComputedField label="Subsidy COGS" value={fmt(draft.cogsSubsidy)} />}
                     <ComputedField label="Conveyance COGS" value={fmt(draft.conveyanceAgentPayout)} />
                     <div className="border-t border-border mt-2 pt-2">
-                      <ComputedField label="Total COGS" value={fmt(draft.cogsInternal + draft.cogsExternal + draft.cogsReferrals + draft.conveyanceAgentPayout + (draft.market === "Primary" ? draft.cogsRebates : 0) + (draft.market === "Secondary" ? draft.cogsSubsidy : 0))} />
+                      <ComputedField label="Total COGS" value={fmt(draft.cogsInternal + draft.cogsExternal + draft.cogsReferrals + draft.conveyanceAgentPayout + (draft.market === "primary" ? draft.cogsRebates : 0) + (draft.market === "secondary" ? draft.cogsSubsidy : 0))} />
                     </div>
                   </div>
                 </div>
@@ -639,7 +639,7 @@ const DealDetail = () => {
 
             {/* Receivables */}
             {showFinancials && !isPendingDetails && (
-              <Section title="Receivables" defaultOpen={draft.status === "Pending Receivables"}>
+              <Section title="Receivables" defaultOpen={draft.status === "pending-receivables"}>
                 <div className="space-y-3">
                   {(draft.receivables || []).length === 0 ? (
                     <span className="text-[12px] text-muted-foreground italic">No receivable entries.</span>
@@ -650,9 +650,9 @@ const DealDetail = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0.5">
                           <EditField label="Invoice #" value={entry.invoiceNumber || ""} onChange={(v) => updateReceivable(idx, "invoiceNumber", v)} />
                           <NumericField label="Amount" value={entry.amount} onChange={(v) => updateReceivable(idx, "amount", v)} />
-                          <SelectField label="Status" value={entry.invoiceStatus || "Created"} options={["Created", "Sent", "Overdue", "Paid", "Paid Partial", "Cancelled"] as InvoiceStatus[]} onChange={(v) => updateReceivable(idx, "invoiceStatus", v)} />
+                          <SelectField label="Status" value={entry.invoiceStatus || "created"} options={["created", "sent", "overdue", "paid", "paid-partial", "cancelled"] as InvoiceStatus[]} onChange={(v) => updateReceivable(idx, "invoiceStatus", v)} />
                           <EditField label="Invoice Date" value={entry.invoiceDate || ""} type="date" onChange={(v) => updateReceivable(idx, "invoiceDate", v)} />
-                          {(entry.invoiceStatus === "Paid" || entry.invoiceStatus === "Paid Partial") && (
+                          {(entry.invoiceStatus === "paid" || entry.invoiceStatus === "paid-partial") && (
                             <>
                               <EditField label="Payment Date" value={entry.paymentReceivedDate || ""} type="date" onChange={(v) => updateReceivable(idx, "paymentReceivedDate", v)} />
                               <NumericField label="Amount Received" value={entry.paymentReceivedAmount ?? 0} onChange={(v) => updateReceivable(idx, "paymentReceivedAmount", v)} />
@@ -668,7 +668,7 @@ const DealDetail = () => {
 
             {/* Payables */}
             {showFinancials && !isPendingDetails && (
-              <Section title="Payables" defaultOpen={draft.status === "Pending Payment"}>
+              <Section title="Payables" defaultOpen={draft.status === "pending-payment"}>
                 <div className="space-y-2">
                   {(draft.payables || []).length === 0 ? (
                     <span className="text-[12px] text-muted-foreground italic">No payable entities — add COGS entries first.</span>
@@ -679,8 +679,8 @@ const DealDetail = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0.5">
                           <ComputedField label="Expected Amount" value={fmt(payable.expectedAmount)} />
                           <EditField label="Ref Number" value={payable.refNumber || ""} onChange={(v) => updatePayable(idx, "refNumber", v)} />
-                          <SelectField label="Status" value={payable.status} options={["Pending", "Approved", "Paid", "Rejected"] as PayableStatus[]} onChange={(v) => updatePayable(idx, "status", v as PayableStatus)} />
-                          {payable.status === "Paid" && (
+                          <SelectField label="Status" value={payable.status} options={["pending", "approved", "paid", "rejected"] as PayableStatus[]} onChange={(v) => updatePayable(idx, "status", v as PayableStatus)} />
+                          {payable.status === "paid" && (
                             <>
                               <EditField label="Paid Date" value={payable.paidDate || ""} type="date" placeholder="Select date" onChange={(v) => updatePayable(idx, "paidDate", v)} />
                               <NumericField label="Paid Amount" value={payable.paidAmount ?? 0} onChange={(v) => updatePayable(idx, "paidAmount", v)} />
@@ -704,7 +704,7 @@ const DealDetail = () => {
                   const isCurrent = i === currentIdx;
                   const dateStr = stageDates[stage.key];
                   const disputeEntry = draft.statusHistory?.find(
-                    (h) => h.to === stage.key && (h.from === "Ready For Invoicing" || h.from === "Pending Details") && h.note
+                    (h) => h.to === stage.key && (h.from === "ready-for-invoicing" || h.from === "pending-details") && h.note
                   );
 
                   return (

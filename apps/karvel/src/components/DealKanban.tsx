@@ -9,13 +9,13 @@ interface Props {
 }
 
 const statusColumns: DealStatus[] = [
-  "Reported",
-  "Pending Details",
-  "Under Review",
-  "Ready For Invoicing",
-  "Pending Receivables",
-  "Pending Payment",
-  "Paid",
+  "reported",
+  "pending-details",
+  "under-review",
+  "ready-for-invoicing",
+  "pending-receivables",
+  "pending-payment",
+  "paid",
 ];
 
 export function DealKanban({ deals, currency = "EUR" }: Props) {
@@ -62,7 +62,7 @@ export function DealKanban({ deals, currency = "EUR" }: Props) {
                   <div className="space-y-1 text-[12px] text-muted-foreground">
                     <p>Agent: {deal.agentName}</p>
                     <p>Opportunity: {deal.opportunityName}</p>
-                    <p className="text-foreground font-medium">{formatAmount(deal.amount, currency)}</p>
+                    <p className="text-foreground font-medium">{formatAmount(deal.dealAmount, currency)}</p>
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-border text-[11px] text-muted-foreground">

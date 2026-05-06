@@ -23,9 +23,9 @@ const typeColors: Record<string, string> = {
   Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
   Rent: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
   Lease: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  "Buy+Sell": "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+  "buy-sell": "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
   Mortgage: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-  "Rent+Lease": "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  "rent-lease": "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
 };
 
 /* ═══ Inline multi-select filter dropdown ═══ */
@@ -270,9 +270,9 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
                   <td className={`${tdClass} text-right tabular-nums`}>{fmt(getPropTotalIntCogs(deal))}</td>
                   <td className={`${tdClass} text-right tabular-nums font-semibold border-r-2 border-r-border`}>{fmt(getPropNetRevenue(deal))}</td>
 
-                  <td className={`${tdClass} text-right tabular-nums`}>{deal.market === "Secondary" ? fmt(getConvTotalRevenue(deal)) : dash}</td>
-                  <td className={`${tdClass} text-right tabular-nums`}>{deal.market === "Secondary" ? fmt(getConvTotalCogs(deal)) : dash}</td>
-                  <td className={`${tdClass} text-right tabular-nums font-semibold border-r-2 border-r-border`}>{deal.market === "Secondary" ? fmt(getConvNetRevenue(deal)) : dash}</td>
+                  <td className={`${tdClass} text-right tabular-nums`}>{deal.market === "secondary" ? fmt(getConvTotalRevenue(deal)) : dash}</td>
+                  <td className={`${tdClass} text-right tabular-nums`}>{deal.market === "secondary" ? fmt(getConvTotalCogs(deal)) : dash}</td>
+                  <td className={`${tdClass} text-right tabular-nums font-semibold border-r-2 border-r-border`}>{deal.market === "secondary" ? fmt(getConvNetRevenue(deal)) : dash}</td>
 
                   {Array.from({ length: maxReceivables }, (_, i) => {
                     const r = deal.receivables?.[i];
@@ -345,23 +345,23 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
 
 function getInvoiceStatusColor(status: string): string {
   switch (status) {
-    case "Paid": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
-    case "Sent": return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
-    case "Created": return "bg-muted text-muted-foreground";
-    case "Overdue": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
-    case "Paid Partial": return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
-    case "Cancelled": return "bg-muted text-muted-foreground line-through";
+    case "paid": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
+    case "sent": return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
+    case "created": return "bg-muted text-muted-foreground";
+    case "overdue": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
+    case "paid-partial": return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+    case "cancelled": return "bg-muted text-muted-foreground line-through";
     default: return "bg-muted text-muted-foreground";
   }
 }
 
 function getPayableStatusColor(status: string): string {
   switch (status) {
-    case "Paid": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
-    case "Approved": return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
-    case "Pending": return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
-    case "Rejected": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
-    case "Overdue": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
+    case "paid": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
+    case "approved": return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
+    case "pending": return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+    case "rejected": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
+    case "overdue": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
     default: return "bg-muted text-muted-foreground";
   }
 }

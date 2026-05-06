@@ -30,15 +30,15 @@ function csvToDeal(row: Record<string, string>, index: number): Deal {
 
   return {
     id,
-    type: (row.type as Deal["type"]) || "Buy",
-    status: "Reported",
-    market: (row.market as Deal["market"]) || "Primary",
-    businessUnit: (row.businessUnit as Deal["businessUnit"]) || "REBU",
-    country: (row.country as Deal["country"]) || "UAE",
+    type: (row.type as Deal["type"]) || "buy",
+    status: "reported",
+    market: (row.market as Deal["market"]) || "primary",
+    businessUnit: (row.businessUnit as Deal["businessUnit"]) || "rebu",
+    country: (row.country as Deal["country"]) || "ae",
     clientName: row.clientName || "Unknown Client",
     agentName: row.agentName || "Unknown Agent",
     opportunityName: row.opportunityName || "",
-    amount: dealPrice,
+    dealAmount: dealPrice,
     reportDate: new Date().toISOString().split("T")[0],
     dealPrice,
     takeRate,
@@ -211,7 +211,7 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
           <div className="text-center py-8">
             <CheckCircle className="h-12 w-12 mx-auto text-[hsl(var(--deal-paid))] mb-4" />
             <p className="text-[16px] font-semibold text-foreground">{createdCount} Deals Created Successfully</p>
-            <p className="text-[13px] text-muted-foreground mt-1">All deals have been added with status "Reported"</p>
+            <p className="text-[13px] text-muted-foreground mt-1">All deals have been added with status "reported"</p>
           </div>
         )}
 

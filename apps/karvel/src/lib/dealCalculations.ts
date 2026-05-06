@@ -12,7 +12,7 @@ function buildPayables(deal: Deal, entries: { entityType: PayableEntry["entityTy
         entityLabel: e.entityLabel,
         expectedAmount: e.expectedAmount,
         refNumber: prev?.refNumber || "",
-        status: prev?.status || "Pending",
+        status: prev?.status || "pending",
         paidAmount: prev?.paidAmount,
         paidDate: prev?.paidDate,
       };
@@ -63,8 +63,8 @@ export function recalculateREBU(deal: Deal): Deal {
   const totalClientKickback = agents.reduce((sum, a) => sum + (a.clientKickback || 0), 0);
 
   // Rebates & Subsidy
-  const rebateAmount = deal.market === "Primary" ? (deal.rebatePercentage / 100) * deal.dealPrice : 0;
-  const subsidyAmount = deal.market === "Secondary" ? (deal.subsidyAmount || 0) : 0;
+  const rebateAmount = deal.market === "primary" ? (deal.rebatePercentage / 100) * deal.dealPrice : 0;
+  const subsidyAmount = deal.market === "secondary" ? (deal.subsidyAmount || 0) : 0;
 
   const cogsInternal = totalAgentPayout + totalTeamLeadShare + totalManagerOverride + conveyanceAgentPayout;
   const cogsExternal = extPayout + Math.max(0, rebateAmount) + Math.max(0, subsidyAmount);
@@ -138,7 +138,7 @@ export function recalculateREBU(deal: Deal): Deal {
     rebateAmount,
     subsidyAmount,
     netHuspyRevenue,
-    amount,
+    dealAmount: amount,
     payables,
     payableRefNumber: firstPayable?.refNumber,
     payableStatus: firstPayable?.status,
@@ -181,7 +181,7 @@ export function recalculateMBU(deal: Deal): Deal {
     cogsExternal,
     cogsReferrals: 0,
     netHuspyRevenue,
-    amount: huspyRevenue,
+    dealAmount: huspyRevenue,
     dealPrice: deal.disbursedAmount,
     takeRate: deal.bankSlab,
     payables,
@@ -191,7 +191,7 @@ export function recalculateMBU(deal: Deal): Deal {
 }
 
 export function recalculateDeal(deal: Deal): Deal {
-  return deal.businessUnit === "Mortgage" ? recalculateMBU(deal) : recalculateREBU(deal);
+  return deal.businessUnit === "mortgage" ? recalculateMBU(deal) : recalculateREBU(deal);
 }
 
 export function createEmptyAgent(index: number): AgentEntry {

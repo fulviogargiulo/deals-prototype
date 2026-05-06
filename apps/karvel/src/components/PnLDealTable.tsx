@@ -36,13 +36,13 @@ interface EditHelpers {
   fmt: (n: number) => string;
 }
 
-const ALL_STATUSES: DealStatus[] = ["Reported", "Pending Details", "Under Review", "Ready For Invoicing", "Pending Receivables", "Pending Payment", "Paid"];
-const ALL_BUS: BusinessUnit[] = ["REBU", "Mortgage"];
-const ALL_MARKETS: DealMarket[] = ["Primary", "Secondary", "Leasing"];
-const ALL_COUNTRIES: Country[] = ["UAE", "Spain", "KSA"];
-const ALL_TYPES: DealType[] = ["Buy", "Sell", "Rent", "Lease", "Buy+Sell", "Mortgage", "Rent+Lease"];
-const ALL_INVOICE_STATUSES: InvoiceStatus[] = ["Created", "Sent", "Overdue", "Paid", "Paid Partial", "Cancelled"];
-const ALL_PAYABLE_STATUSES: PayableStatus[] = ["Pending", "Approved", "Paid", "Rejected"];
+const ALL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"];
+const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
+const ALL_MARKETS: DealMarket[] = ["primary", "secondary", "leasing"];
+const ALL_COUNTRIES: Country[] = ["ae", "es", "sa"];
+const ALL_TYPES: DealType[] = ["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"];
+const ALL_INVOICE_STATUSES: InvoiceStatus[] = ["created", "sent", "overdue", "paid", "paid-partial", "cancelled"];
+const ALL_PAYABLE_STATUSES: PayableStatus[] = ["pending", "approved", "paid", "rejected"];
 
 function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: number, maxPayables: number): ColDef[] {
   const cols: ColDef[] = [];
@@ -136,7 +136,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
     filterType: "number", sortable: true,
     render: (d) => `${d.takeRate.toFixed(2)}%`,
     editable: true,
-    editRender: (d, o, h) => <EditableCell type="number" value={d.takeRate} onChange={(v) => h.updateField(d.id, o, "takeRate", v)} align="right" critical={d.status === "Pending Details" && !d.takeRate} />,
+    editRender: (d, o, h) => <EditableCell type="number" value={d.takeRate} onChange={(v) => h.updateField(d.id, o, "takeRate", v)} align="right" critical={d.status === "pending-details" && !d.takeRate} />,
   });
   cols.push({
     key: "huspyRevenue", label: "Huspy Revenue", group: "propertyTx", subGroup: "Revenue", width: "min-w-[120px]", align: "right",
@@ -172,7 +172,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
       key: `extPartner${i}Bank`, label: `Partner${n} Bank`, group: "propertyTx", subGroup: "COGS", width: "min-w-[120px]", align: "left",
       render: (d) => d.externalPartners?.[i]?.partnerBank || dash,
       editable: true,
-      editRender: (d, o, h) => <EditableCell value={d.externalPartners?.[i]?.partnerBank || ""} onChange={(v) => h.updatePartner(d.id, o, i, "partnerBank", v)} critical={d.status === "Pending Details" && !d.externalPartners?.[i]?.partnerBank} />,
+      editRender: (d, o, h) => <EditableCell value={d.externalPartners?.[i]?.partnerBank || ""} onChange={(v) => h.updatePartner(d.id, o, i, "partnerBank", v)} critical={d.status === "pending-details" && !d.externalPartners?.[i]?.partnerBank} />,
     });
     cols.push({
       key: `extPartner${i}BankAcct`, label: `Partner${n} Acct`, group: "propertyTx", subGroup: "COGS", width: "min-w-[160px]", align: "left",
@@ -185,13 +185,13 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
   // ═══ PROPERTY TRANSACTION — COGS: Rebates ═══
   cols.push({
     key: "rebatePercentage", label: "Rebate %", group: "propertyTx", subGroup: "COGS", width: "min-w-[85px]", align: "right",
-    render: (d) => d.market === "Primary" ? `${d.rebatePercentage.toFixed(1)}%` : dash,
+    render: (d) => d.market === "primary" ? `${d.rebatePercentage.toFixed(1)}%` : dash,
     editable: true,
     editRender: (d, o, h) => <EditableCell type="number" value={d.rebatePercentage} onChange={(v) => h.updateField(d.id, o, "rebatePercentage", v)} align="right" />,
   });
   cols.push({
     key: "rebateAmount", label: "Rebate Amt", group: "propertyTx", subGroup: "COGS", width: "min-w-[100px]", align: "right",
-    render: (d, fmt) => d.market === "Primary" ? fmt(d.rebateAmount) : dash,
+    render: (d, fmt) => d.market === "primary" ? fmt(d.rebateAmount) : dash,
     editable: true,
     editRender: (d, _o, h) => <EditableCell computed value={d.rebateAmount} align="right" onChange={() => {}} formatter={h.fmt} />,
   });
@@ -199,7 +199,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
   // ═══ PROPERTY TRANSACTION — COGS: Subsidy ═══
   cols.push({
     key: "subsidyAmount", label: "Subsidy", group: "propertyTx", subGroup: "COGS", width: "min-w-[100px]", align: "right",
-    render: (d, fmt) => d.market === "Secondary" ? fmt(d.subsidyAmount) : dash,
+    render: (d, fmt) => d.market === "secondary" ? fmt(d.subsidyAmount) : dash,
     editable: true,
     editRender: (d, o, h) => <EditableCell type="number" value={d.subsidyAmount} onChange={(v) => h.updateField(d.id, o, "subsidyAmount", v)} align="right" />,
   });
@@ -214,7 +214,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
       filterType: i === 0 ? "text" : undefined,
       render: (d) => d.agents[i]?.agentName || dash,
       editable: true,
-      editRender: (d, o, h) => <EditableCell value={d.agents[i]?.agentName || ""} onChange={(v) => h.updateAgent(d.id, o, i, "agentName", v)} critical={d.status === "Pending Details" && !d.agents[i]?.agentName} />,
+      editRender: (d, o, h) => <EditableCell value={d.agents[i]?.agentName || ""} onChange={(v) => h.updateAgent(d.id, o, i, "agentName", v)} critical={d.status === "pending-details" && !d.agents[i]?.agentName} />,
     });
     cols.push({
       key: `agent${i}Share`, label: `Agent${nEnd} Share %`, group: "propertyTx", subGroup: "COGS", width: "min-w-[100px]", align: "right",
@@ -227,7 +227,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
       filterType: i === 0 ? "number" : undefined,
       render: (d) => `${(d.agents[i]?.agentCommissionRate || 0).toFixed(1)}%`,
       editable: true,
-      editRender: (d, o, h) => <EditableCell type="number" value={d.agents[i]?.agentCommissionRate || 0} onChange={(v) => h.updateAgent(d.id, o, i, "agentCommissionRate", v)} align="right" critical={d.status === "Pending Details" && !d.agents[i]?.agentCommissionRate} />,
+      editRender: (d, o, h) => <EditableCell type="number" value={d.agents[i]?.agentCommissionRate || 0} onChange={(v) => h.updateAgent(d.id, o, i, "agentCommissionRate", v)} align="right" critical={d.status === "pending-details" && !d.agents[i]?.agentCommissionRate} />,
     });
     cols.push({
       key: `agent${i}Payout`, label: `Agent${nEnd} Payout`, group: "propertyTx", subGroup: "COGS", width: "min-w-[110px]", align: "right",
@@ -262,7 +262,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
       filterType: i === 0 ? "text" : undefined,
       render: (d) => d.agents[i]?.teamLeadName || dash,
       editable: true,
-      editRender: (d, o, h) => <EditableCell value={d.agents[i]?.teamLeadName || ""} onChange={(v) => h.updateAgent(d.id, o, i, "teamLeadName", v)} critical={d.status === "Pending Details" && !d.agents[i]?.teamLeadName} />,
+      editRender: (d, o, h) => <EditableCell value={d.agents[i]?.teamLeadName || ""} onChange={(v) => h.updateAgent(d.id, o, i, "teamLeadName", v)} critical={d.status === "pending-details" && !d.agents[i]?.teamLeadName} />,
     });
     cols.push({
       key: `agent${i}TLRate`, label: `TL${nEnd} Rate %`, group: "propertyTx", subGroup: "COGS", width: "min-w-[85px]", align: "right",
@@ -289,7 +289,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
       key: `agent${i}MgrRate`, label: `Mgr${nEnd} Rate %`, group: "propertyTx", subGroup: "COGS", width: "min-w-[90px]", align: "right",
       render: (d) => `${(d.agents[i]?.managerOverrideRate || 0).toFixed(1)}%`,
       editable: true,
-      editRender: (d, o, h) => <EditableCell type="number" value={d.agents[i]?.managerOverrideRate || 0} onChange={(v) => h.updateAgent(d.id, o, i, "managerOverrideRate", v)} align="right" critical={d.status === "Pending Details" && !d.agents[i]?.managerOverrideRate} />,
+      editRender: (d, o, h) => <EditableCell type="number" value={d.agents[i]?.managerOverrideRate || 0} onChange={(v) => h.updateAgent(d.id, o, i, "managerOverrideRate", v)} align="right" critical={d.status === "pending-details" && !d.agents[i]?.managerOverrideRate} />,
     });
     cols.push({
       key: `agent${i}MgrOverride`, label: `Mgr${nEnd} Override`, group: "propertyTx", subGroup: "COGS", width: "min-w-[100px]", align: "right",
@@ -371,7 +371,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
     editRender: (d, _o, h) => <EditableCell computed value={d.huspyConveyanceShare} align="right" onChange={() => {}} formatter={h.fmt} />,
   });
 
-  const PRE_INVOICE_STATUSES = new Set(["Reported", "Pending Details", "Under Review"]);
+  const PRE_INVOICE_STATUSES = new Set(["reported", "pending-details", "under-review"]);
 
   // ═══ RECEIVABLES (dynamic per receivable entry) ═══
   for (let i = 0; i < maxReceivables; i++) {
@@ -473,23 +473,23 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
 
 const invoiceStatusColor = (s?: InvoiceStatus | string) => {
   switch (s) {
-    case "Paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "Paid Partial": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "Sent": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "Overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "Created": return "bg-muted text-muted-foreground";
-    case "Cancelled": return "bg-muted text-muted-foreground line-through";
+    case "paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
+    case "paid-partial": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "sent": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
+    case "overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "created": return "bg-muted text-muted-foreground";
+    case "cancelled": return "bg-muted text-muted-foreground line-through";
     default: return "bg-muted text-muted-foreground";
   }
 };
 
 const payableStatusColor = (s?: PayableStatus) => {
   switch (s) {
-    case "Paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "Approved": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "Pending": return "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
-    case "Rejected": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "Overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
+    case "approved": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
+    case "pending": return "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
+    case "rejected": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
     default: return "bg-muted text-muted-foreground";
   }
 };
@@ -523,7 +523,7 @@ function PayableStatusChip({ status }: { status?: PayableStatus }) {
 }
 
 function BUBadge({ bu }: { bu: string }) {
-  const cls = bu === "REBU" ? "bg-blue-500/15 text-blue-700 dark:text-blue-400" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
+  const cls = bu === "rebu" ? "bg-blue-500/15 text-blue-700 dark:text-blue-400" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${cls}`}>{bu}</span>;
 }
 
@@ -533,9 +533,9 @@ function TypeBadge({ type }: { type: string }) {
     Sell: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
     Rent: "bg-violet-500/15 text-violet-700 dark:text-violet-400",
     Lease: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-    "Buy+Sell": "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400",
+    "buy-sell": "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400",
     Mortgage: "bg-rose-500/15 text-rose-700 dark:text-rose-400",
-    "Rent+Lease": "bg-orange-500/15 text-orange-700 dark:text-orange-400",
+    "rent-lease": "bg-orange-500/15 text-orange-700 dark:text-orange-400",
   };
   const cls = colors[type] || "bg-muted text-muted-foreground";
   return <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold ${cls}`}>{type}</span>;
@@ -1067,7 +1067,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate }: Props) {
               {paginated.map((originalDeal) => {
                 const deal = getDeal(originalDeal);
                 const isDirty = dirtyDeals.has(deal.id);
-                const EDITABLE_STATUSES: Deal["status"][] = ["Reported", "Pending Details", "Under Review"];
+                const EDITABLE_STATUSES: Deal["status"][] = ["reported", "pending-details", "under-review"];
                 const isRowEditable = EDITABLE_STATUSES.includes(deal.status);
 
                 return (

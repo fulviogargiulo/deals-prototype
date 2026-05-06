@@ -15,7 +15,7 @@ const Clients = () => {
   useEffect(() => {
     const selected = searchParams.get("selected");
     if (selected) {
-      const match = mockClients.find((c) => c.name === selected);
+      const match = mockClients.find((c) => c.fullName === selected);
       if (match) setSelectedClient(match);
       setSearchParams({}, { replace: true });
     }
@@ -25,7 +25,7 @@ const Clients = () => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
-      c.name.toLowerCase().includes(q) ||
+      c.fullName.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
       c.phone.includes(q)
     );

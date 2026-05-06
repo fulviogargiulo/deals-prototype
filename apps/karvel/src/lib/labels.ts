@@ -1,6 +1,16 @@
 // Display-string mappings for canonical lowercase enum values.
 // Use these whenever rendering an enum value to UI; never display the raw value.
-import type { OpportunityType, OpportunityStatus } from "@huspy/shared-domain";
+import type {
+  OpportunityType,
+  OpportunityStatus,
+  DealType,
+  DealStatus,
+  Market,
+  BusinessUnit,
+  Country,
+  InvoiceStatus,
+  PayableStatus,
+} from "@huspy/shared-domain";
 
 export const opportunityTypeLabel: Record<OpportunityType, string> = {
   buy: "Buy",
@@ -18,4 +28,59 @@ export const opportunityStatusLabel: Record<OpportunityStatus, string> = {
   "under-offer": "Under Offer",
   closed: "Closed",
   inactive: "Inactive",
+};
+
+export const dealTypeLabel: Record<DealType, string> = {
+  buy: "Buy",
+  sell: "Sell",
+  rent: "Rent",
+  lease: "Lease",
+  mortgage: "Mortgage",
+  "buy-sell": "Buy+Sell",
+  "rent-lease": "Rent+Lease",
+};
+
+export const dealStatusLabel: Record<DealStatus, string> = {
+  reported: "Reported",
+  "pending-details": "Pending Details",
+  "under-review": "Under Review",
+  "ready-for-invoicing": "Ready For Invoicing",
+  "pending-receivables": "Pending Receivables",
+  "pending-payment": "Pending Payment",
+  paid: "Paid",
+  canceled: "Canceled",
+};
+
+export const marketLabel: Record<Market, string> = {
+  primary: "Primary",
+  secondary: "Secondary",
+  leasing: "Leasing",
+};
+
+export const businessUnitLabel: Record<BusinessUnit, string> = {
+  rebu: "REBU",
+  mortgage: "Mortgage",
+};
+
+export const countryLabel: Record<Country, string> = {
+  ae: "UAE",
+  es: "Spain",
+  sa: "KSA",
+};
+
+export const invoiceStatusLabel: Record<InvoiceStatus, string> = {
+  created: "Created",
+  sent: "Sent",
+  overdue: "Overdue",
+  paid: "Paid",
+  "paid-partial": "Paid Partial",
+  cancelled: "Cancelled",
+};
+
+export const payableStatusLabel: Record<PayableStatus, string> = {
+  pending: "Pending",
+  approved: "Approved",
+  paid: "Paid",
+  rejected: "Rejected",
+  overdue: "Overdue",
 };

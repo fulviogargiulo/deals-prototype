@@ -28,12 +28,12 @@ function formatAmount(amount: number, currency: string): string {
 }
 
 const tileConfig = [
-  { key: "awaiting", label: "Pending Details", color: "text-[hsl(var(--deal-pending-details))]" },
+  { key: "awaiting", label: "pending-details", color: "text-[hsl(var(--deal-pending-details))]" },
   { key: "ready", label: "Ready to Invoice", color: "text-[hsl(var(--deal-reported))]" },
   { key: "sent", label: "Invoice Sent", color: "text-[hsl(var(--deal-ready-invoicing))]" },
   { key: "received", label: "Payment Received", color: "text-[hsl(var(--deal-under-review))]" },
   { key: "paid", label: "Agent Paid", color: "text-[hsl(var(--deal-paid))]" },
-  { key: "overdue", label: "Overdue", color: "text-[hsl(var(--deal-pending-payment))]" },
+  { key: "overdue", label: "overdue", color: "text-[hsl(var(--deal-pending-payment))]" },
 ] as const;
 
 type TileKey = typeof tileConfig[number]["key"];
@@ -50,8 +50,8 @@ function computeTiles(deals: Deal[]) {
 
   for (const d of deals) {
     // Check "Payment Received" first — deals with status Pending Payment or Paid
-    if (d.status === "Pending Payment" || d.status === "Paid") {
-      if (d.payables.every(p => p.status === "Paid")) {
+    if (d.status === "pending-payment" || d.status === "paid") {
+      if (d.payables.every(p => p.status === "paid")) {
         tiles.paid.count++;
         tiles.paid.volume += d.huspyRevenue;
         tiles.paid.dealAmount += d.dealPrice;
@@ -60,19 +60,19 @@ function computeTiles(deals: Deal[]) {
         tiles.received.volume += d.huspyRevenue;
         tiles.received.dealAmount += d.dealPrice;
       }
-    } else if (d.status === "Under Review") {
+    } else if (d.status === "under-review") {
       tiles.awaiting.count++;
       tiles.awaiting.volume += d.huspyRevenue;
       tiles.awaiting.dealAmount += d.dealPrice;
-    } else if (d.status === "Ready For Invoicing" && (!d.invoiceStatus || d.invoiceStatus === "Created")) {
+    } else if (d.status === "ready-for-invoicing" && (!d.invoiceStatus || d.invoiceStatus === "created")) {
       tiles.ready.count++;
       tiles.ready.volume += d.huspyRevenue;
       tiles.ready.dealAmount += d.dealPrice;
-    } else if (d.invoiceStatus === "Sent") {
+    } else if (d.invoiceStatus === "sent") {
       tiles.sent.count++;
       tiles.sent.volume += d.huspyRevenue;
       tiles.sent.dealAmount += d.dealPrice;
-    } else if (d.invoiceStatus === "Overdue" || d.payables.some(p => p.status === "Overdue")) {
+    } else if (d.invoiceStatus === "overdue" || d.payables.some(p => p.status === "overdue")) {
       tiles.overdue.count++;
       tiles.overdue.volume += d.huspyRevenue;
       tiles.overdue.dealAmount += d.dealPrice;
@@ -190,7 +190,7 @@ function CreateInvoiceModal({
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
           <button onClick={onClose} className="px-4 py-2 text-[13px] font-medium text-foreground border border-border rounded-md hover:bg-muted">Cancel</button>
-          <button onClick={() => isValid && onSave([{ id: crypto.randomUUID(), entityName: toName, amount: totalReceivable, status: "Created" as InvoiceStatus }])} disabled={!isValid} className={cn("px-4 py-2 text-[13px] font-medium rounded-md", isValid ? "bg-primary text-primary-foreground hover:opacity-90" : "bg-muted text-muted-foreground cursor-not-allowed")}>
+          <button onClick={() => isValid && onSave([{ id: crypto.randomUUID(), entityName: toName, amount: totalReceivable, status: "created" as InvoiceStatus }])} disabled={!isValid} className={cn("px-4 py-2 text-[13px] font-medium rounded-md", isValid ? "bg-primary text-primary-foreground hover:opacity-90" : "bg-muted text-muted-foreground cursor-not-allowed")}>
             Create Invoice
           </button>
         </div>
@@ -258,7 +258,7 @@ function SOAModal({ payable, deal, currency, onClose, onApprove, onSave }: { pay
     setDebits(prev => prev.map(d => d.id === id ? { ...d, [field]: value } : d));
 
   const [showApproveAfterSave, setShowApproveAfterSave] = useState(false);
-  const canApprove = ((payable.soaStatus === "Generated") || (payable.soaStatus === "Disputed" && showApproveAfterSave)) && onApprove;
+  const canApprove = ((payable.soaStatus === "generated") || (payable.soaStatus === "disputed" && showApproveAfterSave)) && onApprove;
   const [saved, setSaved] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -278,7 +278,7 @@ function SOAModal({ payable, deal, currency, onClose, onApprove, onSave }: { pay
     );
     setSaved(true);
     setIsDirty(false);
-    if (payable.soaStatus === "Disputed") setShowApproveAfterSave(true);
+    if (payable.soaStatus === "disputed") setShowApproveAfterSave(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -297,7 +297,7 @@ function SOAModal({ payable, deal, currency, onClose, onApprove, onSave }: { pay
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className={cn("px-3 py-1 rounded-full text-[12px] font-medium", soaStatusColor(payable.soaStatus))}>{payable.soaStatus || "Pending"}</span>
+            <span className={cn("px-3 py-1 rounded-full text-[12px] font-medium", soaStatusColor(payable.soaStatus))}>{payable.soaStatus || "pending"}</span>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
           </div>
         </div>
@@ -305,7 +305,7 @@ function SOAModal({ payable, deal, currency, onClose, onApprove, onSave }: { pay
         {/* Body */}
         <div className="px-6 py-5 space-y-1">
           {/* Dispute Note */}
-          {payable.soaStatus === "Disputed" && payable.soaDisputeNote && (
+          {payable.soaStatus === "disputed" && payable.soaDisputeNote && (
             <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 mb-4">
               <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
               <div>
@@ -416,11 +416,11 @@ function SOAModal({ payable, deal, currency, onClose, onApprove, onSave }: { pay
 // Entity Invoice Modal
 function EntityInvoiceModal({ payable, deal, currency, onClose, onApprove }: { payable: PayableEntry; deal: Deal; currency: string; onClose: () => void; onApprove?: () => void }) {
   const inv = generateInvoiceData(payable, deal);
-  const statusLabel = inv.status === "Paid" ? "Paid" : inv.status === "Approved" ? "Approved" : "Created";
-  const statusColor = inv.status === "Paid" ? "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]" :
-    inv.status === "Approved" ? "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]" :
+  const statusLabel = inv.status === "paid" ? "paid" : inv.status === "approved" ? "approved" : "created";
+  const statusColor = inv.status === "paid" ? "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]" :
+    inv.status === "approved" ? "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]" :
     "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
-  const canApproveInvoice = inv.status === "Pending" && onApprove;
+  const canApproveInvoice = inv.status === "pending" && onApprove;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -577,21 +577,21 @@ function generateReceivableInvoiceData(deal: Deal) {
     lines.push({ description: `Conveyance fee — ${deal.buildingName || deal.clientName}`, subType: "Conveyance", amount: deal.conveyanceRevenue });
   }
   const subtotal = lines.reduce((s, l) => s + l.amount, 0);
-  const vatRate = deal.country === "UAE" ? 5 : deal.country === "Spain" ? 21 : 15; // VAT % by country
+  const vatRate = deal.country === "ae" ? 5 : deal.country === "es" ? 21 : 15; // VAT % by country
   const vatAmount = Math.round(subtotal * (vatRate / 100));
   const total = subtotal + vatAmount;
-  const derivedStatus = deal.status === "Under Review" ? undefined
-    : deal.status === "Pending Payment" ? "Paid" as const
+  const derivedStatus = deal.status === "under-review" ? undefined
+    : deal.status === "pending-payment" ? "paid" as const
     : deal.invoiceStatus;
   return { issueDate, dueDate, lines, subtotal, vatRate, vatAmount, total, status: derivedStatus };
 }
 
 function ReceivableInvoiceModal({ deal, currency, onClose }: { deal: Deal; currency: string; onClose: () => void }) {
   const inv = generateReceivableInvoiceData(deal);
-  const statusLabel = inv.status === "Paid" ? "Paid" : inv.status === "Paid Partial" ? "Paid Partial" : inv.status === "Sent" ? "Sent" : inv.status === "Overdue" ? "Overdue" : "Created";
-  const statusColor = inv.status === "Paid" ? "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]" :
-    inv.status === "Sent" ? "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]" :
-    inv.status === "Overdue" ? "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]" :
+  const statusLabel = inv.status === "paid" ? "paid" : inv.status === "paid-partial" ? "paid-partial" : inv.status === "sent" ? "sent" : inv.status === "overdue" ? "overdue" : "created";
+  const statusColor = inv.status === "paid" ? "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]" :
+    inv.status === "sent" ? "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]" :
+    inv.status === "overdue" ? "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]" :
     "bg-muted text-muted-foreground";
 
   return (
@@ -708,23 +708,23 @@ function ReceivableInvoiceModal({ deal, currency, onClose }: { deal: Deal; curre
 
 const invoiceStatusColor = (s?: InvoiceStatus | string) => {
   switch (s) {
-    case "Paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "Paid Partial": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "Sent": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "Overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "Created": return "bg-muted text-muted-foreground";
-    case "Cancelled": return "bg-muted text-muted-foreground line-through";
+    case "paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
+    case "paid-partial": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "sent": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
+    case "overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "created": return "bg-muted text-muted-foreground";
+    case "cancelled": return "bg-muted text-muted-foreground line-through";
     default: return "bg-muted text-muted-foreground";
   }
 };
 
 const payableStatusColor = (s?: PayableStatus) => {
   switch (s) {
-    case "Paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "Approved": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "Pending": return "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
-    case "Rejected": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "Overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
+    case "approved": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
+    case "pending": return "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
+    case "rejected": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
+    case "overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
     default: return "bg-muted text-muted-foreground";
   }
 };
@@ -734,21 +734,21 @@ const getEntityCategory = (entityType: string) => EXTERNAL_ENTITY_TYPES.has(enti
 
 const soaStatusColor = (s?: SOAStatus) => {
   switch (s) {
-    case "Approved": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "Generated": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "Pending": return "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
-    case "Disputed": return "bg-destructive/10 text-destructive";
+    case "approved": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
+    case "generated": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
+    case "pending": return "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
+    case "disputed": return "bg-destructive/10 text-destructive";
     default: return "bg-muted text-muted-foreground";
   }
 };
 
 const dealStatusColor = (status: string) => {
   const map: Record<string, string> = {
-    "Under Review": "bg-[hsl(var(--deal-under-review)/0.1)] text-[hsl(var(--deal-under-review))]",
-    "Ready For Invoicing": "bg-[hsl(var(--deal-ready-invoicing)/0.1)] text-[hsl(var(--deal-ready-invoicing))]",
-    "Pending Receivables": "bg-[hsl(var(--deal-pending-receivables)/0.1)] text-[hsl(var(--deal-pending-receivables))]",
-    "Pending Payment": "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]",
-    "Paid": "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]",
+    "under-review": "bg-[hsl(var(--deal-under-review)/0.1)] text-[hsl(var(--deal-under-review))]",
+    "ready-for-invoicing": "bg-[hsl(var(--deal-ready-invoicing)/0.1)] text-[hsl(var(--deal-ready-invoicing))]",
+    "pending-receivables": "bg-[hsl(var(--deal-pending-receivables)/0.1)] text-[hsl(var(--deal-pending-receivables))]",
+    "pending-payment": "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]",
+    "paid": "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]",
   };
   return map[status] || "bg-muted text-muted-foreground";
 };
@@ -958,7 +958,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
 
   const tiles = useMemo(() => computeTiles(deals), [deals]);
 
-  const financeStatuses = ["Under Review", "Ready For Invoicing", "Pending Receivables", "Pending Payment", "Paid"];
+  const financeStatuses = ["under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"];
   const financeDeals = useMemo(() => {
     // 1. Status filter
     let filtered = deals.filter((d) => financeStatuses.includes(d.status));
@@ -987,12 +987,12 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
     if (activeTile) {
       filtered = filtered.filter((d) => {
           switch (activeTile) {
-            case "awaiting": return d.status === "Under Review";
-            case "ready": return d.status === "Ready For Invoicing" && (!d.invoiceStatus || d.invoiceStatus === "Created");
-            case "sent": return d.invoiceStatus === "Sent";
-            case "received": return d.invoiceStatus === "Paid" && d.payables.some(p => p.status !== "Paid");
-            case "paid": return d.invoiceStatus === "Paid" && d.payables.every(p => p.status === "Paid");
-            case "overdue": return d.invoiceStatus === "Overdue" || d.payables.some(p => p.status === "Overdue");
+            case "awaiting": return d.status === "under-review";
+            case "ready": return d.status === "ready-for-invoicing" && (!d.invoiceStatus || d.invoiceStatus === "created");
+            case "sent": return d.invoiceStatus === "sent";
+            case "received": return d.invoiceStatus === "paid" && d.payables.some(p => p.status !== "paid");
+            case "paid": return d.invoiceStatus === "paid" && d.payables.every(p => p.status === "paid");
+            case "overdue": return d.invoiceStatus === "overdue" || d.payables.some(p => p.status === "overdue");
             default: return true;
         }
       });
@@ -1005,9 +1005,9 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
     const updatedDeal: Deal = {
       ...deal,
       invoiceNumber: invoices.map((_, i) => `INV-${deal.id.replace("DEAL-", "")}-${i + 1}`).join(", "),
-      invoiceStatus: "Created" as InvoiceStatus,
+      invoiceStatus: "created" as InvoiceStatus,
       invoiceDate: new Date().toISOString().split("T")[0],
-      status: "Pending Receivables",
+      status: "pending-receivables",
     };
     onDealUpdate(updatedDeal);
     setCreatingInvoiceFor(null);
@@ -1021,7 +1021,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
   }, [financeDeals]);
 
   const approvedPayableRows = useMemo(() => 
-    allPayableRows.filter(({ payable }) => payable.status === "Approved"),
+    allPayableRows.filter(({ payable }) => payable.status === "approved"),
     [allPayableRows]
   );
 
@@ -1070,7 +1070,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
       const d = dealsToUpdate.get(deal.id)!;
       d.payables = d.payables.map(p =>
         p === payable || (p.entityLabel === payable.entityLabel && p.entityType === payable.entityType)
-          ? { ...p, status: "Paid" as PayableStatus, paidAmount: p.expectedAmount, paidDate: new Date().toISOString().slice(0, 10) }
+          ? { ...p, status: "paid" as PayableStatus, paidAmount: p.expectedAmount, paidDate: new Date().toISOString().slice(0, 10) }
           : p
       );
     }
@@ -1108,7 +1108,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
   const recUniqueStatuses = useMemo(() => [...new Set(financeDeals.map(d => d.status))].sort(), [financeDeals]);
   const recUniqueInvStatuses = useMemo(() => {
     const fromData = allReceivableRows.map(r => r.receivable.invoiceStatus || "No invoice").filter(Boolean);
-    const allStatuses = ["No invoice", "Created", "Sent", "Overdue", "Paid", "Paid Partial", "Cancelled"];
+    const allStatuses = ["No invoice", "created", "sent", "overdue", "paid", "paid-partial", "cancelled"];
     return [...new Set([...allStatuses, ...fromData])].sort();
   }, [allReceivableRows]);
 
@@ -1141,11 +1141,11 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
   const paySort = useTableSort();
   const payFilters = useTableFilters(["entity", "type", "status", "soaStatus"]);
   const payUniqueTypes = useMemo(() => [...new Set(allPayableRows.map(r => getEntityCategory(r.payable.entityType)))].sort(), [allPayableRows]);
-  const payableStatusDisplayLabel = (s: PayableStatus) => s === "Pending" ? "Created" : s;
+  const payableStatusDisplayLabel = (s: PayableStatus) => s === "pending" ? "created" : s;
   const getDisplayedInvoiceStatus = (p: PayableEntry) =>
-    (!p.soaStatus || p.soaStatus === "Pending" || p.soaStatus === "Generated" || p.soaStatus === "Disputed") ? "No Invoice" : payableStatusDisplayLabel(p.status);
+    (!p.soaStatus || p.soaStatus === "pending" || p.soaStatus === "generated" || p.soaStatus === "disputed") ? "No Invoice" : payableStatusDisplayLabel(p.status);
   const payUniqueStatuses = useMemo(() => [...new Set(allPayableRows.map(r => getDisplayedInvoiceStatus(r.payable)))].sort(), [allPayableRows]);
-  const payUniqueSoaStatuses = useMemo(() => [...new Set(allPayableRows.map(r => r.payable.soaStatus || "Pending"))].sort(), [allPayableRows]);
+  const payUniqueSoaStatuses = useMemo(() => [...new Set(allPayableRows.map(r => r.payable.soaStatus || "pending"))].sort(), [allPayableRows]);
   const payUniqueEntities = useMemo(() => [...new Set(allPayableRows.map(r => r.payable.entityLabel))].sort(), [allPayableRows]);
 
   const payablesSorted = useMemo(() => applySortAndFilter(
@@ -1157,7 +1157,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
         case "type": return getEntityCategory(r.payable.entityType);
         case "ref": return r.payable.refNumber || "";
         case "soa": return r.payable.soaReference || "";
-        case "soaStatus": return r.payable.soaStatus || "Pending";
+        case "soaStatus": return r.payable.soaStatus || "pending";
         case "entityInvoice": return r.payable.entityUploadedInvoice || "";
         case "status": return r.payable.status;
         case "amount": return r.payable.expectedAmount;
@@ -1171,7 +1171,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
         case "entity": return r.payable.entityLabel;
         case "type": return getEntityCategory(r.payable.entityType);
         case "status": return getDisplayedInvoiceStatus(r.payable);
-        case "soaStatus": return r.payable.soaStatus || "Pending";
+        case "soaStatus": return r.payable.soaStatus || "pending";
         default: return "";
       }
     }
@@ -1241,7 +1241,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
         <>
           {/* Bulk download bar */}
           {(() => {
-            const downloadableRows = receivableRowsSorted.filter(r => r.receivable.invoiceNumber && r.deal.status !== "Under Review");
+            const downloadableRows = receivableRowsSorted.filter(r => r.receivable.invoiceNumber && r.deal.status !== "under-review");
             const selectedDownloadable = downloadableRows.filter(r => selectedInvoiceIds.has(`${r.deal.id}-${r.idx}`));
             return downloadableRows.length > 0 && (
               <div className="flex items-center justify-between">
@@ -1271,11 +1271,11 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                   <th className={`${thBase} w-10`}>
                     <Checkbox
                       checked={(() => {
-                        const downloadable = receivableRowsSorted.filter(r => r.receivable.invoiceNumber && r.deal.status !== "Under Review");
+                        const downloadable = receivableRowsSorted.filter(r => r.receivable.invoiceNumber && r.deal.status !== "under-review");
                         return downloadable.length > 0 && downloadable.every(r => selectedInvoiceIds.has(`${r.deal.id}-${r.idx}`));
                       })()}
                       onCheckedChange={(checked) => {
-                        const downloadable = receivableRowsSorted.filter(r => r.receivable.invoiceNumber && r.deal.status !== "Under Review");
+                        const downloadable = receivableRowsSorted.filter(r => r.receivable.invoiceNumber && r.deal.status !== "under-review");
                         if (checked) {
                           setSelectedInvoiceIds(new Set(downloadable.map(r => `${r.deal.id}-${r.idx}`)));
                         } else {
@@ -1304,13 +1304,13 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
               <tbody>
                 {receivableRowsSorted.map(({ deal, receivable, idx }) => {
                   const rowKey = `${deal.id}-${idx}`;
-                  const canCreateInvoice = deal.status === "Ready For Invoicing" && (!receivable.invoiceStatus || receivable.invoiceStatus === "Created");
+                  const canCreateInvoice = deal.status === "ready-for-invoicing" && (!receivable.invoiceStatus || receivable.invoiceStatus === "created");
                   const entityTypeLabel = receivable.entityType.charAt(0).toUpperCase() + receivable.entityType.slice(1);
 
                   return (
                     <tr key={rowKey} className="border-b border-border hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 border-r border-r-border/40">
-                        {receivable.invoiceNumber && deal.status !== "Under Review" ? (
+                        {receivable.invoiceNumber && deal.status !== "under-review" ? (
                           <Checkbox
                             checked={selectedInvoiceIds.has(rowKey)}
                             onCheckedChange={(checked) => {
@@ -1334,7 +1334,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                       <td className="px-4 py-3 text-foreground border-r border-r-border/40 capitalize text-[12px]">{entityTypeLabel}</td>
                       <td className="px-4 py-3 text-right font-medium text-foreground border-r border-r-border/40">{formatAmount(receivable.amount, currency)}</td>
                       <td className="px-4 py-3 text-center border-r border-r-border/40">
-                        {deal.status === "Under Review" ? (
+                        {deal.status === "under-review" ? (
                           <span className="text-muted-foreground">—</span>
                         ) : receivable.invoiceNumber ? (
                           <button onClick={() => setViewingReceivableInvoice(deal)} className="inline-flex items-center justify-center gap-1.5 min-w-[130px] px-3 py-1.5 text-[12px] font-medium rounded-md border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer">
@@ -1350,28 +1350,28 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
-                        {deal.status === "Under Review" ? (
+                        {deal.status === "under-review" ? (
                           <span className="text-muted-foreground text-[11px]">No invoice</span>
                         ) : receivable.invoiceNumber ? (
                           <select
-                            value={deal.status === "Pending Payment" ? "Paid" : (receivable.invoiceStatus || "Created")}
+                            value={deal.status === "pending-payment" ? "paid" : (receivable.invoiceStatus || "created")}
                             onChange={(e) => {
                               const newStatus = e.target.value as InvoiceStatus;
                               if (onDealUpdate) {
                                 const updatedReceivables = [...(deal.receivables || [])];
                                 updatedReceivables[idx] = { ...receivable, invoiceStatus: newStatus };
-                                const allPaid = updatedReceivables.every((r) => r.invoiceStatus === "Paid");
-                                const updatedDealStatus = allPaid && deal.status === "Pending Receivables" ? "Pending Payment" : deal.status;
+                                const allPaid = updatedReceivables.every((r) => r.invoiceStatus === "paid");
+                                const updatedDealStatus = allPaid && deal.status === "pending-receivables" ? "pending-payment" : deal.status;
                                 onDealUpdate({ ...deal, receivables: updatedReceivables, invoiceStatus: newStatus, status: updatedDealStatus });
                               }
                             }}
                             className={cn(
                               "px-2 py-1 rounded-full text-[11px] font-medium border-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring appearance-none pr-5 bg-no-repeat text-center",
-                              invoiceStatusColor(deal.status === "Pending Payment" ? "Paid" : (receivable.invoiceStatus || "Created"))
+                              invoiceStatusColor(deal.status === "pending-payment" ? "paid" : (receivable.invoiceStatus || "created"))
                             )}
                             style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundPosition: "right 6px center", backgroundSize: "10px" }}
                           >
-                            {(["Created", "Sent", "Overdue", "Paid", "Paid Partial", "Cancelled"] as InvoiceStatus[]).map((s) => (
+                            {(["created", "sent", "overdue", "paid", "paid-partial", "cancelled"] as InvoiceStatus[]).map((s) => (
                               <option key={s} value={s}>{s}</option>
                             ))}
                           </select>
@@ -1461,17 +1461,17 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                       <td className="px-4 py-3 text-muted-foreground capitalize border-r border-r-border/40">{getEntityCategory(payable.entityType)}</td>
                       
                       <td className="px-4 py-3 border-r border-r-border/40">
-                        {payable.soaReference && (payable.soaStatus === "Generated" || payable.soaStatus === "Approved" || payable.soaStatus === "Disputed") ? (
+                        {payable.soaReference && (payable.soaStatus === "generated" || payable.soaStatus === "approved" || payable.soaStatus === "disputed") ? (
                           <button onClick={() => setViewingSOA({ payable, deal })} className="text-primary hover:underline font-medium text-[13px] flex items-center gap-1">
                             <FileText className="h-3.5 w-3.5" /> {payable.soaReference}
                           </button>
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="px-4 py-3 border-r border-r-border/40">
-                        <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium", soaStatusColor(payable.soaStatus))}>{payable.soaStatus || "Pending"}</span>
+                        <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium", soaStatusColor(payable.soaStatus))}>{payable.soaStatus || "pending"}</span>
                       </td>
                       <td className="px-4 py-3 border-r border-r-border/40">
-                        {(!payable.soaStatus || payable.soaStatus === "Pending" || payable.soaStatus === "Generated" || payable.soaStatus === "Disputed") ? (
+                        {(!payable.soaStatus || payable.soaStatus === "pending" || payable.soaStatus === "generated" || payable.soaStatus === "disputed") ? (
                           <span className="text-muted-foreground">—</span>
                         ) : payable.entityUploadedInvoice ? (
                           <button onClick={() => setViewingInvoice({ payable, deal })} className="inline-flex items-center justify-center gap-1 whitespace-nowrap px-2.5 py-1 text-[11px] font-medium rounded-md border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer">
@@ -1480,7 +1480,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="px-4 py-3 border-r border-r-border/40 whitespace-nowrap">
-                        {(!payable.soaStatus || payable.soaStatus === "Pending" || payable.soaStatus === "Generated" || payable.soaStatus === "Disputed") ? (
+                        {(!payable.soaStatus || payable.soaStatus === "pending" || payable.soaStatus === "generated" || payable.soaStatus === "disputed") ? (
                           <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted text-muted-foreground")}>No Invoice</span>
                         ) : (
                           <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium", payableStatusColor(payable.status))}>{payableStatusDisplayLabel(payable.status)}</span>
@@ -1502,7 +1502,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                         )}
                       </td>
                       <td className="px-4 py-3 text-foreground">
-                        {payable.status === "Paid" && payable.refNumber ? payable.refNumber : <span className="text-muted-foreground">—</span>}
+                        {payable.status === "paid" && payable.refNumber ? payable.refNumber : <span className="text-muted-foreground">—</span>}
                       </td>
                     </tr>
                   );
@@ -1532,11 +1532,11 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
           if (onDealUpdate) {
             const updatedDeal = { ...viewingSOA.deal, payables: viewingSOA.deal.payables.map(p =>
               p.entityLabel === viewingSOA.payable.entityLabel && p.entityType === viewingSOA.payable.entityType
-                ? { ...p, soaStatus: "Approved" as SOAStatus }
+                ? { ...p, soaStatus: "approved" as SOAStatus }
                 : p
             )};
             onDealUpdate(updatedDeal);
-            setViewingSOA({ ...viewingSOA, payable: { ...viewingSOA.payable, soaStatus: "Approved" as SOAStatus } });
+            setViewingSOA({ ...viewingSOA, payable: { ...viewingSOA.payable, soaStatus: "approved" as SOAStatus } });
           }
         }} onSave={(credits, debits) => {
           // Mock save — in a real app this would persist to backend
@@ -1548,11 +1548,11 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
       {viewingInvoice && (
         <EntityInvoiceModal payable={viewingInvoice.payable} deal={viewingInvoice.deal} currency={currency} onClose={() => setViewingInvoice(null)} onApprove={() => {
           const updatedPayables = viewingInvoice.deal.payables.map(p =>
-            p.entityLabel === viewingInvoice.payable.entityLabel ? { ...p, status: "Approved" as PayableStatus } : p
+            p.entityLabel === viewingInvoice.payable.entityLabel ? { ...p, status: "approved" as PayableStatus } : p
           );
           const updatedDeal = { ...viewingInvoice.deal, payables: updatedPayables };
           onDealUpdate(updatedDeal);
-          setViewingInvoice({ ...viewingInvoice, deal: updatedDeal, payable: { ...viewingInvoice.payable, status: "Approved" as PayableStatus } });
+          setViewingInvoice({ ...viewingInvoice, deal: updatedDeal, payable: { ...viewingInvoice.payable, status: "approved" as PayableStatus } });
         }} />
       )}
 

@@ -1,5 +1,27 @@
-import type { Opportunity as BaseOpportunity } from "@huspy/shared-domain";
-export type { OpportunityType, OpportunityStatus } from "@huspy/shared-domain";
+import type {
+  Opportunity as BaseOpportunity,
+  Deal as BaseDeal,
+  DealStatus,
+  InvoiceStatus,
+  PayableStatus,
+  BusinessUnit,
+  Country,
+  Market,
+} from "@huspy/shared-domain";
+
+// Re-export canonical enums under their original karvel-import paths.
+export type {
+  OpportunityType,
+  OpportunityStatus,
+  DealType,
+  DealStatus,
+  InvoiceStatus,
+  PayableStatus,
+  BusinessUnit,
+  Country,
+  Currency,
+  Market,
+} from "@huspy/shared-domain";
 
 export interface Opportunity extends BaseOpportunity {
   // Karvel-required (canonical leaves optional)
@@ -12,11 +34,13 @@ export interface Opportunity extends BaseOpportunity {
   lastActivity: string;
 }
 
-export type DealType = "Buy" | "Sell" | "Rent" | "Lease" | "Buy+Sell" | "Mortgage" | "Rent+Lease";
-export type DealMarket = "Primary" | "Secondary" | "Leasing";
-export type DealStatus = "Reported" | "Pending Details" | "Under Review" | "Ready For Invoicing" | "Pending Receivables" | "Pending Payment" | "Paid";
-export type InvoiceStatus = "Created" | "Sent" | "Overdue" | "Paid" | "Paid Partial" | "Cancelled";
+// Backward-compat alias — internal karvel code historically called this DealMarket
+export type DealMarket = Market;
+
+// Karvel-local enums (not in canonical) — also lowercased for consistency
 export type ReceivableEntityType = "developer" | "buyer" | "seller" | "tenant" | "bank" | "landlord";
+export type PaymentMode = "cash" | "mortgage";
+export type SOAStatus = "pending" | "generated" | "approved" | "disputed";
 
 /** Per-entity receivable entry (mirrors payables structure) */
 export interface ReceivableEntry {
@@ -29,13 +53,6 @@ export interface ReceivableEntry {
   paymentReceivedDate?: string;
   paymentReceivedAmount?: number;
 }
-export type PayableStatus = "Pending" | "Approved" | "Paid" | "Rejected" | "Overdue";
-export type BusinessUnit = "REBU" | "Mortgage";
-export type Country = "UAE" | "Spain" | "KSA";
-export type PaymentMode = "Cash" | "Mortgage";
-
-/** Per-COGS-entity payable entry */
-export type SOAStatus = "Pending" | "Generated" | "Approved" | "Disputed";
 
 /** Per-COGS-entity payable entry */
 export interface PayableEntry {
@@ -91,19 +108,19 @@ export interface ExternalPartnerEntry {
   partnerBankAccount?: string;
 }
 
-export interface Deal {
-  id: string;
-  type: DealType;
-  status: DealStatus;
-  market: DealMarket;
+// Karvel.Deal extends the canonical BaseDeal contract.
+// Inherits id, type, status, dealAmount, reportDate (required) plus
+// opportunityId?/clientId?/agentId?/market?/businessUnit?/country?/currency?/
+// createdAt?/updatedAt? (optional). Karvel narrows market/businessUnit/country
+// to required and adds its full operational schema.
+export interface Deal extends BaseDeal {
+  market: Market;
   businessUnit: BusinessUnit;
   country: Country;
   channel?: string;
   clientName: string;
   agentName: string;          // primary agent display name (derived from agents[0])
   opportunityName: string;
-  amount: number;
-  reportDate: string;
 
   // Deal Information
   ofCaseNumber?: string;

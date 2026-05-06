@@ -53,7 +53,7 @@ export function PendingDetailsSection({ deal, onSave, variant = "panel" }: Pendi
     const allDetailsDone = missing.details.every((_, i) => newSubmittedDetails.has(`detail-${i}`));
     const allDocsDone = missing.documents.every((_, i) => newSubmittedDocs.has(i));
     if (allDetailsDone && allDocsDone) {
-      const updated: Deal = { ...deal, status: "Under Review" as DealStatus };
+      const updated: Deal = { ...deal, status: "under-review" as DealStatus };
       onSave?.(updated);
       toast.success("All information provided — deal moved to Under Review");
     }
