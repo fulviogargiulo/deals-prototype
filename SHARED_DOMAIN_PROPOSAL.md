@@ -52,7 +52,23 @@ export interface Deal extends BaseDeal {
 
 The app keeps its full type. The base type becomes the contract that's enforceable across the workspace.
 
-## What I haven't done
+## Migration progress
 
-- **Not added `@huspy/shared-domain` as a dep in either app yet.** That's the next step once you approve these decisions. I want you to push back on any picks above before I propagate.
-- **Not modified any existing types in either app.** Both apps still build and run exactly as before. Zero risk of breakage from this change.
+| Entity | Karvel | Agent-app | Notes |
+|---|---|---|---|
+| `Client` | ✅ Done (commit `7c6108f`) | ✅ Done (commit `7c6108f`) | Karvel renamed `name` → `fullName`; both extend `BaseClient` |
+| `Opportunity` | ✅ Done (commit `f7e9830`) | ✅ Done (commit `f7e9830`) | Karvel mocks rewritten with lowercase enums + `neighborhoods`; new `apps/karvel/src/lib/labels.ts` for display strings |
+| `Deal` | ⏳ **Deferred** — see below | ✅ Done | Agent-app extends `BaseDeal`; mock currency `€` → `EUR`; `finalised` → `ready-for-invoicing` |
+
+### Karvel Deal — why deferred
+
+Karvel uses Title-Case multi-word enum values (`"Reported"`, `"Pending Details"`, `"Ready For Invoicing"`, `"Buy+Sell"`, `"REBU"`, `"UAE"`) across:
+- 29 mock records in [apps/karvel/src/data/mockDeals.ts](apps/karvel/src/data/mockDeals.ts)
+- ~17 component files (filters, tables, dialogs, badges)
+- Field name divergence: karvel uses `amount`, canonical uses `dealAmount`
+
+The risk: enum values overlap across `DealStatus` / `InvoiceStatus` / `PayableStatus` (e.g. `"Paid"` exists in all three) — a global find-and-replace would corrupt records. Each file needs context-aware editing.
+
+**Estimated effort:** ~30 minutes of focused editing + iterative build fixing. Worth doing as a dedicated task, not bundled into a multi-step session.
+
+**Karvel's `Deal` is unchanged** until that migration runs. The shared contract is structurally agreed on (`BaseDeal` exists in `packages/shared-domain/`), karvel just doesn't extend it yet.

@@ -61,19 +61,23 @@ export interface Opportunity {
 // ---------- Deal ----------
 // Canonical core. Karvel adds COGS, payables, receivables, multi-agent splits.
 // Agent-app adds invoice + payment fields visible to the agent.
+//
+// Most fields are optional in canonical so that apps with partial data can
+// extend BaseDeal without forcing wide mock-data rewrites. Apps narrow the
+// fields they require in their own extending interface.
 export interface Deal {
   id: string;
-  opportunityId: string;
-  clientId: string;
-  agentId: string;
+  opportunityId?: string;
+  clientId?: string;
+  agentId?: string;
   type: DealType;
   status: DealStatus;
-  market: Market;
-  businessUnit: BusinessUnit;
-  country: Country;
-  currency: Currency;
+  market?: Market;
+  businessUnit?: BusinessUnit;
+  country?: Country;
+  currency?: Currency;
   dealAmount: number;
   reportDate: string; // ISO date
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

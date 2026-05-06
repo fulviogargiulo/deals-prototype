@@ -1,4 +1,5 @@
-import type { Client as BaseClient, Opportunity as BaseOpportunity } from "@huspy/shared-domain";
+import type { Client as BaseClient, Opportunity as BaseOpportunity, Deal as BaseDeal } from "@huspy/shared-domain";
+export type { DealStatus } from "@huspy/shared-domain";
 
 export type VerificationStatus = 'incoming' | 'pending' | 'verified';
 
@@ -88,28 +89,24 @@ export type ScheduleActivityStatus = 'scheduled' | 'completed' | 'overdue' | 'no
 export type VisitOutcome = 'completed' | 'no-show' | 'cancelled' | 'rescheduled';
 export type ClientInterestLevel = 'high' | 'medium' | 'low' | 'none';
 
-// Deal types
-export type DealStatus = 'reported' | 'pending-details' | 'under-review' | 'finalised' | 'pending-payment' | 'pending-receivables' | 'paid' | 'canceled';
+// Deal types — DealStatus re-exported from @huspy/shared-domain at top of file
 export type DisputeStatus = 'open' | 'resolved';
 export type DisputeField = 'deal-amount' | 'commission-percentage' | 'report-date' | 'other';
 export type LineItemCategory = 'deal-commission' | 'referral-commission' | 'support-fee' | 'clawback' | 'other';
 export type LineItemIssue = 'amount' | 'description' | 'category' | 'other';
 
-export interface Deal {
-  id: string;
-  opportunityId: string;
-  opportunityName: string;
-  clientId: string;
-  clientName: string;
+// Agent-app uses OpportunityType (5 values) for Deal, not the broader canonical
+// DealType (which includes "buy-sell" and "rent-lease" combinations from karvel).
+// Agent-app uses `marketType` field name; canonical uses `market` — Omit'd.
+export interface Deal extends Omit<BaseDeal, "type" | "market"> {
   type: OpportunityType;
   marketType: 'primary' | 'secondary' | 'leasing';
+  // Agent-app-specific fields (display caches + agent-facing data)
+  opportunityName: string;
+  clientName: string;
   title: string;
-  dealAmount: number;
   commissionPercentage: number;
   commissionAmount: number;
-  reportDate: string;
-  status: DealStatus;
-  currency: string;
   dispute?: DealDispute;
   invoiceNumber?: string;
   invoiceDueDate?: string;
