@@ -1,0 +1,106 @@
+import { Bed, Bath } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Inline SVG component for size icon to match lucide icon styling
+function SizeIcon({ className }: { className?: string }) {
+  return (
+    <svg 
+      width="16" 
+      height="16" 
+      viewBox="0 0 16 16" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <g clipPath="url(#clip0_603_1457)">
+        <path 
+          fillRule="evenodd" 
+          clipRule="evenodd" 
+          d="M3.33335 1.33334C3.70154 1.33334 4.00002 1.63182 4.00002 2.00001V12H14C14.3682 12 14.6667 12.2985 14.6667 12.6667C14.6667 13.0349 14.3682 13.3333 14 13.3333H3.33335C2.96516 13.3333 2.66669 13.0349 2.66669 12.6667V2.00001C2.66669 1.63182 2.96516 1.33334 3.33335 1.33334Z" 
+          fill="currentColor"
+        />
+        <path 
+          fillRule="evenodd" 
+          clipRule="evenodd" 
+          d="M2.86195 1.52861C3.1223 1.26826 3.54441 1.26826 3.80476 1.52861L5.80476 3.52861C6.06511 3.78896 6.06511 4.21107 5.80476 4.47141C5.54441 4.73176 5.1223 4.73176 4.86195 4.47141L3.33335 2.94282L1.80476 4.47141C1.54441 4.73176 1.1223 4.73176 0.861949 4.47141C0.6016 4.21107 0.6016 3.78896 0.861949 3.52861L2.86195 1.52861Z" 
+          fill="currentColor"
+        />
+        <path 
+          fillRule="evenodd" 
+          clipRule="evenodd" 
+          d="M11.5286 10.1953C11.789 9.93492 12.2111 9.93492 12.4714 10.1953L14.4714 12.1953C14.7318 12.4556 14.7318 12.8777 14.4714 13.1381L12.4714 15.1381C12.2111 15.3984 11.789 15.3984 11.5286 15.1381C11.2683 14.8777 11.2683 14.4556 11.5286 14.1953L13.0572 12.6667L11.5286 11.1381C11.2683 10.8777 11.2683 10.4556 11.5286 10.1953Z" 
+          fill="currentColor"
+        />
+      </g>
+      <defs>
+        <clipPath id="clip0_603_1457">
+          <rect width="16" height="16" fill="white"/>
+        </clipPath>
+      </defs>
+    </svg>
+  );
+}
+
+interface SpecPillsProps {
+  bedrooms?: number;
+  bathrooms?: number;
+  size?: number | string;
+  sizeUnit?: string;
+  className?: string;
+  variant?: "default" | "compact";
+}
+
+export function SpecPills({ 
+  bedrooms, 
+  bathrooms, 
+  size, 
+  sizeUnit = "m²",
+  className,
+  variant = "default"
+}: SpecPillsProps) {
+  const pillClass = cn(
+    "flex items-center gap-1.5 rounded-full",
+    variant === "default" ? "px-3 py-1.5" : "px-2 py-1"
+  );
+  
+  const pillStyle = { backgroundColor: '#F2F2F2' };
+  
+  const iconClass = cn(
+    "text-foreground",
+    variant === "default" ? "w-4 h-4" : "w-3.5 h-3.5"
+  );
+  
+  const textClass = cn(
+    "font-medium text-foreground",
+    variant === "default" ? "text-sm" : "text-xs"
+  );
+
+  const formatSize = () => {
+    if (!size) return null;
+    if (typeof size === "string") return size;
+    return `${size} ${sizeUnit}`;
+  };
+
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      {bedrooms !== undefined && (
+        <div className={pillClass} style={pillStyle}>
+          <Bed className={iconClass} />
+          <span className={textClass}>{bedrooms}</span>
+        </div>
+      )}
+      {bathrooms !== undefined && (
+        <div className={pillClass} style={pillStyle}>
+          <Bath className={iconClass} />
+          <span className={textClass}>{bathrooms}</span>
+        </div>
+      )}
+      {formatSize() && (
+        <div className={pillClass} style={pillStyle}>
+          <SizeIcon className={iconClass} />
+          <span className={textClass}>{formatSize()}</span>
+        </div>
+      )}
+    </div>
+  );
+}

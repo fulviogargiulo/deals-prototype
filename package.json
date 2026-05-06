@@ -1,0 +1,14 @@
+{
+  "name": "huspy-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev:karvel": "pnpm --filter @huspy/karvel dev",
+    "dev:agent": "pnpm --filter @huspy/agent-app dev",
+    "build:karvel": "pnpm --filter @huspy/karvel build",
+    "build:agent": "pnpm --filter @huspy/agent-app build",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  }
+}

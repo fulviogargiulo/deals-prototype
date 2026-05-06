@@ -1,0 +1,231 @@
+import { useState } from "react";
+import { Settings, Upload, Plus, UserRound, DollarSign, List, Landmark } from "lucide-react";
+import { getDeals, setDeals as setStoreDeals, addDeals as addStoreDeals } from "@/data/dealStore";
+import { DealPnLView } from "@/components/DealPnLView";
+import { DealListingView } from "@/components/DealListingView";
+import { DealFinanceView } from "@/components/DealFinanceView";
+import { DealPnLDetailPanel } from "@/components/DealPnLDetailPanel";
+import { DealListingDetailPanel } from "@/components/DealListingDetailPanel";
+import { Deal, DealMarket, DealStatus, BusinessUnit, Country } from "@/data/types";
+import { MultiSelectFilter } from "@/components/MultiSelectFilter";
+import { DateRangePicker, DateRange, TimePeriod, getPresetRange } from "@/components/DateRangePicker";
+import { BulkUploadDialog } from "@/components/BulkUploadDialog";
+import { AddDealDialog } from "@/components/AddDealDialog";
+
+const COUNTRIES: Country[] = ["UAE", "Spain", "KSA"];
+const BUSINESS_UNITS: BusinessUnit[] = ["REBU", "Mortgage"];
+const MARKET_TYPES: DealMarket[] = ["Primary", "Secondary", "Leasing"];
+const CHANNELS = ["MA/Broker", "BBG/Commercial", "B2C/Digital", "REA", "REA Purchase", "BYOB", "Direct Sales"];
+const DEAL_STATUSES: DealStatus[] = ["Reported", "Pending Details", "Under Review", "Ready For Invoicing", "Pending Receivables", "Pending Payment", "Paid"];
+
+export const countryCurrencyMap: Record<Country, string> = {
+  UAE: "AED",
+  Spain: "EUR",
+  KSA: "SAR",
+};
+
+type ViewMode = "listing" | "pnl" | "finance";
+
+const Deals = () => {
+  const [viewMode, setViewMode] = useState<ViewMode>("listing");
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([...COUNTRIES]);
+  const [selectedBUs, setSelectedBUs] = useState<string[]>([...BUSINESS_UNITS]);
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([...MARKET_TYPES]);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([...CHANNELS]);
+  
+  const [allDeals, setAllDealsState] = useState<Deal[]>(getDeals());
+  const setAllDeals = (updater: Deal[] | ((prev: Deal[]) => Deal[])) => {
+    setAllDealsState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      setStoreDeals(next);
+      return next;
+    });
+  };
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [addDealOpen, setAddDealOpen] = useState(false);
+
+  // Shared date range state
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("MTD");
+  const [dateRange, setDateRange] = useState<DateRange>(getPresetRange("MTD"));
+
+  const handleDealUpdate = (updated: Deal) => {
+    setAllDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+    if (selectedDeal?.id === updated.id) setSelectedDeal(updated);
+  };
+
+  const handleBulkDealsUpdate = (updatedDeals: Deal[]) => {
+    setAllDeals(updatedDeals);
+    setSelectedDeal(null);
+  };
+
+  const currency = selectedCountries.length > 0
+    ? countryCurrencyMap[selectedCountries[0] as Country]
+    : "EUR";
+
+  const showChannel = selectedBUs.includes("Mortgage") && selectedCountries.includes("UAE");
+
+  const filtered = allDeals.filter((deal) => {
+    if (selectedCountries.length > 0 && selectedCountries.length < COUNTRIES.length) {
+      if (!selectedCountries.includes(deal.country)) return false;
+    }
+    if (selectedBUs.length > 0 && selectedBUs.length < BUSINESS_UNITS.length) {
+      if (!selectedBUs.includes(deal.businessUnit)) return false;
+    }
+    if (selectedMarkets.length > 0 && selectedMarkets.length < MARKET_TYPES.length) {
+      if (!selectedMarkets.includes(deal.market)) return false;
+    }
+    if (showChannel && selectedChannels.length > 0 && selectedChannels.length < CHANNELS.length) {
+      if (deal.channel && !selectedChannels.includes(deal.channel)) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="flex-1 min-w-0 flex flex-col min-h-screen bg-background overflow-x-hidden">
+      <header className="flex items-center justify-between px-5 h-12 bg-card">
+        <div className="flex items-center gap-2.5">
+          <DollarSign className="h-[16px] w-[16px] text-muted-foreground" />
+          <span className="font-semibold text-[14px] text-foreground">Deals</span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <button className="p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground">
+            <Settings className="h-[18px] w-[18px]" />
+          </button>
+          <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center">
+            <UserRound className="h-4 w-4 text-primary-foreground" />
+          </div>
+        </div>
+      </header>
+
+      {/* Content + Panel */}
+      <div className="flex-1 relative overflow-hidden flex">
+        <div className="flex-1 min-w-0 px-6 py-6 bg-background overflow-y-auto overflow-x-hidden">
+          {/* Title row */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <h1 className="text-[22px] font-semibold text-foreground">Deal Management</h1>
+              <div className="flex rounded-lg overflow-hidden bg-accent p-1 gap-1">
+                <button
+                  onClick={() => { setViewMode("listing"); setSelectedDeal(null); }}
+                  className={`p-2 rounded-md transition-colors ${viewMode === "listing" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  title="Deal Listing"
+                >
+                  <List className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => { setViewMode("pnl"); setSelectedDeal(null); }}
+                  className={`p-2 rounded-md transition-colors ${viewMode === "pnl" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  title="P&L View"
+                >
+                  <DollarSign className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => { setViewMode("finance"); setSelectedDeal(null); }}
+                  className={`p-2 rounded-md transition-colors ${viewMode === "finance" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  title="Finance View"
+                >
+                  <Landmark className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {viewMode !== "finance" && (
+              <div className="flex items-center gap-3">
+                <button onClick={() => setBulkUploadOpen(true)} className="flex items-center gap-2 px-4 py-2 border border-border rounded-md text-[13px] font-medium text-foreground bg-card hover:bg-muted transition-colors">
+                  <Upload className="h-4 w-4" />
+                  Bulk Upload
+                </button>
+                <button onClick={() => setAddDealOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-[13px] font-medium hover:opacity-90 transition-opacity">
+                  <Plus className="h-4 w-4" />
+                  Add Deal
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Filter selectors + Date picker */}
+          <div className="flex items-center gap-3 mb-6 flex-wrap">
+            <MultiSelectFilter
+              label="Country"
+              options={COUNTRIES}
+              selected={selectedCountries}
+              onChange={setSelectedCountries}
+            />
+            <MultiSelectFilter
+              label="Business Unit"
+              options={BUSINESS_UNITS}
+              selected={selectedBUs}
+              onChange={setSelectedBUs}
+            />
+            <MultiSelectFilter
+              label="Market Type"
+              options={MARKET_TYPES}
+              selected={selectedMarkets}
+              onChange={setSelectedMarkets}
+            />
+            {showChannel && (
+              <MultiSelectFilter
+                label="Channel"
+                options={CHANNELS}
+                selected={selectedChannels}
+                onChange={setSelectedChannels}
+              />
+            )}
+            <DateRangePicker
+              dateRange={dateRange}
+              timePeriod={timePeriod}
+              onDateRangeChange={setDateRange}
+              onTimePeriodChange={setTimePeriod}
+            />
+          </div>
+
+          {/* View */}
+          {viewMode === "listing" ? (
+            <DealListingView deals={filtered} currency={currency} dateRange={dateRange} onDealClick={setSelectedDeal} />
+          ) : viewMode === "pnl" ? (
+            <DealPnLView deals={filtered} currency={currency} dateRange={dateRange} onDealsUpdate={handleBulkDealsUpdate} />
+          ) : (
+            <DealFinanceView deals={filtered} currency={currency} dateRange={dateRange} onDealUpdate={handleDealUpdate} />
+          )}
+        </div>
+
+        {/* Detail Panel */}
+        {selectedDeal && (
+          <div className="absolute top-0 right-0 h-full z-10 shadow-xl animate-slide-in-right">
+            {viewMode === "listing" ? (
+              <DealListingDetailPanel
+                deal={selectedDeal}
+                currency={currency}
+                onClose={() => setSelectedDeal(null)}
+                onSave={handleDealUpdate}
+                onSwitchToPnL={(d) => { setViewMode("pnl"); setSelectedDeal(d); }}
+              />
+            ) : (
+              <DealPnLDetailPanel
+                deal={selectedDeal}
+                currency={currency}
+                onClose={() => setSelectedDeal(null)}
+                onSave={handleDealUpdate}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Dialogs */}
+      <BulkUploadDialog
+        open={bulkUploadOpen}
+        onClose={() => setBulkUploadOpen(false)}
+        onDealsCreated={(deals) => { setAllDeals(prev => [...deals, ...prev]); setBulkUploadOpen(false); }}
+      />
+      <AddDealDialog
+        open={addDealOpen}
+        onClose={() => setAddDealOpen(false)}
+        onDealCreated={(deal) => { setAllDeals(prev => [deal, ...prev]); }}
+      />
+    </div>
+  );
+};
+
+export default Deals;
