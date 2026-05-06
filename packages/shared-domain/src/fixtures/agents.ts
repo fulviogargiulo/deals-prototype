@@ -1,0 +1,48 @@
+import type { Agent } from "../entities";
+
+export const sharedAgents: Agent[] = [
+  {
+    id: "agent-felicia",
+    name: "Felicia Canovas",
+    email: "felicia@huspy.io",
+    phone: "+34 612 345 678",
+    photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face",
+    specialties: ["Residential Sales", "Investment Properties"],
+    experience: 8,
+    rating: 4.9,
+    totalSales: 156,
+  },
+  {
+    id: "agent-guilherme",
+    name: "Guilherme Castro",
+    email: "guilherme@huspy.io",
+    phone: "+34 623 456 789",
+    photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face",
+    specialties: ["Luxury Properties", "Commercial Real Estate"],
+    experience: 12,
+    rating: 4.8,
+    totalSales: 203,
+  },
+  {
+    id: "agent-omar",
+    name: "Omar Al Saleem",
+    email: "omar@huspy.io",
+    phone: "+966 55 123 4567",
+    photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face",
+    specialties: ["KSA Market", "Off-plan"],
+    experience: 6,
+    rating: 4.7,
+    totalSales: 89,
+  },
+  {
+    id: "agent-gelo",
+    name: "Gelo Huspy",
+    email: "gelo@huspy.io",
+    phone: "+34 645 678 901",
+    photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face",
+    specialties: ["Madrid Sales", "First-time Buyers"],
+    experience: 10,
+    rating: 4.9,
+    totalSales: 178,
+  },
+];

@@ -189,6 +189,124 @@ export interface DealDispute {
   createdAt: string;
 }
 
+// ============================================================
+// Task / Document / Agent / ScheduleActivity
+// ============================================================
+// Currently used by agent-app only. Karvel may consume them later
+// (operations team needs a task list too). Co-located in shared-domain
+// so all canonical data lives in one place.
+// ============================================================
+
+export type TaskStatus = "todo" | "in-progress" | "completed" | "overdue";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assigneeId?: string;
+  clientId?: string;
+  opportunityId?: string;
+  dueDate?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DocumentType = "contract" | "id" | "financial" | "property" | "legal" | "other";
+
+export interface Document {
+  id: string;
+  name: string;
+  type: DocumentType;
+  size: number;
+  mimeType: string;
+  clientId?: string;
+  opportunityId?: string;
+  uploadedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  photo?: string;
+  specialties?: string[];
+  experience?: number;
+  rating?: number;
+  totalSales?: number;
+}
+
+export type ScheduleActivityType = "viewing" | "task";
+export type ScheduleActivityStatus = "scheduled" | "completed" | "overdue" | "no-show" | "cancelled";
+export type VisitOutcome = "completed" | "no-show" | "cancelled" | "rescheduled";
+export type ClientInterestLevel = "high" | "medium" | "low" | "none";
+
+export interface PropertyAddress {
+  street: string;
+  city: string;
+  postalCode: string;
+  lat: number;
+  lng: number;
+}
+
+export interface MeetingPoint {
+  message: string;
+  sentVia: "whatsapp" | "sms" | "email";
+  sentTo: string;
+}
+
+export interface VisitDocument {
+  id: string;
+  name: string;
+  type: string;
+}
+
+export interface VisitFeedback {
+  outcome: VisitOutcome;
+  notes?: string;
+  clientInterest?: ClientInterestLevel;
+  clientLiked?: boolean;
+  reason?: string;
+}
+
+export interface ScheduleActivity {
+  id: string;
+  type: ScheduleActivityType;
+  title: string;
+  description?: string;
+  date: string;
+  time: string;
+  duration?: string;
+  status: ScheduleActivityStatus;
+  clientId?: string;
+  clientName?: string;
+  opportunityId?: string;
+  opportunityName?: string;
+  propertyId?: string;
+  propertyName?: string;
+  propertyImage?: string;
+  propertyLocation?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientAvatar?: string;
+  propertyAddress?: PropertyAddress;
+  meetingPoint?: MeetingPoint;
+  meetingPointLabel?: string;
+  documents?: VisitDocument[];
+  feedback?: VisitFeedback;
+}
+
+// Convenience aggregate: a client with their full opportunity list joined.
+export interface ClientWithOpportunities extends Client {
+  opportunities: Opportunity[];
+}
+
 export interface Deal {
   // Required core
   id: string;

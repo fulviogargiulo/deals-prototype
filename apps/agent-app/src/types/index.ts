@@ -1,132 +1,112 @@
-import type { Client as BaseClient, Opportunity as BaseOpportunity, Deal as BaseDeal } from "@huspy/shared-domain";
-export type { DealStatus } from "@huspy/shared-domain";
+// Agent-app types. Canonical entity types and enums are re-exported from
+// @huspy/shared-domain — single source of truth across the monorepo.
+// Only agent-app-specific extensions and UI-only types are defined locally.
 
-export type VerificationStatus = 'incoming' | 'pending' | 'verified';
+import type {
+  Client as BaseClient,
+  Opportunity as BaseOpportunity,
+  Deal as BaseDeal,
+} from "@huspy/shared-domain";
 
-export type OpportunityType = 'buy' | 'rent' | 'sell' | 'lease' | 'mortgage';
+// Re-export canonical types
+export type {
+  // Enums
+  DealStatus,
+  DealType,
+  OpportunityType,
+  OpportunityStatus,
+  TaskStatus,
+  TaskPriority,
+  DocumentType,
+  ScheduleActivityType,
+  ScheduleActivityStatus,
+  VisitOutcome,
+  ClientInterestLevel,
+  DisputeStatus,
+  DisputeField,
+  // Entities
+  Task,
+  Document,
+  Agent,
+  ScheduleActivity,
+  // Schedule support types
+  PropertyAddress,
+  MeetingPoint,
+  VisitDocument,
+  VisitFeedback,
+  // Deal dispute
+  DealDispute,
+} from "@huspy/shared-domain";
 
-export type OpportunityStatus = 'new' | 'to-review' | 'qualified' | 'active' | 'under-offer' | 'closed';
+// ----------------------------------------------------------------
+// Agent-app-only enums and UI types
+// ----------------------------------------------------------------
+export type VerificationStatus = "incoming" | "pending" | "verified";
+export type PropertyStatus = "published" | "in-review" | "draft" | "rejected" | "delisted";
+export type DelistReason = "sold" | "lost";
+export type LineItemCategory = "deal-commission" | "referral-commission" | "support-fee" | "clawback" | "other";
+export type LineItemIssue = "amount" | "description" | "category" | "other";
 
-export type TaskStatus = 'todo' | 'in-progress' | 'completed' | 'overdue';
-
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
-
-export type DocumentType = 'contract' | 'id' | 'financial' | 'property' | 'legal' | 'other';
-
-export type PropertyStatus = 'published' | 'in-review' | 'draft' | 'rejected' | 'delisted';
-
-export type DelistReason = 'sold' | 'lost';
-
+// ----------------------------------------------------------------
+// Narrower agent-app entity extensions — required-field invariants
+// the agent-app UI depends on. Same records as shared; just stricter typing.
+// ----------------------------------------------------------------
 export interface Client extends BaseClient {
   description?: string;
   location?: string;
   preferredLanguage?: string;
   verificationStatus: VerificationStatus;
-  source?: 'self-created' | 'idealista' | 'fotocasa'; // Source of client
-  expiresAt?: string; // For incoming clients - time limit to accept
-  lastActivity: string; // Description of the last activity
+  source?: "self-created" | "idealista" | "fotocasa";
+  expiresAt?: string;
+  lastActivity: string;
 }
 
-// Inherits id, clientId, agentId?, type, status, title, country?, neighborhoods,
-// source?, bedrooms?, bathrooms?, sizeRange?, propertyTypes?, description?,
-// images?, createdAt, updatedAt from canonical.
-// Overrides priceRange shapes to keep loose `currency: string` for existing mock data.
-export interface Opportunity extends Omit<BaseOpportunity, "priceRange" | "originalPriceRange" | "type" | "status"> {
-  type: OpportunityType;
-  status: OpportunityStatus;
+export interface Opportunity
+  extends Omit<BaseOpportunity, "priceRange" | "originalPriceRange" | "type" | "status"> {
+  type: import("@huspy/shared-domain").OpportunityType;
+  status: import("@huspy/shared-domain").OpportunityStatus;
   priceRange?: { min: number; max: number; currency: string };
   originalPriceRange?: { min: number; max: number; currency: string };
-  // Agent-app-only
   tags: string[];
   portalBadges: string[];
   updatesCount: number;
   pendingActions: string[];
 }
 
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  assigneeId?: string;
-  clientId?: string;
-  opportunityId?: string;
-  dueDate?: string;
-  completedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Document {
-  id: string;
-  name: string;
-  type: DocumentType;
-  size: number;
-  mimeType: string;
-  clientId?: string;
-  opportunityId?: string;
-  uploadedBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
+// Local — uses agent-app.Opportunity (narrower) instead of shared.Opportunity
 export interface ClientWithOpportunities extends Client {
   opportunities: Opportunity[];
 }
 
-export interface GlobalSearchResult {
-  id: string;
-  type: 'client' | 'opportunity' | 'property' | 'task' | 'document';
-  title: string;
-  subtitle?: string;
-  metadata?: string;
-}
-
-export type ScheduleActivityType = 'viewing' | 'task';
-export type ScheduleActivityStatus = 'scheduled' | 'completed' | 'overdue' | 'no-show' | 'cancelled';
-
-export type VisitOutcome = 'completed' | 'no-show' | 'cancelled' | 'rescheduled';
-export type ClientInterestLevel = 'high' | 'medium' | 'low' | 'none';
-
-// Deal types — DealStatus re-exported from @huspy/shared-domain at top of file
-export type DisputeStatus = 'open' | 'resolved';
-export type DisputeField = 'deal-amount' | 'commission-percentage' | 'report-date' | 'other';
-export type LineItemCategory = 'deal-commission' | 'referral-commission' | 'support-fee' | 'clawback' | 'other';
-export type LineItemIssue = 'amount' | 'description' | 'category' | 'other';
-
-// Agent-app uses OpportunityType (5 values) for Deal, not the broader canonical
-// DealType (which includes "buy-sell" and "rent-lease" combinations from karvel).
-// Agent-app uses `marketType` field name; canonical uses `market` — Omit'd.
 export interface Deal extends Omit<BaseDeal, "type" | "market"> {
-  type: OpportunityType;
-  marketType: 'primary' | 'secondary' | 'leasing';
-  // Agent-app-specific fields (display caches + agent-facing data)
+  type: import("@huspy/shared-domain").OpportunityType;
+  marketType: "primary" | "secondary" | "leasing";
   opportunityName: string;
   clientName: string;
   title: string;
   commissionPercentage: number;
   commissionAmount: number;
-  dispute?: DealDispute;
+  dispute?: import("@huspy/shared-domain").DealDispute;
   invoiceNumber?: string;
   invoiceDueDate?: string;
   paymentDate?: string;
 }
 
-export interface DealDispute {
+// ----------------------------------------------------------------
+// UI-only types (not domain entities — live here, not in shared)
+// ----------------------------------------------------------------
+export interface GlobalSearchResult {
   id: string;
-  dealId: string;
-  field: DisputeField;
-  description: string;
-  correctValue?: string;
-  status: DisputeStatus;
-  createdAt: string;
+  type: "client" | "opportunity" | "property" | "task" | "document";
+  title: string;
+  subtitle?: string;
+  metadata?: string;
 }
 
 export interface StatementLineItem {
   id: string;
   description: string;
-  type: 'credit' | 'debit';
+  type: "credit" | "debit";
   category: LineItemCategory;
   amount: number;
   dealId?: string;
@@ -139,7 +119,7 @@ export interface StatementLineItemDispute {
   issue: LineItemIssue;
   description: string;
   correctValue?: string;
-  status: DisputeStatus;
+  status: import("@huspy/shared-domain").DisputeStatus;
   createdAt: string;
 }
 
@@ -150,63 +130,7 @@ export interface StatementOfAccount {
   totalCredit: number;
   totalDebit: number;
   balance: number;
-  status: 'draft' | 'confirmed' | 'paid';
+  status: "draft" | "confirmed" | "paid";
   generatedAt: string;
   expiresAt: string;
-}
-
-export interface PropertyAddress {
-  street: string;
-  city: string;
-  postalCode: string;
-  lat: number;
-  lng: number;
-}
-
-export interface MeetingPoint {
-  message: string;
-  sentVia: 'whatsapp' | 'sms' | 'email';
-  sentTo: string;
-}
-
-export interface VisitDocument {
-  id: string;
-  name: string;
-  type: string;
-}
-
-export interface VisitFeedback {
-  outcome: VisitOutcome;
-  notes?: string;
-  clientInterest?: ClientInterestLevel;
-  clientLiked?: boolean; // Whether the client liked the property
-  reason?: string; // For no-show/cancelled
-}
-
-export interface ScheduleActivity {
-  id: string;
-  type: ScheduleActivityType;
-  title: string;
-  description?: string;
-  date: string; // ISO date string (YYYY-MM-DD)
-  time: string; // e.g., "10:00"
-  duration?: string; // e.g., "30m" or "1h 30m"
-  status: ScheduleActivityStatus;
-  clientId?: string;
-  clientName?: string;
-  opportunityId?: string;
-  opportunityName?: string;
-  propertyId?: string;
-  propertyName?: string;
-  propertyImage?: string;
-  propertyLocation?: string;
-  // Extended fields for visit details
-  clientPhone?: string;
-  clientEmail?: string;
-  clientAvatar?: string;
-  propertyAddress?: PropertyAddress;
-  meetingPoint?: MeetingPoint;
-  meetingPointLabel?: string; // Simple description of where to meet
-  documents?: VisitDocument[];
-  feedback?: VisitFeedback;
 }

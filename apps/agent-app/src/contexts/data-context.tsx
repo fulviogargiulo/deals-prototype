@@ -7,7 +7,7 @@ import {
   mockDocuments,
   mockAgents
 } from '@/data/mockData';
-import { generateManyClients } from '@/data/generateMockClients';
+import { generateManyClients } from '@huspy/shared-domain';
 
 export type DataViewMode = 'default' | 'empty' | 'few' | 'many';
 
@@ -52,8 +52,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         break;
       case 'many': {
         const manyClients = generateManyClients(150);
-        newClients = manyClients.map(({ opportunities: _, ...client }) => client);
-        newOpportunities = manyClients.flatMap(c => c.opportunities);
+        // Cast: generator returns shared types; agent-app uses narrower locals.
+        // Runtime values include the required fields (verificationStatus, tags, etc.).
+        newClients = manyClients.map(({ opportunities: _, ...client }) => client) as Client[];
+        newOpportunities = manyClients.flatMap(c => c.opportunities) as Opportunity[];
         break;
       }
       default:
