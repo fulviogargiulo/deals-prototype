@@ -7,7 +7,7 @@ import { ExpectedPayoutSection } from '@/components/deals/expected-payout-sectio
 import { PaidInvoicesModal } from '@/components/modals/paid-invoices-modal';
 import { mockDeals, mockStatement } from '@/data/mockDeals';
 
-const PIPELINE_STATUSES = ['under-review', 'finalised', 'pending-payment', 'pending-receivables'];
+const PIPELINE_STATUSES = ['under-review', 'ready-for-invoicing', 'pending-payment', 'pending-receivables'];
 const CLOSED_STATUSES = ['paid'];
 
 export function PaymentHistory() {

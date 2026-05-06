@@ -50,7 +50,7 @@ export function ClientTable({ clients, onRowClick, selectedId }: Props) {
                   <td className="px-5 py-3.5">
                     <StatusBadge status={client.status} />
                   </td>
-                  <td className={tdClass}>{client.source}</td>
+                  <td className={tdClass}>{client.source ?? "-"}</td>
                   <td className={tdClass}>{client.origin}</td>
                 </tr>
               ))}

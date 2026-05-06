@@ -20,7 +20,7 @@ export function DealsList() {
     from: startOfWeek(now, { weekStartsOn: 1 }),
     to: endOfWeek(now, { weekStartsOn: 1 }),
   });
-  const pendingConfirmation = mockDeals.filter(d => d.status === 'finalised');
+  const pendingConfirmation = mockDeals.filter(d => d.status === 'ready-for-invoicing');
   const pendingInfo = mockDeals.filter(d => d.status === 'pending-details');
 
   useEffect(() => {

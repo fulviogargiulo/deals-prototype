@@ -52,7 +52,7 @@ export function ClientDetailPanel({ client, onClose }: Props) {
           </div>
           <div className="flex items-center">
             <span className="w-[140px] text-[13px] text-muted-foreground shrink-0">Source</span>
-            <span className="text-[13px] text-foreground font-medium border border-border rounded px-2 py-0.5">{client.source}</span>
+            <span className="text-[13px] text-foreground font-medium border border-border rounded px-2 py-0.5">{client.source ?? "-"}</span>
           </div>
           <div className="flex items-center">
             <span className="w-[140px] text-[13px] text-muted-foreground shrink-0">Origin</span>

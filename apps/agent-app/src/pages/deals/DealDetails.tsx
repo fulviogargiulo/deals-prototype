@@ -19,7 +19,7 @@ const statusLabels: Record<DealStatus, string> = {
   reported: 'Reported',
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
-  finalised: 'Ready For Invoicing',
+  'ready-for-invoicing': 'Ready For Invoicing',
   'pending-payment': 'Pending Payment',
   'pending-receivables': 'Pending Receivables',
   paid: 'Paid',
@@ -30,7 +30,7 @@ const statusColors: Record<DealStatus, { color: string; bg: string }> = {
   reported: { color: 'hsl(var(--accent-indigo))', bg: 'hsl(var(--accent-indigo) / 0.1)' },
   'pending-details': { color: 'hsl(var(--ds-orange))', bg: 'hsl(var(--ds-orange) / 0.1)' },
   'under-review': { color: 'hsl(var(--accent-orchid))', bg: 'hsl(var(--accent-orchid) / 0.1)' },
-  finalised: { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
+  'ready-for-invoicing': { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
   'pending-payment': { color: 'hsl(var(--accent-teal))', bg: 'hsl(var(--accent-teal) / 0.1)' },
   'pending-receivables': { color: 'hsl(var(--accent-terracotta))', bg: 'hsl(var(--accent-terracotta) / 0.1)' },
   paid: { color: 'hsl(var(--fg-secondary))', bg: 'hsl(var(--fg-secondary) / 0.1)' },
@@ -108,7 +108,7 @@ export function DealDetails() {
   };
 
 
-  const allDocsUploaded = ['finalised', 'pending-payment', 'pending-receivables', 'paid'].includes(deal.status);
+  const allDocsUploaded = ['ready-for-invoicing', 'pending-payment', 'pending-receivables', 'paid'].includes(deal.status);
   const documents = getDocumentsForMarketType(deal.marketType).map(doc => 
     allDocsUploaded ? { ...doc, uploaded: true } : doc
   );
@@ -282,11 +282,11 @@ export function DealDetails() {
         )}
 
         {/* Commission Breakdown — for finalised, pending-receivables, pending-payment, paid */}
-        {['finalised', 'pending-receivables', 'pending-payment', 'paid'].includes(deal.status) && (() => {
+        {['ready-for-invoicing', 'pending-receivables', 'pending-payment', 'paid'].includes(deal.status) && (() => {
           const netHuspyRevenue = Math.round(deal.dealAmount * 0.15);
           const incentive = 500;
           const commissionPayout = Math.round(deal.commissionPercentage / 100 * netHuspyRevenue) - incentive;
-          const isExpandable = deal.status !== 'finalised';
+          const isExpandable = deal.status !== 'ready-for-invoicing';
 
           const content = (
             <>
@@ -319,7 +319,7 @@ export function DealDetails() {
                   <span className="text-sm font-semibold text-foreground">Commission Payout (H)</span>
                   <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">{deal.currency}{commissionPayout.toLocaleString()}</span>
                 </div>
-                {deal.status === 'finalised' && !confirmedForInvoicing && !disputeSubmitted && (
+                {deal.status === 'ready-for-invoicing' && !confirmedForInvoicing && !disputeSubmitted && (
                   <Button
                     size="sm"
                     className="h-7 rounded-full text-xs"
@@ -336,7 +336,7 @@ export function DealDetails() {
               </div>
 
               {/* Confirmed message */}
-              {deal.status === 'finalised' && confirmedForInvoicing && (
+              {deal.status === 'ready-for-invoicing' && confirmedForInvoicing && (
                 <div className="border-t border-border-ds-primary px-4 py-3 flex items-center gap-2" style={{ backgroundColor: 'hsl(var(--ds-green) / 0.06)' }}>
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--ds-green))' }} />
                   <p className="text-[12px] font-semibold leading-[140%]" style={{ color: 'hsl(var(--ds-green))' }}>
@@ -346,7 +346,7 @@ export function DealDetails() {
               )}
 
               {/* Dispute form — only for finalised */}
-              {deal.status === 'finalised' && showDisputeForm && !disputeSubmitted && (
+              {deal.status === 'ready-for-invoicing' && showDisputeForm && !disputeSubmitted && (
                 <div className="border-t border-border-ds-primary px-4 py-4 space-y-3">
                   <p className="text-[14px] font-semibold text-foreground leading-[140%]">Raise a Dispute</p>
                   <textarea
@@ -390,7 +390,7 @@ export function DealDetails() {
 
           const disputeBadges = (
             <div className="flex items-center gap-2">
-              {deal.status === 'finalised' && (
+              {deal.status === 'ready-for-invoicing' && (
                 disputeSubmitted ? (
                   <div className="flex items-center gap-1.5">
                     <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-orange) / 0.1)', color: 'hsl(var(--ds-orange))' }}>Under Review</span>

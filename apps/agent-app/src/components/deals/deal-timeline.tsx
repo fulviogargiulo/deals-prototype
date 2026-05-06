@@ -19,7 +19,7 @@ const statusSentences: Record<DealStatus, StatusSentence> = {
   'under-review': {
     text: "We\u2019re reviewing the details \u2014 once verified, we\u2019ll approve it for invoicing.",
   },
-  finalised: {
+  'ready-for-invoicing': {
     text: "We\u2019ve approved this deal \u2014 ",
     actionText: 'confirm for invoicing',
     suffix: ' to proceed.',
@@ -42,7 +42,7 @@ const timelineSteps: { status: DealStatus; label: string }[] = [
   { status: 'reported', label: 'Reported' },
   { status: 'pending-details', label: 'Pending Details' },
   { status: 'under-review', label: 'Under Review' },
-  { status: 'finalised', label: 'Invoicing' },
+  { status: 'ready-for-invoicing', label: 'Invoicing' },
   { status: 'pending-receivables', label: 'Receivables' },
   { status: 'pending-payment', label: 'Payment' },
   { status: 'paid', label: 'Paid' },

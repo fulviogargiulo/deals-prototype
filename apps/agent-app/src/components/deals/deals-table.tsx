@@ -26,7 +26,7 @@ const statusLabels: Record<DealStatus, string> = {
   reported: 'Reported',
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
-  finalised: 'Ready For Invoicing',
+  'ready-for-invoicing': 'Ready For Invoicing',
   'pending-payment': 'Pending Payment',
   'pending-receivables': 'Pending Receivables',
   paid: 'Paid',
@@ -37,7 +37,7 @@ const statusColors: Record<DealStatus, { color: string; bg: string }> = {
   reported: { color: 'hsl(var(--accent-indigo))', bg: 'hsl(var(--accent-indigo) / 0.1)' },
   'pending-details': { color: 'hsl(var(--ds-orange))', bg: 'hsl(var(--ds-orange) / 0.1)' },
   'under-review': { color: 'hsl(var(--accent-orchid))', bg: 'hsl(var(--accent-orchid) / 0.1)' },
-  finalised: { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
+  'ready-for-invoicing': { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
   'pending-payment': { color: 'hsl(var(--accent-teal))', bg: 'hsl(var(--accent-teal) / 0.1)' },
   'pending-receivables': { color: 'hsl(var(--accent-terracotta))', bg: 'hsl(var(--accent-terracotta) / 0.1)' },
   paid: { color: 'hsl(var(--fg-secondary))', bg: 'hsl(var(--fg-secondary) / 0.1)' },
@@ -54,7 +54,7 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
 type SortKey = 'title' | 'dealAmount' | 'commissionAmount' | 'reportDate';
 type SortDir = 'asc' | 'desc';
 
-const allStatuses: DealStatus[] = ['reported', 'pending-details', 'under-review', 'finalised', 'pending-payment', 'pending-receivables', 'paid', 'canceled'];
+const allStatuses: DealStatus[] = ['reported', 'pending-details', 'under-review', 'ready-for-invoicing', 'pending-payment', 'pending-receivables', 'paid', 'canceled'];
 const allTypes: OpportunityType[] = ['buy', 'sell', 'rent', 'lease', 'mortgage'];
 
 export function DealsTable({ deals, disputedDealIds = new Set() }: DealsTableProps) {
