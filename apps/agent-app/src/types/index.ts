@@ -1,3 +1,5 @@
+import type { Client as BaseClient } from "@huspy/shared-domain";
+
 export type VerificationStatus = 'incoming' | 'pending' | 'verified';
 
 export type OpportunityType = 'buy' | 'rent' | 'sell' | 'lease' | 'mortgage';
@@ -14,11 +16,7 @@ export type PropertyStatus = 'published' | 'in-review' | 'draft' | 'rejected' | 
 
 export type DelistReason = 'sold' | 'lost';
 
-export interface Client {
-  id: string;
-  fullName: string;
-  phone: string; // Required field
-  email?: string;
+export interface Client extends BaseClient {
   description?: string;
   location?: string;
   preferredLanguage?: string;
@@ -26,8 +24,6 @@ export interface Client {
   source?: 'self-created' | 'idealista' | 'fotocasa'; // Source of client
   expiresAt?: string; // For incoming clients - time limit to accept
   lastActivity: string; // Description of the last activity
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface Opportunity {

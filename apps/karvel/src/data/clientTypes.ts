@@ -1,8 +1,8 @@
-export interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
+import type { Client as BaseClient } from "@huspy/shared-domain";
+
+export interface Client extends BaseClient {
+  // Karvel-only fields
+  email: string; // required in karvel even though optional in canonical
   status: "Active" | "Inactive";
   source: string;
   origin: string;

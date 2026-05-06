@@ -44,7 +44,7 @@ export function ClientTable({ clients, onRowClick, selectedId }: Props) {
                   className={`border-b border-border hover:bg-muted/30 transition-colors cursor-pointer ${selectedId === client.id ? "bg-muted/50" : ""}`}
                 >
                   <td className={tdClass}>{client.id.slice(0, 20)}...</td>
-                  <td className={tdClass}>{client.name}</td>
+                  <td className={tdClass}>{client.fullName}</td>
                   <td className={tdClass}>{client.email}</td>
                   <td className={tdClass}>{client.phone}</td>
                   <td className="px-5 py-3.5">

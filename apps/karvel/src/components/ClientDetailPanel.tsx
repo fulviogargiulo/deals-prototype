@@ -13,7 +13,7 @@ export function ClientDetailPanel({ client, onClose }: Props) {
       <div className="p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
-          <h2 className="text-xl font-semibold text-foreground">{client.name}</h2>
+          <h2 className="text-xl font-semibold text-foreground">{client.fullName}</h2>
           <div className="flex items-center gap-2">
             <button className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground">
               <ArrowUpRight className="h-5 w-5" />
@@ -42,7 +42,7 @@ export function ClientDetailPanel({ client, onClose }: Props) {
         <h3 className="text-[15px] font-semibold text-foreground mb-4">Overview</h3>
 
         <div className="space-y-4">
-          <DetailRow label="Name" value={client.name} />
+          <DetailRow label="Name" value={client.fullName} />
           <DetailRow label="Email" value={client.email} />
           <DetailRow label="Phone" value={client.phone} />
           <DetailRow label="Government ID" value="-" />
