@@ -1,4 +1,4 @@
-import type { Client as BaseClient } from "@huspy/shared-domain";
+import type { Client as BaseClient, Opportunity as BaseOpportunity } from "@huspy/shared-domain";
 
 export type VerificationStatus = 'incoming' | 'pending' | 'verified';
 
@@ -26,41 +26,20 @@ export interface Client extends BaseClient {
   lastActivity: string; // Description of the last activity
 }
 
-export interface Opportunity {
-  id: string;
-  clientId: string;
+// Inherits id, clientId, agentId?, type, status, title, country?, neighborhoods,
+// source?, bedrooms?, bathrooms?, sizeRange?, propertyTypes?, description?,
+// images?, createdAt, updatedAt from canonical.
+// Overrides priceRange shapes to keep loose `currency: string` for existing mock data.
+export interface Opportunity extends Omit<BaseOpportunity, "priceRange" | "originalPriceRange" | "type" | "status"> {
   type: OpportunityType;
   status: OpportunityStatus;
-  title: string;
-  priceRange?: {
-    min: number;
-    max: number;
-    currency: string;
-  };
-  originalPriceRange?: {
-    min: number;
-    max: number;
-    currency: string;
-  };
-  bedrooms?: number;
-  bathrooms?: number;
-  sizeRange?: {
-    min: number;
-    max: number;
-    unit: string;
-  };
-  neighborhoods: string[];
+  priceRange?: { min: number; max: number; currency: string };
+  originalPriceRange?: { min: number; max: number; currency: string };
+  // Agent-app-only
   tags: string[];
   portalBadges: string[];
-  source?: string;
   updatesCount: number;
   pendingActions: string[];
-  propertyTypes?: string[];
-  images?: string[];
-  description?: string;
-  agentId?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface Task {

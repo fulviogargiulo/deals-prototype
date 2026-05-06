@@ -22,15 +22,38 @@ export interface Client {
 }
 
 // ---------- Opportunity ----------
+// Canonical leans on agent-app's richer property-attribute shape. Karvel
+// extends with denormalized display caches (clientName, agentName).
+export interface PriceRange {
+  min: number;
+  max: number;
+  currency: Currency;
+}
+
+export interface SizeRange {
+  min: number;
+  max: number;
+  unit: string; // e.g. "m²", "sqft"
+}
+
 export interface Opportunity {
   id: string;
   clientId: string;
-  agentId: string;
+  agentId?: string; // optional in canonical; karvel narrows to required
   type: OpportunityType;
   status: OpportunityStatus;
   title: string;
-  country: Country;
+  country?: Country; // optional in canonical for now
+  neighborhoods: string[];
   source?: string;
+  priceRange?: PriceRange;
+  originalPriceRange?: PriceRange;
+  bedrooms?: number;
+  bathrooms?: number;
+  sizeRange?: SizeRange;
+  propertyTypes?: string[];
+  description?: string;
+  images?: string[];
   createdAt: string;
   updatedAt: string;
 }

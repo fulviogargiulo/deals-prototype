@@ -143,8 +143,8 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     setForm(prev => ({
       ...prev,
       type: opp.type as DealType,
-      market: opp.type === "Rent" || opp.type === "Lease" ? "Leasing" : "Primary",
-      country: opp.city === "Madrid" || opp.city === "Valencia" ? "Spain" : "UAE",
+      market: opp.type === "rent" || opp.type === "lease" ? "Leasing" : "Primary",
+      country: opp.neighborhoods[0] === "Madrid" || opp.neighborhoods[0] === "Valencia" ? "Spain" : "UAE",
       agentName: opp.agentName,
       buyerName: opp.clientName,
       buyerPhone: opp.clientPhone,
@@ -346,10 +346,10 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-[13px] font-medium text-foreground">{opp.title}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{opp.clientName} • {opp.agentName} • {opp.city}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{opp.clientName} • {opp.agentName} • {opp.neighborhoods[0] ?? "-"}</p>
                       </div>
                       <div className="text-right">
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${opp.status === "Active" ? "bg-[hsl(var(--deal-paid))]/15 text-[hsl(var(--deal-paid))]" : opp.status === "New" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${opp.status === "active" ? "bg-[hsl(var(--deal-paid))]/15 text-[hsl(var(--deal-paid))]" : opp.status === "new" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
                           {opp.status}
                         </span>
                         <p className="text-[10px] text-muted-foreground mt-1 font-mono">{opp.id.slice(0, 12)}...</p>

@@ -1,5 +1,6 @@
 import { Opportunity, OpportunityStatus } from "@/data/types";
 import { TypeBadge, StatusBadge } from "./OpportunityBadges";
+import { opportunityStatusLabel } from "@/lib/labels";
 import { MoreVertical, ChevronDown } from "lucide-react";
 import { useState } from "react";
 
@@ -7,7 +8,7 @@ interface Props {
   opportunities: Opportunity[];
 }
 
-const statusColumns: OpportunityStatus[] = ["New", "Active", "Closed", "Inactive"];
+const statusColumns: OpportunityStatus[] = ["new", "active", "closed", "inactive"];
 
 export function OpportunityKanban({ opportunities }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -28,7 +29,7 @@ export function OpportunityKanban({ opportunities }: Props) {
             <ChevronDown
               className={`h-4 w-4 text-muted-foreground transition-transform ${collapsed[status] ? "-rotate-90" : ""}`}
             />
-            <span className="font-semibold text-[13px] text-foreground">{status}</span>
+            <span className="font-semibold text-[13px] text-foreground">{opportunityStatusLabel[status]}</span>
             <span className="ml-auto text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-medium">
               {grouped[status].length}
             </span>

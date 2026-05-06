@@ -1,20 +1,14 @@
-export type OpportunityType = "Buy" | "Sell" | "Rent" | "Lease";
-export type OpportunityStatus = "New" | "Active" | "Closed" | "Inactive";
+import type { Opportunity as BaseOpportunity } from "@huspy/shared-domain";
+export type { OpportunityType, OpportunityStatus } from "@huspy/shared-domain";
 
-export interface Opportunity {
-  id: string;
-  city: string;
-  type: OpportunityType;
-  title: string;
-  status: OpportunityStatus;
-  clientId: string;
+export interface Opportunity extends BaseOpportunity {
+  // Karvel-required (canonical leaves optional)
+  agentId: string;
+  source: string;
+  // Karvel display caches (denormalized; not part of canonical schema)
   clientName: string;
   clientPhone: string;
-  agentId: string;
   agentName: string;
-  source: string;
-  createdAt: string;
-  updatedAt: string;
   lastActivity: string;
 }
 

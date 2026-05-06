@@ -43,7 +43,7 @@ export function OpportunityDetailPanel({ opportunity, onClose }: Props) {
 
         <div className="space-y-4">
           <DetailRow label="Title" value={opportunity.title} />
-          <DetailRow label="City" value={opportunity.city} />
+          <DetailRow label="City" value={opportunity.neighborhoods[0] ?? "-"} />
           <div className="flex items-center">
             <span className="w-[140px] text-[13px] text-muted-foreground shrink-0">Type</span>
             <TypeBadge type={opportunity.type} />
