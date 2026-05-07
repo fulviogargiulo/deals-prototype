@@ -2,6 +2,7 @@
 // `mockStatement` is agent-app-only (StatementOfAccount is a financial UI
 // concept karvel doesn't share), so it lives here.
 import { sharedDeals, sharedDealStakeholders, sharedAgents } from "@huspy/shared-domain";
+import type { DealStakeholder } from "@huspy/shared-domain";
 import type { Deal, StatementOfAccount } from "@/types";
 
 // Cast: shared.Deal.type is `DealType` (includes buy-sell, rent-lease);
@@ -21,6 +22,14 @@ const agentDealIds = new Set(
     : []
 );
 export const agentDeals: Deal[] = mockDeals.filter((d) => agentDealIds.has(d.id));
+
+// Maps dealId → the current agent's DealStakeholder record, for commission split lookups.
+export const agentStakeMap: Map<string, DealStakeholder> = new Map(
+  (currentAgent
+    ? sharedDealStakeholders.filter((s) => s.partyId === currentAgent.partyId && s.role === "agent")
+    : []
+  ).map((s) => [s.dealId, s])
+);
 
 export const mockStatement: StatementOfAccount = {
   id: "stmt-1",

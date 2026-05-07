@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Deal, DealStatus, OpportunityType } from '@/types';
+import { type DealStakeholder, computeAgentCommission } from '@huspy/shared-domain';
 import { Search, ChevronDown, Check, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 interface DealsTableProps {
   deals: Deal[];
   disputedDealIds?: Set<string>;
+  agentStakeMap?: Map<string, DealStakeholder>;
 }
 
 const statusLabels: Record<DealStatus, string> = {
@@ -55,7 +57,7 @@ type SortDir = 'asc' | 'desc';
 const allStatuses: DealStatus[] = ['reported', 'pending-details', 'under-review', 'pending-agent-approval', 'pending-receivables', 'finalized', 'canceled'];
 const allTypes: OpportunityType[] = ['buy', 'sell', 'rent', 'lease', 'mortgage'];
 
-export function DealsTable({ deals, disputedDealIds = new Set() }: DealsTableProps) {
+export function DealsTable({ deals, disputedDealIds = new Set(), agentStakeMap }: DealsTableProps) {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilters, setStatusFilters] = useState<DealStatus[]>([]);
@@ -242,6 +244,7 @@ export function DealsTable({ deals, disputedDealIds = new Set() }: DealsTablePro
             filtered.map((deal) => {
               const config = typeConfig[deal.type];
               const colors = statusColors[deal.status];
+              const agentCommission = computeAgentCommission(deal.commissionAmount, agentStakeMap?.get(deal.id));
               return (
                 <div
                   key={deal.id}
@@ -271,9 +274,9 @@ export function DealsTable({ deals, disputedDealIds = new Set() }: DealsTablePro
                     {deal.currency}{deal.dealAmount.toLocaleString()}
                   </span>
 
-                  {/* Commission */}
+                  {/* Commission — agent's personal share based on DealStakeholder.splitPercentage */}
                   <span className="text-sm text-foreground text-right tabular-nums font-semibold">
-                    {deal.currency}{deal.commissionAmount.toLocaleString()}
+                    {deal.currency}{agentCommission.toLocaleString()}
                   </span>
 
                   {/* Status badge */}

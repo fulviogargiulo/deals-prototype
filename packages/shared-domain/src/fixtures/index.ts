@@ -43,5 +43,7 @@ export {
   getDealStakeholdersForDeal,
   getDealStakeholdersForParty,
   getClientForDeal,
+  getAgentStakeForDeal,
+  computeAgentCommission,
 } from "./queries";
 export { generateManyClients } from "./manyClientsGenerator";

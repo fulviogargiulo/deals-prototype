@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { FileText, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import { DocumentRow } from '@/components/deals/document-row';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { mockDeals } from '@/data/mockDeals';
-import { computeDealFinancials, COMMISSION_RATES, getClientForDeal } from '@huspy/shared-domain';
+import { mockDeals, agentStakeMap } from '@/data/mockDeals';
+import { computeDealFinancials, COMMISSION_RATES, getClientForDeal, computeAgentCommission } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -210,6 +210,9 @@ export function DealDetails() {
         {/* Commission Breakdown — visible once deal is approved or further along */}
         {['pending-agent-approval', 'pending-receivables', 'finalized'].includes(deal.status) && (() => {
           const f = computeDealFinancials(deal.dealAmount);
+          const stake = agentStakeMap.get(deal.id);
+          const personalCommission = computeAgentCommission(f.agentCommissionPayout, stake);
+          const splitPct = stake?.splitPercentage ?? 100;
           const isExpandable = deal.status !== 'pending-agent-approval';
 
           const content = (
@@ -217,7 +220,7 @@ export function DealDetails() {
               {/* Formula */}
               <div className="px-4 py-3 border-b border-border-ds-primary">
                 <p className="text-[12px] text-fg-secondary leading-[140%]">
-                  Your Payout = Deal Price × {COMMISSION_RATES.takeRate}% (Huspy rate) × {COMMISSION_RATES.agentGrossRate}% (your commission rate)
+                  Your Payout = Deal Price × {COMMISSION_RATES.takeRate}% (Huspy rate) × {COMMISSION_RATES.agentGrossRate}% (your commission rate){splitPct < 100 ? ` × ${splitPct}% (your deal split)` : ''}
                 </p>
               </div>
 
@@ -235,13 +238,19 @@ export function DealDetails() {
                   <span className="text-[12px] text-fg-secondary leading-[140%]">Your Commission Rate</span>
                   <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{COMMISSION_RATES.agentGrossRate}%</span>
                 </div>
+                {splitPct < 100 && (
+                  <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
+                    <span className="text-[12px] text-fg-secondary leading-[140%]">Your Deal Split</span>
+                    <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{splitPct}%</span>
+                  </div>
+                )}
               </div>
 
               {/* Total */}
               <div className="border-t border-border-ds-primary px-4 py-3 flex items-center justify-between">
                 <div>
                   <span className="text-sm font-semibold text-foreground">Your Commission Payout</span>
-                  <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">{deal.currency}{f.agentCommissionPayout.toLocaleString()}</span>
+                  <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">{deal.currency}{personalCommission.toLocaleString()}</span>
                 </div>
                 {deal.status === 'pending-agent-approval' && !confirmedForInvoicing && !disputeSubmitted && (
                   <Button

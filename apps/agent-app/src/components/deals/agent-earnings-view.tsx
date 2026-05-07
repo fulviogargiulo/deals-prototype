@@ -242,22 +242,26 @@ export function AgentEarningsView() {
               const { color, bg } = invoiceStatusStyle(inv.status);
               const symbol = CURRENCY_SYMBOLS[inv.currency] ?? inv.currency;
               return (
-                <div key={inv.id} className="px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div key={inv.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                       style={{ backgroundColor: 'hsl(var(--accent-indigo) / 0.1)' }}
                     >
                       <FileText className="w-4 h-4" style={{ color: 'hsl(var(--accent-indigo))' }} />
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground leading-[120%]">{inv.invoiceNumber}</p>
-                      <p className="text-xs text-fg-secondary leading-[140%] mt-0.5">
-                        {inv.period} · {symbol}{inv.amount.toLocaleString()}
-                      </p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground leading-[120%] truncate">{inv.invoiceNumber}</p>
+                      <p className="text-xs text-fg-secondary leading-[140%] mt-0.5">{new Date(inv.issueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span
+                      className="text-[15px] font-semibold tabular-nums"
+                      style={{ color: 'hsl(var(--accent-teal))' }}
+                    >
+                      {symbol}{inv.amount.toLocaleString()}
+                    </span>
                     <span
                       className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize"
                       style={{ color, backgroundColor: bg }}

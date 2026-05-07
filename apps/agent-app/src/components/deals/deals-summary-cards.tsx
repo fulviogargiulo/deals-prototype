@@ -2,13 +2,15 @@ import { useMemo } from 'react';
 import { Deal } from '@/types';
 import { FileText, Banknote, TrendingUp } from 'lucide-react';
 import { isWithinInterval, parseISO } from 'date-fns';
+import { type DealStakeholder, computeAgentCommission } from '@huspy/shared-domain';
 
 interface DealsSummaryCardsProps {
   deals: Deal[];
   dateRange?: { from: Date; to: Date };
+  agentStakeMap?: Map<string, DealStakeholder>;
 }
 
-export function DealsSummaryCards({ deals, dateRange }: DealsSummaryCardsProps) {
+export function DealsSummaryCards({ deals, dateRange, agentStakeMap }: DealsSummaryCardsProps) {
   const filteredDeals = useMemo(() => {
     if (!dateRange) return deals;
     return deals.filter(d => {
@@ -20,7 +22,7 @@ export function DealsSummaryCards({ deals, dateRange }: DealsSummaryCardsProps) 
   const totalDealValue = filteredDeals.reduce((sum, d) => sum + d.dealAmount, 0);
   const totalCommissionsPaid = filteredDeals
     .filter(d => d.status === 'finalized')
-    .reduce((sum, d) => sum + d.commissionAmount, 0);
+    .reduce((sum, d) => sum + computeAgentCommission(d.commissionAmount, agentStakeMap?.get(d.id)), 0);
 
   const cards = [
     {

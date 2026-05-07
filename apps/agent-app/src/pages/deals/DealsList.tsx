@@ -10,7 +10,7 @@ import { DealsDateRangeSelector } from '@/components/deals/deals-date-range-sele
 import { ActionsRequiredSection } from '@/components/deals/actions-required-section';
 import { DealsTable } from '@/components/deals/deals-table';
 import { AgentEarningsView } from '@/components/deals/agent-earnings-view';
-import { agentDeals } from '@/data/mockDeals';
+import { agentDeals, agentStakeMap } from '@/data/mockDeals';
 
 export function DealsList() {
   const location = useLocation();
@@ -51,7 +51,7 @@ export function DealsList() {
 
           <TabsContent value="deals" className="space-y-8 mt-0">
             <DealsDateRangeSelector onChange={setDateRange} />
-            <DealsSummaryCards deals={agentDeals} dateRange={dateRange} />
+            <DealsSummaryCards deals={agentDeals} dateRange={dateRange} agentStakeMap={agentStakeMap} />
             <ActionsRequiredSection
               pendingConfirmation={pendingConfirmation}
               pendingInfo={pendingInfo}
@@ -59,7 +59,7 @@ export function DealsList() {
               onDealDisputed={handleDealDisputed}
             />
             <div id="all-deals">
-              <DealsTable deals={agentDeals} disputedDealIds={disputedDealIds} />
+              <DealsTable deals={agentDeals} disputedDealIds={disputedDealIds} agentStakeMap={agentStakeMap} />
             </div>
           </TabsContent>
 

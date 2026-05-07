@@ -1,7 +1,7 @@
 // Query helpers — stand-ins for what a real backend's query layer would do.
 // Both apps can use these against the canonical fixtures.
 
-import type { ClientWithOpportunities } from "../entities";
+import type { ClientWithOpportunities, DealStakeholder } from "../entities";
 import { sharedClients } from "./clients";
 import { sharedOpportunities } from "./opportunities";
 import { sharedTasks } from "./tasks";
@@ -76,6 +76,18 @@ export const getPostingLinesForInvoice = (invoiceId: string) => sharedPostingLin
 // DealStakeholder helpers.
 export const getDealStakeholdersForDeal = (dealId: string) => sharedDealStakeholders.filter((s) => s.dealId === dealId);
 export const getDealStakeholdersForParty = (partyId: string) => sharedDealStakeholders.filter((s) => s.partyId === partyId);
+
+// Returns the agent-role DealStakeholder for a specific agent party on a given deal.
+export const getAgentStakeForDeal = (dealId: string, agentPartyId: string): DealStakeholder | undefined =>
+  sharedDealStakeholders.find((s) => s.dealId === dealId && s.partyId === agentPartyId && s.role === "agent");
+
+// Computes the commission amount attributable to one agent based on their stake.
+// Uses fixedAmount when set; otherwise applies splitPercentage (defaults to 100%).
+export const computeAgentCommission = (totalAgentCommission: number, stake: DealStakeholder | undefined): number => {
+  if (!stake) return totalAgentCommission;
+  if (stake.fixedAmount !== undefined) return stake.fixedAmount;
+  return Math.round(totalAgentCommission * ((stake.splitPercentage ?? 100) / 100));
+};
 
 // Returns the Client record for the primary client stakeholder on a deal.
 export const getClientForDeal = (dealId: string) => {

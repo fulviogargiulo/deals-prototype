@@ -1,9 +1,10 @@
 import type { DealStakeholder } from "../entities";
 
-// One agent stakeholder + one client stakeholder per deal.
+// One or more agent stakeholders + one client stakeholder per deal.
 // Client role is determined by deal type:
 //   buy → buyer, sell → seller, rent/lease → tenant, mortgage → borrower
-// splitPercentage on agent records reflects the agentShare (100 in all current deals).
+// splitPercentage on agent records reflects each agent's share of the commission pool.
+// deal-006 and deal-017 have two-agent splits to exercise multi-agent commission logic.
 export const sharedDealStakeholders: DealStakeholder[] = [
   // deal-001 — buy, agent-felicia, client-001
   { id: "ds-deal-001-agent",  dealId: "deal-001", partyId: "party-agent-felicia",   role: "agent",   splitPercentage: 100 },
@@ -25,9 +26,10 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   { id: "ds-deal-005-agent",  dealId: "deal-005", partyId: "party-agent-omar",      role: "agent",   splitPercentage: 100 },
   { id: "ds-deal-005-client", dealId: "deal-005", partyId: "party-client-005",      role: "buyer" },
 
-  // deal-006 — sell, agent-felicia, client-006
-  { id: "ds-deal-006-agent",  dealId: "deal-006", partyId: "party-agent-felicia",   role: "agent",   splitPercentage: 100 },
-  { id: "ds-deal-006-client", dealId: "deal-006", partyId: "party-client-006",      role: "seller" },
+  // deal-006 — sell, felicia 70% / guilherme 30% co-listing split
+  { id: "ds-deal-006-agent",        dealId: "deal-006", partyId: "party-agent-felicia",   role: "agent", splitPercentage: 70 },
+  { id: "ds-deal-006-agent-co",     dealId: "deal-006", partyId: "party-agent-guilherme", role: "agent", splitPercentage: 30 },
+  { id: "ds-deal-006-client",       dealId: "deal-006", partyId: "party-client-006",      role: "seller" },
 
   // deal-007 — buy, agent-felicia, client-001
   { id: "ds-deal-007-agent",  dealId: "deal-007", partyId: "party-agent-felicia",   role: "agent",   splitPercentage: 100 },
@@ -69,9 +71,10 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   { id: "ds-deal-016-agent",  dealId: "deal-016", partyId: "party-agent-ravi",      role: "agent",   splitPercentage: 100 },
   { id: "ds-deal-016-client", dealId: "deal-016", partyId: "party-client-007",      role: "seller" },
 
-  // deal-017 — buy, agent-felicia, client-002
-  { id: "ds-deal-017-agent",  dealId: "deal-017", partyId: "party-agent-felicia",   role: "agent",   splitPercentage: 100 },
-  { id: "ds-deal-017-client", dealId: "deal-017", partyId: "party-client-002",      role: "buyer" },
+  // deal-017 — buy, felicia 60% / omar 40% referral split
+  { id: "ds-deal-017-agent",        dealId: "deal-017", partyId: "party-agent-felicia", role: "agent", splitPercentage: 60 },
+  { id: "ds-deal-017-agent-co",     dealId: "deal-017", partyId: "party-agent-omar",    role: "agent", splitPercentage: 40 },
+  { id: "ds-deal-017-client",       dealId: "deal-017", partyId: "party-client-002",    role: "buyer" },
 
   // deal-018 — buy, agent-felicia, client-004
   { id: "ds-deal-018-agent",  dealId: "deal-018", partyId: "party-agent-felicia",   role: "agent",   splitPercentage: 100 },
