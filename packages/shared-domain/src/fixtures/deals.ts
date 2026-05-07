@@ -297,7 +297,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-018", opportunityId: "opp-004", clientId: "client-004", agentId: "agent-felicia",
-    type: "buy", status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
+    type: "buy", status: "finalized", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 1250000, reportDate: "2026-04-15",
     createdAt: "2026-04-15T00:00:00.000Z", updatedAt: "2026-04-15T00:00:00.000Z",
     commissionPercentage: 2.5,

@@ -34,18 +34,18 @@ export const sharedPostings: Posting[] = [
     description: "Payment received — INV-2026-001 (Mariana Dañobeitia)",
     metadata: { deal_id: "deal-001", invoice_id: "inv-001", bank_ref: "WIRE-20260112-001" },
   },
-  // SOA approved — agent payout crystallised (40% of 11 550 = 4 620)
+  // Agent invoice — commission crystallised for agent-felicia (40% of 11 550 = 4 620)
   {
     id: "posting-003",
-    externalRef: "SOA-001",
-    businessProcess: "soa_approved",
+    externalRef: "AGINV-001",
+    businessProcess: "agent_invoice",
     createdBy: "user-ops-finance",
     createdAt: "2026-01-20T11:00:00.000Z",
     valueDate: "2026-01-20",
     currency: "EUR",
     status: "posted",
-    description: "SOA approved — Felicia Canovas, deal-001",
-    metadata: { deal_id: "deal-001", soa_id: "SOA-001", agent_id: "agent-felicia" },
+    description: "Agent invoice — Felicia Canovas, deal-001",
+    metadata: { deal_id: "deal-001", agent_id: "agent-felicia" },
   },
   // Payout instructed — cash leaves bank
   {
@@ -119,20 +119,20 @@ export const sharedPostings: Posting[] = [
     metadata: { agent_id: "agent-felicia", period: "Q1-2026" },
   },
 
-  // ── deal-016 — SOA approved, agent-gelo ────────────────────────────────────
+  // ── deal-016 — agent invoice, agent-gelo ────────────────────────────────────
 
   // Commission crystallised for agent-gelo: AED 42 000 × 40% = 16 800
   {
     id: "posting-011",
-    externalRef: "SOA-016",
-    businessProcess: "soa_approved",
+    externalRef: "AGINV-016",
+    businessProcess: "agent_invoice",
     createdBy: "user-ops-finance",
     createdAt: "2026-05-10T11:00:00.000Z",
     valueDate: "2026-05-10",
     currency: "AED",
     status: "posted",
-    description: "SOA approved — Gelo Huspy, deal-016",
-    metadata: { deal_id: "deal-016", soa_id: "SOA-016", agent_id: "agent-gelo" },
+    description: "Agent invoice — Gelo Huspy, deal-016",
+    metadata: { deal_id: "deal-016", agent_id: "agent-gelo" },
   },
 
   // ── Standalone — no deal_id (agent-gelo) ───────────────────────────────────
@@ -175,5 +175,34 @@ export const sharedPostings: Posting[] = [
     status: "posted",
     description: "Jan 2026 platform support fee — Felicia Canovas",
     metadata: { agent_id: "agent-felicia", line_type: "platform_support_fee", period: "2026-01" },
+  },
+
+  // ── Apr 2026 — agent-felicia, UNALLOCATED (no agentInvoiceId on lines) ──────
+
+  // Agent invoice — deal-018 commission crystallised for agent-felicia (EUR 15 000)
+  {
+    id: "posting-015",
+    externalRef: "AGINV-018",
+    businessProcess: "agent_invoice",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-04-15T11:00:00.000Z",
+    valueDate: "2026-04-15",
+    currency: "EUR",
+    status: "posted",
+    description: "Agent invoice — Felicia Canovas, deal-018",
+    metadata: { deal_id: "deal-018", agent_id: "agent-felicia" },
+  },
+  // Apr 2026 platform support fee — agent-felicia (EUR 150 deduction)
+  {
+    id: "posting-016",
+    externalRef: "FEE-2026-04-FELICIA",
+    businessProcess: "manual_adjustment",
+    createdBy: "system",
+    createdAt: "2026-04-01T00:00:00.000Z",
+    valueDate: "2026-04-01",
+    currency: "EUR",
+    status: "posted",
+    description: "Apr 2026 platform support fee — Felicia Canovas",
+    metadata: { agent_id: "agent-felicia", line_type: "platform_support_fee", period: "2026-04" },
   },
 ];

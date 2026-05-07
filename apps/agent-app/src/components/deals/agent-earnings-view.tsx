@@ -1,17 +1,18 @@
 import { useState } from 'react';
-import { sharedPostingLines, sharedPostings, sharedAgentInvoices } from '@huspy/shared-domain';
-import type { PostingLine, Posting } from '@huspy/shared-domain';
+import { sharedPostings } from '@huspy/shared-domain';
+import type { PostingLine } from '@huspy/shared-domain';
 import { Button } from '@/components/ui/button';
 import { FileText, TrendingUp, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CreateInvoiceModal } from '@/components/modals/create-invoice-modal';
+import { getPostingLines, getAgentInvoices } from '@/data/earningsStore';
 import type { StatementOfAccount } from '@/types';
 
 // Prototype: hardcoded to the current agent. In production this comes from auth context.
 const AGENT_ID = 'agent-felicia';
 const AGENT_LEDGER = `AgentLiability_${AGENT_ID}`;
 
-// Postings that represent internal settlement flows — shown in the ledger but excluded
-// from statement generation (they are already accounted for by the payout process).
+// Settlement entries (cash movement bookkeeping) — hidden from the agent-facing ledger.
+// They are internal accounting entries that zero out the liability once a payout is sent.
 const SETTLEMENT_PROCESSES = new Set(['payout_instructed', 'bank_statement_outbound_matched']);
 
 const PERIODS = [
@@ -29,63 +30,66 @@ function formatAmount(amount: number, side: PostingLine['side'], currency: strin
   return { text: `${sign}${symbol}${amount.toLocaleString()}`, color };
 }
 
-function lineTypeLabel(line: PostingLine & { posting: Posting }): string {
-  const t = line.metadata?.line_type as string | undefined;
-  if (t) return t.replace(/_/g, ' ');
-  if (line.metadata?.deal_id) return 'commission';
-  if (line.posting.businessProcess === 'payout_instructed') return 'payout';
-  return 'adjustment';
+function lineTypeLabel(lineType: string | undefined): string {
+  if (!lineType) return 'other';
+  return lineType.replace(/_/g, ' ');
 }
 
 function invoiceStatusStyle(status: string) {
   switch (status) {
-    case 'paid':         return { color: 'hsl(var(--ds-green))',   bg: 'hsl(var(--ds-green)   / 0.1)' };
+    case 'paid':         return { color: 'hsl(var(--ds-green))',      bg: 'hsl(var(--ds-green)      / 0.1)' };
     case 'issued':       return { color: 'hsl(var(--accent-indigo))', bg: 'hsl(var(--accent-indigo) / 0.1)' };
-    case 'acknowledged': return { color: 'hsl(var(--accent-teal))', bg: 'hsl(var(--accent-teal) / 0.1)' };
-    case 'disputed':     return { color: 'hsl(var(--ds-red))',    bg: 'hsl(var(--ds-red)    / 0.1)' };
-    default:             return { color: 'hsl(var(--fg-secondary))', bg: 'hsl(var(--fg-secondary) / 0.1)' };
+    case 'acknowledged': return { color: 'hsl(var(--accent-teal))',   bg: 'hsl(var(--accent-teal)   / 0.1)' };
+    case 'disputed':     return { color: 'hsl(var(--ds-red))',        bg: 'hsl(var(--ds-red)        / 0.1)' };
+    default:             return { color: 'hsl(var(--fg-secondary))',   bg: 'hsl(var(--fg-secondary)  / 0.1)' };
   }
 }
 
 export function AgentEarningsView() {
   const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
   const [showGenerateStatement, setShowGenerateStatement] = useState(false);
+  // Incrementing this forces a re-read from the store after a mutation.
+  const [refreshKey, setRefreshKey] = useState(0);
+  void refreshKey;
 
-  // All PostingLines on this agent's subledger, joined with parent Posting
-  const agentLines = sharedPostingLines
+  const allAgentInvoices = getAgentInvoices().filter(i => i.agentId === AGENT_ID);
+  // Map agentInvoiceId → invoiceNumber for the Invoice column in the ledger table.
+  const invoiceNumberMap = new Map(allAgentInvoices.map(i => [i.id, i.invoiceNumber]));
+
+  // All PostingLines on this agent's subledger, joined with parent Posting.
+  // Settlement entries are excluded — they are internal bookkeeping (payout cash movement)
+  // and have no meaning for the agent's earnings view.
+  const agentLines = getPostingLines()
     .filter(l => l.ledgerId === AGENT_LEDGER)
     .map(l => ({ ...l, posting: sharedPostings.find(p => p.id === l.postingId)! }))
-    .filter(l => !!l.posting);
+    .filter(l => !!l.posting && !SETTLEMENT_PROCESSES.has(l.posting.businessProcess));
 
   const filteredLines = selectedPeriod
     ? agentLines.filter(l => l.posting.valueDate.startsWith(selectedPeriod))
     : agentLines;
 
-  const agentInvoices = sharedAgentInvoices.filter(i => i.agentId === AGENT_ID);
   const filteredInvoices = selectedPeriod
-    ? agentInvoices.filter(i => i.period.startsWith(selectedPeriod) || selectedPeriod.startsWith(i.period.substring(0, 7)))
-    : agentInvoices;
+    ? allAgentInvoices.filter(i => i.period.startsWith(selectedPeriod) || selectedPeriod.startsWith(i.period.substring(0, 7)))
+    : allAgentInvoices;
 
-  // Lines eligible for statement generation: uninvoiced and not a settlement entry
-  const statementEligibleLines = filteredLines.filter(
-    l => !l.agentInvoiceId && !SETTLEMENT_PROCESSES.has(l.posting.businessProcess)
-  );
+  // Lines eligible for statement generation: uninvoiced (no agentInvoiceId)
+  const statementEligibleLines = filteredLines.filter(l => !l.agentInvoiceId);
   const canGenerateStatement = statementEligibleLines.length > 0;
 
   const periodNet = filteredLines.reduce((s, l) => l.side === 'CREDIT' ? s + l.amount : s - l.amount, 0);
 
-  // Build a StatementOfAccount from eligible lines so CreateInvoiceModal can consume it
   const pendingStatement: StatementOfAccount = {
     id: 'pending-stmt',
     cycleLabel: selectedPeriod
       ? (PERIODS.find(p => p.value === selectedPeriod)?.label ?? selectedPeriod)
       : 'Current Period',
+    period: selectedPeriod ?? new Date().toISOString().slice(0, 7),
     lineItems: statementEligibleLines.map(l => ({
       id: l.id,
       description: l.posting.description ?? 'Posting',
       type: l.side === 'CREDIT' ? 'credit' : 'debit',
-      category: l.metadata?.line_type === 'platform_support_fee' ? 'support-fee'
-              : l.metadata?.deal_id ? 'deal-commission'
+      category: l.lineType === 'platform_support_fee' ? 'support-fee'
+              : l.lineType === 'commission'            ? 'deal-commission'
               : 'other',
       amount: l.amount,
       dealId: l.metadata?.deal_id as string | undefined,
@@ -151,11 +155,12 @@ export function AgentEarningsView() {
           )}
         </div>
 
-        <div className="grid grid-cols-[90px_1fr_110px_110px_120px] px-4 py-2 border-b border-border-ds-primary gap-3">
+        <div className="grid grid-cols-[90px_1fr_100px_110px_130px_110px] px-4 py-2 border-b border-border-ds-primary gap-3">
           <span className="text-xs font-semibold text-fg-secondary">Date</span>
           <span className="text-xs font-semibold text-fg-secondary">Description</span>
           <span className="text-xs font-semibold text-fg-secondary">Deal</span>
           <span className="text-xs font-semibold text-fg-secondary">Type</span>
+          <span className="text-xs font-semibold text-fg-secondary">Invoice</span>
           <span className="text-xs font-semibold text-fg-secondary text-right">Amount</span>
         </div>
 
@@ -167,12 +172,14 @@ export function AgentEarningsView() {
           <div className="divide-y divide-border-ds-primary">
             {filteredLines.map(line => {
               const { text, color } = formatAmount(line.amount, line.side, line.posting.currency);
-              const isSettlement = SETTLEMENT_PROCESSES.has(line.posting.businessProcess);
               const dealId = line.metadata?.deal_id as string | undefined;
+              const invoiceNumber = line.agentInvoiceId
+                ? (invoiceNumberMap.get(line.agentInvoiceId) ?? line.agentInvoiceId)
+                : null;
               return (
                 <div
                   key={line.id}
-                  className={`grid grid-cols-[90px_1fr_110px_110px_120px] px-4 py-3 items-center gap-3 ${isSettlement ? 'opacity-50' : ''}`}
+                  className="grid grid-cols-[90px_1fr_100px_110px_130px_110px] px-4 py-3 items-center gap-3"
                 >
                   <span className="text-xs text-fg-secondary tabular-nums">
                     {new Date(line.posting.valueDate).toLocaleDateString('en-GB', {
@@ -188,10 +195,13 @@ export function AgentEarningsView() {
                   <div className="flex items-center gap-1">
                     {line.side === 'CREDIT'
                       ? <ArrowDownLeft className="w-3 h-3 shrink-0" style={{ color: 'hsl(var(--ds-green))' }} />
-                      : <ArrowUpRight className="w-3 h-3 shrink-0" style={{ color: 'hsl(var(--ds-red))' }} />
+                      : <ArrowUpRight  className="w-3 h-3 shrink-0" style={{ color: 'hsl(var(--ds-red))' }} />
                     }
-                    <span className="text-xs text-fg-secondary capitalize">{lineTypeLabel(line)}</span>
+                    <span className="text-xs text-fg-secondary capitalize">{lineTypeLabel(line.lineType)}</span>
                   </div>
+                  <span className="text-xs font-mono truncate" style={{ color: invoiceNumber ? 'hsl(var(--accent-indigo))' : 'hsl(var(--fg-secondary) / 0.4)' }}>
+                    {invoiceNumber ?? '—'}
+                  </span>
                   <span className="text-sm font-semibold text-right tabular-nums" style={{ color }}>
                     {text}
                   </span>
@@ -210,7 +220,7 @@ export function AgentEarningsView() {
               className="text-[18px] font-semibold tabular-nums"
               style={{ color: periodNet >= 0 ? 'hsl(var(--ds-green))' : 'hsl(var(--ds-red))' }}
             >
-              {periodNet >= 0 ? '+' : '−'}{CURRENCY_SYMBOLS['EUR']}{ Math.abs(periodNet).toLocaleString()}
+              {periodNet >= 0 ? '+' : '−'}{CURRENCY_SYMBOLS['EUR']}{Math.abs(periodNet).toLocaleString()}
             </span>
           </div>
         )}
@@ -271,7 +281,11 @@ export function AgentEarningsView() {
         open={showGenerateStatement}
         onOpenChange={setShowGenerateStatement}
         statement={pendingStatement}
-        onInvoiceCreated={() => setShowGenerateStatement(false)}
+        agentId={AGENT_ID}
+        onInvoiceCreated={() => {
+          setShowGenerateStatement(false);
+          setRefreshKey(k => k + 1);
+        }}
       />
     </div>
   );

@@ -57,7 +57,7 @@ export type PostingStatus = "draft" | "posted" | "reversed";
 
 export type BusinessProcess =
   | "deal_close"
-  | "soa_approved"
+  | "agent_invoice"
   | "bank_statement_inbound_matched"
   | "bank_statement_outbound_matched"
   | "payout_instructed"

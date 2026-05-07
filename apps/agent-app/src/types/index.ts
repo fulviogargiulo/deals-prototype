@@ -126,6 +126,7 @@ export interface StatementLineItemDispute {
 export interface StatementOfAccount {
   id: string;
   cycleLabel: string;
+  period: string;           // machine-readable "YYYY-MM" used when creating AgentInvoice
   lineItems: StatementLineItem[];
   totalCredit: number;
   totalDebit: number;

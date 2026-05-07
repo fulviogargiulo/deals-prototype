@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FileText, Building2, User, Calendar, Hash, CreditCard, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { createAgentInvoice } from '@/data/earningsStore';
 
 interface CreateInvoiceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   statement: StatementOfAccount;
+  agentId: string;
   onInvoiceCreated?: () => void;
 }
 
@@ -22,7 +24,7 @@ const categoryLabels: Record<string, string> = {
   'other': 'Other',
 };
 
-export function CreateInvoiceModal({ open, onOpenChange, statement, onInvoiceCreated }: CreateInvoiceModalProps) {
+export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onInvoiceCreated }: CreateInvoiceModalProps) {
   const [isCreated, setIsCreated] = useState(false);
 
   const defaultInvoiceNumber = `INV-${statement.id.replace('stmt-', '').toUpperCase()}-${statement.cycleLabel.replace(/\s/g, '').toUpperCase()}`;
@@ -46,6 +48,24 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, onInvoiceCre
   };
 
   const handleCreate = () => {
+    const now = new Date().toISOString();
+    const lineIds = statement.lineItems.map(li => li.id);
+    createAgentInvoice(
+      {
+        id: `agent-inv-${agentId}-${Date.now()}`,
+        agentId,
+        invoiceNumber,
+        period: statement.period,
+        status: 'issued',
+        currency: 'EUR',
+        totalAmount: statement.balance,
+        issueDate,
+        dueDate,
+        createdAt: now,
+        updatedAt: now,
+      },
+      lineIds
+    );
     setIsCreated(true);
     toast.success('Invoice created successfully and is now under review');
     onInvoiceCreated?.();

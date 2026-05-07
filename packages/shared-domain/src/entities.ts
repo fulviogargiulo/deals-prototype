@@ -114,8 +114,6 @@ export interface Opportunity {
 // Karvel-specific support types (lived in apps/karvel/src/data/types.ts before flattening)
 export type ReceivableEntityType = "developer" | "buyer" | "seller" | "tenant" | "bank" | "landlord";
 export type PaymentMode = "cash" | "mortgage";
-export type SOAStatus = "pending" | "generated" | "approved" | "disputed";
-
 export interface ReceivableEntry {
   entityName: string;
   entityType: ReceivableEntityType;
@@ -135,9 +133,6 @@ export interface PayableEntry {
   status: PayableStatus;
   paidAmount?: number;
   paidDate?: string;
-  soaReference?: string;
-  soaStatus?: SOAStatus;
-  soaDisputeNote?: string;
   entityUploadedInvoice?: string;
 }
 
@@ -492,6 +487,7 @@ export interface PostingLine {
   ledgerId: string;
   side: PostingSide;
   amount: number;
+  lineType?: string;        // e.g. "commission" | "incentive" | "platform_support_fee" | "payout" | "bonus"
   invoiceId?: string;       // receivable Invoice this line is claimed by
   agentInvoiceId?: string;  // AgentInvoice this line is claimed by
   metadata?: Record<string, unknown>;

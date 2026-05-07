@@ -11,7 +11,6 @@ export type {
   StatusHistoryEntry,
   ReceivableEntityType,
   PaymentMode,
-  SOAStatus,
   DealDispute,
   DisputeStatus,
   DisputeField,

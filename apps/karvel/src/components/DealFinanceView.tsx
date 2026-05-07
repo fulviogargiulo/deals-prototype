@@ -1,4 +1,4 @@
-import { Deal, InvoiceStatus, PayableStatus, PayableEntry, ReceivableEntry, SOAStatus } from "@/data/types";
+import { Deal, InvoiceStatus, PayableStatus, PayableEntry, ReceivableEntry } from "@/data/types";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { FileText, DollarSign, Send, Plus, X, Download, Upload, CheckCircle, CreditCard, Receipt, ArrowUp, ArrowDown, ArrowUpDown, Filter, AlertTriangle, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -199,27 +199,6 @@ function CreateInvoiceModal({
   );
 }
 
-// Mock SOA data generator
-function generateSOAData(payable: PayableEntry, deal: Deal, currency: string) {
-  const entityName = payable.entityLabel.split(" — ")[1] || payable.entityLabel;
-  const month = deal.reportDate ? new Date(deal.reportDate).toLocaleString("en-US", { month: "long", year: "numeric" }) : "February 2026";
-  const credits = [
-    { description: `Commission — ${deal.opportunityName || deal.clientName}`, amount: payable.expectedAmount },
-  ];
-  if (payable.entityType === "agent" && payable.expectedAmount > 500) {
-    credits.push({ description: `Referral commission — Lead from ${deal.agentName}`, amount: Math.round(payable.expectedAmount * 0.12) });
-  }
-  const debits = [
-    { description: "Platform support fee", amount: Math.round(payable.expectedAmount * 0.05) },
-  ];
-  if (payable.paidAmount && payable.paidAmount < payable.expectedAmount) {
-    debits.push({ description: `Clawback — Adjustment ${deal.id}`, amount: payable.expectedAmount - payable.paidAmount });
-  }
-  const totalCredits = credits.reduce((s, c) => s + c.amount, 0);
-  const totalDebits = debits.reduce((s, d) => s + d.amount, 0);
-  return { entityName, month, credits, debits, totalCredits, totalDebits, balance: totalCredits - totalDebits };
-}
-
 // Mock Invoice data generator
 function generateInvoiceData(payable: PayableEntry, deal: Deal) {
   const entityName = payable.entityLabel.split(" — ")[1] || payable.entityLabel;
@@ -236,181 +215,6 @@ function generateInvoiceData(payable: PayableEntry, deal: Deal) {
   const totalCredits = lines.filter(l => l.type === "Credit").reduce((s, l) => s + l.amount, 0);
   const totalDebits = lines.filter(l => l.type === "Debit").reduce((s, l) => s + l.amount, 0);
   return { entityName, invoiceRef: payable.entityUploadedInvoice || "", issueDate, dueDate, month, lines, totalCredits, totalDebits, amountDue: totalCredits - totalDebits, status: payable.status };
-}
-
-// SOA Modal
-function SOAModal({ payable, deal, currency, onClose, onApprove, onSave }: { payable: PayableEntry; deal: Deal; currency: string; onClose: () => void; onApprove?: () => void; onSave?: (credits: { description: string; amount: number }[], debits: { description: string; amount: number }[]) => void }) {
-  const soa = generateSOAData(payable, deal, currency);
-  const [credits, setCredits] = useState(soa.credits.map((c, i) => ({ ...c, id: `c-${i}` })));
-  const [debits, setDebits] = useState(soa.debits.map((d, i) => ({ ...d, id: `d-${i}` })));
-
-  const totalCredits = credits.reduce((s, c) => s + c.amount, 0);
-  const totalDebits = debits.reduce((s, d) => s + d.amount, 0);
-  const balance = totalCredits - totalDebits;
-
-  const addCredit = () => setCredits(prev => [...prev, { id: `c-${Date.now()}`, description: "", amount: 0 }]);
-  const addDebit = () => setDebits(prev => [...prev, { id: `d-${Date.now()}`, description: "", amount: 0 }]);
-  const removeCredit = (id: string) => setCredits(prev => prev.filter(c => c.id !== id));
-  const removeDebit = (id: string) => setDebits(prev => prev.filter(d => d.id !== id));
-  const updateCredit = (id: string, field: "description" | "amount", value: string | number) =>
-    setCredits(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
-  const updateDebit = (id: string, field: "description" | "amount", value: string | number) =>
-    setDebits(prev => prev.map(d => d.id === id ? { ...d, [field]: value } : d));
-
-  const [showApproveAfterSave, setShowApproveAfterSave] = useState(false);
-  const canApprove = ((payable.soaStatus === "generated") || (payable.soaStatus === "disputed" && showApproveAfterSave)) && onApprove;
-  const [saved, setSaved] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-
-  const trackChange = <T,>(fn: (...args: any[]) => T) => (...args: any[]) => { setIsDirty(true); setSaved(false); return fn(...args); };
-
-  const addCreditTracked = trackChange(addCredit);
-  const addDebitTracked = trackChange(addDebit);
-  const removeCreditTracked = trackChange(removeCredit);
-  const removeDebitTracked = trackChange(removeDebit);
-  const updateCreditTracked = trackChange(updateCredit);
-  const updateDebitTracked = trackChange(updateDebit);
-
-  const handleSave = () => {
-    onSave?.(
-      credits.map(c => ({ description: c.description, amount: c.amount })),
-      debits.map(d => ({ description: d.description, amount: d.amount }))
-    );
-    setSaved(true);
-    setIsDirty(false);
-    if (payable.soaStatus === "disputed") setShowApproveAfterSave(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-card rounded-xl shadow-2xl w-full max-w-2xl mx-4 border border-border max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-[16px] text-foreground">Statement of Account — {soa.month}</h3>
-              <p className="text-[12px] text-muted-foreground mt-0.5">{soa.entityName} • {payable.soaReference}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className={cn("px-3 py-1 rounded-full text-[12px] font-medium", soaStatusColor(payable.soaStatus))}>{payable.soaStatus || "pending"}</span>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className="px-6 py-5 space-y-1">
-          {/* Dispute Note */}
-          {payable.soaStatus === "disputed" && payable.soaDisputeNote && (
-            <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 mb-4">
-              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[13px] font-semibold text-destructive">Dispute Reason</p>
-                <p className="text-[13px] text-foreground mt-1">{payable.soaDisputeNote}</p>
-              </div>
-            </div>
-          )}
-          {/* Credits */}
-          <div className="flex items-center justify-between py-3 border-b border-border">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--deal-paid))]" />
-              <span className="font-semibold text-[15px] text-foreground">Credits</span>
-            </div>
-            <span className="text-[15px] font-semibold text-[hsl(var(--deal-paid))]">+{formatAmount(totalCredits, currency)}</span>
-          </div>
-          {credits.map((c) => (
-            <div key={c.id} className="flex items-center gap-2 py-2 border-b border-border/50 pl-5">
-              <input
-                type="text"
-                value={c.description}
-                onChange={e => updateCreditTracked(c.id, "description", e.target.value)}
-                placeholder="Description"
-                className="flex-1 text-[13px] bg-transparent border border-border rounded px-2 py-1.5 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-              <input
-                type="number"
-                value={c.amount || ""}
-                onChange={e => updateCreditTracked(c.id, "amount", Number(e.target.value) || 0)}
-                placeholder="Amount"
-                className="w-28 text-[13px] bg-transparent border border-border rounded px-2 py-1.5 text-right font-medium text-[hsl(var(--deal-paid))] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-              <button onClick={() => removeCreditTracked(c.id)} className="text-muted-foreground hover:text-destructive p-1"><X className="h-3.5 w-3.5" /></button>
-            </div>
-          ))}
-          <button onClick={addCreditTracked} className="flex items-center gap-1.5 text-[12px] text-primary hover:text-primary/80 font-medium mt-1 ml-5 py-1">
-            <Plus className="h-3.5 w-3.5" /> Add Credit
-          </button>
-
-          {/* Debits */}
-          <div className="flex items-center justify-between py-3 border-b border-border mt-3">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-destructive" />
-              <span className="font-semibold text-[15px] text-foreground">Debits</span>
-            </div>
-            <span className="text-[15px] font-semibold text-destructive">−{formatAmount(totalDebits, currency)}</span>
-          </div>
-          {debits.map((d) => (
-            <div key={d.id} className="flex items-center gap-2 py-2 border-b border-border/50 pl-5">
-              <input
-                type="text"
-                value={d.description}
-                onChange={e => updateDebitTracked(d.id, "description", e.target.value)}
-                placeholder="Description"
-                className="flex-1 text-[13px] bg-transparent border border-border rounded px-2 py-1.5 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-              <input
-                type="number"
-                value={d.amount || ""}
-                onChange={e => updateDebitTracked(d.id, "amount", Number(e.target.value) || 0)}
-                placeholder="Amount"
-                className="w-28 text-[13px] bg-transparent border border-border rounded px-2 py-1.5 text-right font-medium text-destructive placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-              <button onClick={() => removeDebitTracked(d.id)} className="text-muted-foreground hover:text-destructive p-1"><X className="h-3.5 w-3.5" /></button>
-            </div>
-          ))}
-          <button onClick={addDebitTracked} className="flex items-center gap-1.5 text-[12px] text-destructive hover:text-destructive/80 font-medium mt-1 ml-5 py-1">
-            <Plus className="h-3.5 w-3.5" /> Add Debit
-          </button>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-5 border-t border-border bg-muted/30 rounded-b-xl">
-          <div className="flex items-baseline gap-3">
-            <span className="font-semibold text-[14px] text-foreground">Balance</span>
-            <span className={cn("text-[28px] font-bold", balance >= 0 ? "text-foreground" : "text-destructive")}>{formatAmount(balance, currency)}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {canApprove && (
-              <button
-                onClick={onApprove}
-                disabled={isDirty}
-                className={cn("inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium rounded-md transition-all",
-                  isDirty ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-[hsl(var(--deal-paid))] text-primary-foreground hover:opacity-90"
-                )}
-              >
-                <CheckCircle className="h-4 w-4" /> Approve SOA
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={!isDirty && !saved}
-              className={cn("inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium rounded-md transition-all",
-                saved ? "bg-[hsl(var(--deal-paid))] text-primary-foreground" :
-                isDirty ? "bg-primary text-primary-foreground hover:opacity-90" :
-                "bg-muted text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              <CheckCircle className="h-4 w-4" /> {saved ? "Saved!" : "Save Changes"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // Entity Invoice Modal
@@ -732,15 +536,7 @@ const payableStatusColor = (s?: PayableStatus) => {
 const EXTERNAL_ENTITY_TYPES = new Set(["external_partner", "broker", "referrer"]);
 const getEntityCategory = (entityType: string) => EXTERNAL_ENTITY_TYPES.has(entityType) ? "External" : "Internal";
 
-const soaStatusColor = (s?: SOAStatus) => {
-  switch (s) {
-    case "approved": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "generated": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "pending": return "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]";
-    case "disputed": return "bg-destructive/10 text-destructive";
-    default: return "bg-muted text-muted-foreground";
-  }
-};
+
 
 const dealStatusColor = (status: string) => {
   const map: Record<string, string> = {
@@ -941,7 +737,6 @@ function applySortAndFilter<T>(
 export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpdate }: Props) {
   const [creatingInvoiceFor, setCreatingInvoiceFor] = useState<Deal | null>(null);
   const [activeTile, setActiveTile] = useState<TileKey | null>(null);
-  const [viewingSOA, setViewingSOA] = useState<{ payable: PayableEntry; deal: Deal } | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<{ payable: PayableEntry; deal: Deal } | null>(null);
   const [viewingReceivableInvoice, setViewingReceivableInvoice] = useState<Deal | null>(null);
   const [showDownloadSummary, setShowDownloadSummary] = useState(false);
@@ -1138,13 +933,12 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
 
   /* ---- Payables sort/filter ---- */
   const paySort = useTableSort();
-  const payFilters = useTableFilters(["entity", "type", "status", "soaStatus"]);
+  const payFilters = useTableFilters(["entity", "type", "status"]);
   const payUniqueTypes = useMemo(() => [...new Set(allPayableRows.map(r => getEntityCategory(r.payable.entityType)))].sort(), [allPayableRows]);
   const payableStatusDisplayLabel = (s: PayableStatus) => s === "pending" ? "created" : s;
   const getDisplayedInvoiceStatus = (p: PayableEntry) =>
-    (!p.soaStatus || p.soaStatus === "pending" || p.soaStatus === "generated" || p.soaStatus === "disputed") ? "No Invoice" : payableStatusDisplayLabel(p.status);
+    p.entityUploadedInvoice ? payableStatusDisplayLabel(p.status) : "No Invoice";
   const payUniqueStatuses = useMemo(() => [...new Set(allPayableRows.map(r => getDisplayedInvoiceStatus(r.payable)))].sort(), [allPayableRows]);
-  const payUniqueSoaStatuses = useMemo(() => [...new Set(allPayableRows.map(r => r.payable.soaStatus || "pending"))].sort(), [allPayableRows]);
   const payUniqueEntities = useMemo(() => [...new Set(allPayableRows.map(r => r.payable.entityLabel))].sort(), [allPayableRows]);
 
   const payablesSorted = useMemo(() => applySortAndFilter(
@@ -1155,8 +949,6 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
         case "entity": return r.payable.entityLabel;
         case "type": return getEntityCategory(r.payable.entityType);
         case "ref": return r.payable.refNumber || "";
-        case "soa": return r.payable.soaReference || "";
-        case "soaStatus": return r.payable.soaStatus || "pending";
         case "entityInvoice": return r.payable.entityUploadedInvoice || "";
         case "status": return r.payable.status;
         case "amount": return r.payable.expectedAmount;
@@ -1170,7 +962,6 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
         case "entity": return r.payable.entityLabel;
         case "type": return getEntityCategory(r.payable.entityType);
         case "status": return getDisplayedInvoiceStatus(r.payable);
-        case "soaStatus": return r.payable.soaStatus || "pending";
         default: return "";
       }
     }
@@ -1435,10 +1226,6 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                     filterable filterOptions={payUniqueTypes} filterValues={payFilters.filters.type} onFilterChange={(s) => payFilters.setFilter("type", s)}
                     openFilter={payFilters.openFilter} filterKey="type" onFilterToggle={payFilters.toggleFilter} />
                   
-                  <SortableHeader label="SOA" sortKey="soa" currentSortKey={paySort.sortKey} sortDir={paySort.sortDir} onSort={paySort.handleSort} sortable={false} className="min-w-[180px]" />
-                  <SortableHeader label="SOA Status" sortKey="soaStatus" currentSortKey={paySort.sortKey} sortDir={paySort.sortDir} onSort={paySort.handleSort} sortable={false}
-                    filterable filterOptions={payUniqueSoaStatuses} filterValues={payFilters.filters.soaStatus} onFilterChange={(s) => payFilters.setFilter("soaStatus", s)}
-                    openFilter={payFilters.openFilter} filterKey="soaStatus" onFilterToggle={payFilters.toggleFilter} />
                   <SortableHeader label="Entity Invoice" sortKey="entityInvoice" currentSortKey={paySort.sortKey} sortDir={paySort.sortDir} onSort={paySort.handleSort} sortable={false} />
                   <SortableHeader label="Invoice Status" sortKey="status" currentSortKey={paySort.sortKey} sortDir={paySort.sortDir} onSort={paySort.handleSort} sortable={false}
                     filterable filterOptions={payUniqueStatuses} filterValues={payFilters.filters.status} onFilterChange={(s) => payFilters.setFilter("status", s)}
@@ -1460,29 +1247,17 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                       <td className="px-4 py-3 text-muted-foreground capitalize border-r border-r-border/40">{getEntityCategory(payable.entityType)}</td>
                       
                       <td className="px-4 py-3 border-r border-r-border/40">
-                        {payable.soaReference && (payable.soaStatus === "generated" || payable.soaStatus === "approved" || payable.soaStatus === "disputed") ? (
-                          <button onClick={() => setViewingSOA({ payable, deal })} className="text-primary hover:underline font-medium text-[13px] flex items-center gap-1">
-                            <FileText className="h-3.5 w-3.5" /> {payable.soaReference}
-                          </button>
-                        ) : <span className="text-muted-foreground">—</span>}
-                      </td>
-                      <td className="px-4 py-3 border-r border-r-border/40">
-                        <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium", soaStatusColor(payable.soaStatus))}>{payable.soaStatus || "pending"}</span>
-                      </td>
-                      <td className="px-4 py-3 border-r border-r-border/40">
-                        {(!payable.soaStatus || payable.soaStatus === "pending" || payable.soaStatus === "generated" || payable.soaStatus === "disputed") ? (
-                          <span className="text-muted-foreground">—</span>
-                        ) : payable.entityUploadedInvoice ? (
+                        {payable.entityUploadedInvoice ? (
                           <button onClick={() => setViewingInvoice({ payable, deal })} className="inline-flex items-center justify-center gap-1 whitespace-nowrap px-2.5 py-1 text-[11px] font-medium rounded-md border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer">
                             <Receipt className="h-3 w-3 shrink-0" /> {payable.entityUploadedInvoice}
                           </button>
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="px-4 py-3 border-r border-r-border/40 whitespace-nowrap">
-                        {(!payable.soaStatus || payable.soaStatus === "pending" || payable.soaStatus === "generated" || payable.soaStatus === "disputed") ? (
-                          <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted text-muted-foreground")}>No Invoice</span>
-                        ) : (
+                        {payable.entityUploadedInvoice ? (
                           <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium", payableStatusColor(payable.status))}>{payableStatusDisplayLabel(payable.status)}</span>
+                        ) : (
+                          <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted text-muted-foreground")}>No Invoice</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-foreground border-r border-r-border/40">{formatAmount(payable.expectedAmount, currency)}</td>
@@ -1507,7 +1282,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                   );
                 })}
                 {payablesSorted.length === 0 && (
-                  <tr><td colSpan={10} className="text-center py-12 text-muted-foreground text-[13px]">No payables found</td></tr>
+                  <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-[13px]">No payables found</td></tr>
                 )}
               </tbody>
             </table>
@@ -1523,24 +1298,6 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
           onClose={() => setCreatingInvoiceFor(null)}
           onSave={(invoices) => handleCreateInvoice(creatingInvoiceFor, invoices)}
         />
-      )}
-
-      {/* SOA Modal */}
-      {viewingSOA && (
-        <SOAModal payable={viewingSOA.payable} deal={viewingSOA.deal} currency={currency} onClose={() => setViewingSOA(null)} onApprove={() => {
-          if (onDealUpdate) {
-            const updatedDeal = { ...viewingSOA.deal, payables: viewingSOA.deal.payables.map(p =>
-              p.entityLabel === viewingSOA.payable.entityLabel && p.entityType === viewingSOA.payable.entityType
-                ? { ...p, soaStatus: "approved" as SOAStatus }
-                : p
-            )};
-            onDealUpdate(updatedDeal);
-            setViewingSOA({ ...viewingSOA, payable: { ...viewingSOA.payable, soaStatus: "approved" as SOAStatus } });
-          }
-        }} onSave={(credits, debits) => {
-          // Mock save — in a real app this would persist to backend
-          console.log("SOA saved:", { credits, debits, payable: viewingSOA.payable.entityLabel });
-        }} />
       )}
 
       {/* Entity Invoice Modal */}
