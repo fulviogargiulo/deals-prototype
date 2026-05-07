@@ -46,8 +46,8 @@ const Deals = () => {
   const [addDealOpen, setAddDealOpen] = useState(false);
 
   // Shared date range state
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("MTD");
-  const [dateRange, setDateRange] = useState<DateRange>(getPresetRange("MTD"));
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("YTD");
+  const [dateRange, setDateRange] = useState<DateRange>(getPresetRange("YTD"));
 
   const handleDealUpdate = (updated: Deal) => {
     setAllDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));

@@ -7,6 +7,8 @@ const agentDisplayName: Record<string, string> = {
   "agent-guilherme": "Guilherme Castro",
   "agent-omar": "Omar Al Saleem",
   "agent-gelo": "Gelo Huspy",
+  "agent-ravi": "Ravi Nair",
+  "agent-zainab": "Zainab Al-Qadi",
 };
 
 function findClient(id?: string) {
@@ -46,6 +48,7 @@ interface BaseInput {
   market: Deal["market"];
   country: Deal["country"];
   currency: Deal["currency"];
+  businessUnit?: Deal["businessUnit"];
   dealAmount: number;
   reportDate: string;
   createdAt: string;
@@ -75,7 +78,7 @@ function expand(b: BaseInput): Deal {
     type: b.type,
     status: b.status,
     market: b.market,
-    businessUnit: "rebu",
+    businessUnit: b.businessUnit ?? "rebu",
     country: b.country,
     currency: b.currency,
     dealAmount: b.dealAmount,
@@ -216,5 +219,69 @@ export const sharedDeals: Deal[] = [
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-03T00:00:00.000Z",
     commissionPercentage: 2.5, invoiceNumber: "INV-2026-008",
     invoiceDueDate: "2026-03-30",
+  }),
+  // New deals — ae country, mortgage BU, and missing "canceled" status
+  expand({
+    id: "deal-009", opportunityId: "opp-007", clientId: "client-007", agentId: "agent-omar",
+    type: "buy", status: "reported", market: "primary", country: "ae", currency: "AED",
+    dealAmount: 1850000, reportDate: "2026-05-01",
+    createdAt: "2026-05-01T00:00:00.000Z", updatedAt: "2026-05-01T00:00:00.000Z",
+    commissionPercentage: 2,
+  }),
+  expand({
+    id: "deal-010", opportunityId: "opp-008", clientId: "client-008", agentId: "agent-ravi",
+    type: "buy", status: "canceled", market: "secondary", country: "ae", currency: "AED",
+    dealAmount: 4200000, reportDate: "2026-03-18",
+    createdAt: "2026-03-18T00:00:00.000Z", updatedAt: "2026-03-18T00:00:00.000Z",
+    commissionPercentage: 2,
+  }),
+  expand({
+    id: "deal-011", opportunityId: "opp-009", clientId: "client-007", agentId: "agent-zainab",
+    type: "mortgage", status: "pending-details", market: "primary", country: "ae", currency: "AED",
+    businessUnit: "mortgage",
+    dealAmount: 1400000, reportDate: "2026-04-20",
+    createdAt: "2026-04-20T00:00:00.000Z", updatedAt: "2026-04-20T00:00:00.000Z",
+    commissionPercentage: 0.5,
+  }),
+  expand({
+    id: "deal-012", opportunityId: "opp-010", clientId: "client-008", agentId: "agent-ravi",
+    type: "mortgage", status: "under-review", market: "secondary", country: "ae", currency: "AED",
+    businessUnit: "mortgage",
+    dealAmount: 3200000, reportDate: "2026-04-28",
+    createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-04-28T00:00:00.000Z",
+    commissionPercentage: 0.5,
+  }),
+  expand({
+    id: "deal-013", opportunityId: "opp-011", clientId: "client-009", agentId: "agent-gelo",
+    type: "buy", status: "ready-for-invoicing", market: "secondary", country: "es", currency: "EUR",
+    dealAmount: 620000, reportDate: "2026-04-10",
+    createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-10T00:00:00.000Z",
+    commissionPercentage: 3,
+  }),
+  expand({
+    id: "deal-014", opportunityId: "opp-011", clientId: "client-009", agentId: "agent-felicia",
+    type: "mortgage", status: "pending-receivables", market: "secondary", country: "es", currency: "EUR",
+    businessUnit: "mortgage",
+    dealAmount: 496000, reportDate: "2026-04-15",
+    createdAt: "2026-04-15T00:00:00.000Z", updatedAt: "2026-04-15T00:00:00.000Z",
+    commissionPercentage: 0.5, invoiceNumber: "INV-2026-014",
+    invoiceDueDate: "2026-04-30",
+  }),
+  expand({
+    id: "deal-015", opportunityId: "opp-012", clientId: "client-010", agentId: "agent-omar",
+    type: "mortgage", status: "pending-payment", market: "primary", country: "sa", currency: "SAR",
+    businessUnit: "mortgage",
+    dealAmount: 920000, reportDate: "2026-05-02",
+    createdAt: "2026-05-02T00:00:00.000Z", updatedAt: "2026-05-02T00:00:00.000Z",
+    commissionPercentage: 0.5, invoiceNumber: "INV-2026-015",
+    invoiceDueDate: "2026-05-20",
+  }),
+  expand({
+    id: "deal-016", opportunityId: "opp-007", clientId: "client-007", agentId: "agent-ravi",
+    type: "sell", status: "paid", market: "primary", country: "ae", currency: "AED",
+    dealAmount: 2100000, reportDate: "2026-05-04",
+    createdAt: "2026-05-04T00:00:00.000Z", updatedAt: "2026-05-04T00:00:00.000Z",
+    commissionPercentage: 2, invoiceNumber: "INV-2026-016",
+    invoiceDueDate: "2026-05-15", paymentDate: "2026-05-04",
   }),
 ];

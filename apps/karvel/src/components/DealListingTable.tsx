@@ -18,7 +18,7 @@ interface ColumnFilter {
   values: Set<string>;
 }
 
-const ALL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"];
+const ALL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid", "canceled"];
 const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
 
 const thBase = "px-4 py-3 font-semibold text-foreground text-[13px] whitespace-nowrap border-b border-border bg-muted/20";
@@ -314,9 +314,9 @@ export function DealListingTable({ deals, currency, onDealClick }: Props) {
                     <button onClick={(e) => { e.stopPropagation(); navigate(`/?selected=${encodeURIComponent(deal.ofCaseNumber!)}`); }} className="text-primary underline underline-offset-2 hover:opacity-80">{deal.ofCaseNumber}</button>
                   ) : dash}</td>
                   <td className="px-4 py-3"><DealStatusBadge status={deal.status} isDisputed={deal.isDisputed} /></td>
-                  <td className={`${tdClass} text-right tabular-nums`}>{formatAmount(deal.dealPrice, currency)}</td>
+                  <td className={`${tdClass} text-right tabular-nums`}>{formatAmount(deal.dealPrice, deal.currency ?? currency)}</td>
                   <td className={`${tdClass} text-right tabular-nums`}>{deal.takeRate.toFixed(2)}%</td>
-                  <td className={`${tdClass} text-right tabular-nums`}>{formatAmount(deal.huspyRevenue, currency)}</td>
+                  <td className={`${tdClass} text-right tabular-nums`}>{formatAmount(deal.huspyRevenue, deal.currency ?? currency)}</td>
                   <td className={tdClass}>{deal.clientName ? (
                     <button onClick={(e) => { e.stopPropagation(); navigate(`/clients?selected=${encodeURIComponent(deal.clientName)}`); }} className="text-primary underline underline-offset-2 hover:opacity-80">{deal.clientName}</button>
                   ) : dash}</td>
