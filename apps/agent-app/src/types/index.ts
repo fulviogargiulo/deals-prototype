@@ -87,8 +87,6 @@ export interface Deal extends Omit<BaseDeal, "type" | "market"> {
   commissionPercentage: number;
   commissionAmount: number;
   dispute?: import("@huspy/shared-domain").DealDispute;
-  invoiceNumber?: string;
-  invoiceDueDate?: string;
   paymentDate?: string;
 }
 

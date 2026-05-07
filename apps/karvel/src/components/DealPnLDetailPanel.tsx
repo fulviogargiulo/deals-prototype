@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Deal, DealType, DealStatus, DealMarket, InvoiceStatus, PayableStatus, BusinessUnit, Country, PaymentMode, AgentEntry, ExternalPartnerEntry, PayableEntry } from "@/data/types";
+import { Deal, DealType, DealStatus, DealMarket, PayableStatus, BusinessUnit, Country, PaymentMode, AgentEntry, ExternalPartnerEntry, PayableEntry } from "@/data/types";
 import { X, ArrowUpRight, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { recalculateDeal, createEmptyAgent } from "@/lib/dealCalculations";
 import { RequiredDocumentsSection } from "./RequiredDocumentsSection";
@@ -378,28 +378,21 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
         {/* ═══════════════════════════════════════════ */}
         {!isPendingDetails && (
         <CollapsibleSection title="Receivables" id="receivables" collapsed={collapsedSections} toggle={toggleSection}>
-          <EditField label="Invoice Number" value={draft.invoiceNumber || ""} onChange={(v) => update("invoiceNumber", v)} />
-          <SelectField label="Invoice Status" value={draft.invoiceStatus || "issued"} options={["issued", "paid", "cancelled"] as InvoiceStatus[]} onChange={(v) => update("invoiceStatus", v)} />
-          <ComputedField label="Invoice Amount" value={draft.invoiceNumber ? fmt(draft.huspyRevenue) : "—"} />
-          <EditField label="Invoice Date" value={draft.invoiceDate || ""} type="date" placeholder="Select date" onChange={(v) => update("invoiceDate", v)} />
-          {draft.invoiceStatus === "paid" && (
-            <>
-              <EditField label="Payment Received Date" value={draft.paymentReceivedDate || ""} type="date" placeholder="Select date" onChange={(v) => update("paymentReceivedDate", v)} />
-              <EditField label="Payment Received Amount" value={String(draft.paymentReceivedAmount ?? "")} type="number" onChange={(v) => update("paymentReceivedAmount", parseFloat(v as string) || 0)} />
-              {draft.invoiceNumber && draft.paymentReceivedAmount != null && draft.paymentReceivedAmount !== draft.huspyRevenue && (() => {
-                const delta = draft.paymentReceivedAmount! - draft.huspyRevenue;
-                const isPositive = delta > 0;
-                return (
-                  <div className="flex justify-between items-center py-1.5 px-1">
-                    <span className="text-[12px] font-medium text-muted-foreground">Delta</span>
-                    <span className={`text-[13px] font-bold ${isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
-                      {isPositive ? "+" : ""}{fmt(delta)}
-                    </span>
-                  </div>
-                );
-              })()}
-            </>
-          )}
+          <ComputedField label="Invoice Amount" value={fmt(draft.huspyRevenue)} />
+          <EditField label="Payment Received Date" value={draft.paymentReceivedDate || ""} type="date" placeholder="Select date" onChange={(v) => update("paymentReceivedDate", v)} />
+          <EditField label="Payment Received Amount" value={String(draft.paymentReceivedAmount ?? "")} type="number" onChange={(v) => update("paymentReceivedAmount", parseFloat(v as string) || 0)} />
+          {draft.paymentReceivedAmount != null && draft.paymentReceivedAmount !== draft.huspyRevenue && (() => {
+            const delta = draft.paymentReceivedAmount! - draft.huspyRevenue;
+            const isPositive = delta > 0;
+            return (
+              <div className="flex justify-between items-center py-1.5 px-1">
+                <span className="text-[12px] font-medium text-muted-foreground">Delta</span>
+                <span className={`text-[13px] font-bold ${isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                  {isPositive ? "+" : ""}{fmt(delta)}
+                </span>
+              </div>
+            );
+          })()}
         </CollapsibleSection>
         )}
 

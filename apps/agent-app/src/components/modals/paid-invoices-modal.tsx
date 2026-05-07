@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { Download, FileText, ChevronRight, Calendar } from 'lucide-react';
+import { Download, FileText, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Deal } from '@/types';
 import { toast } from 'sonner';
 
@@ -24,7 +22,7 @@ export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome }: Pa
   );
 
   const handleDownload = (deal: Deal, type: 'invoice' | 'receipt') => {
-    toast.success(`Downloading ${type === 'invoice' ? 'Invoice' : 'Payment Receipt'} ${deal.invoiceNumber || deal.id}`);
+    toast.success(`Downloading ${type === 'invoice' ? 'Invoice' : 'Payment Receipt'} ${deal.id}`);
   };
 
   return (
@@ -65,15 +63,6 @@ export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome }: Pa
 
               {/* Dates row */}
               <div className="flex items-center gap-4 flex-wrap">
-                {deal.invoiceNumber && (
-                  <Badge variant="outline" className="text-[10px] font-semibold border-border-ds-primary text-fg-secondary">
-                    {deal.invoiceNumber}
-                  </Badge>
-                )}
-                <div className="flex items-center gap-1.5 text-[12px] font-normal leading-[140%] text-fg-secondary">
-                  <Calendar className="w-3.5 h-3.5" />
-                  Due: {formatDate(deal.invoiceDueDate)}
-                </div>
                 <div className="flex items-center gap-1.5 text-[12px] font-normal leading-[140%]" style={{ color: 'hsl(var(--ds-green))' }}>
                   <Calendar className="w-3.5 h-3.5" />
                   Paid: {formatDate(deal.paymentDate)}

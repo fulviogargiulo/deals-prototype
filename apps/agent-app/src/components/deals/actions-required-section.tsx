@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Deal } from '@/types';
+import { type DealStakeholder, computeAgentCommission } from '@huspy/shared-domain';
 import { AlertCircle, Clock, AlertTriangle, CheckCircle2, MoreVertical, Timer, ArrowRight } from 'lucide-react';
 import { CountdownTimer, CountdownLabels } from '@/components/ui/countdown-timer';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ interface ActionsRequiredSectionProps {
   pendingInfo: Deal[];
   disputedDealIds: Set<string>;
   onDealDisputed?: (dealId: string) => void;
+  agentStakeMap?: Map<string, DealStakeholder>;
 }
 
 const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = {
@@ -27,7 +29,7 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
   lease: { icon: LeaseBareIcon, color: '#CD52C3' },
 };
 
-export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, disputedDealIds, onDealDisputed }: ActionsRequiredSectionProps) {
+export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, disputedDealIds, onDealDisputed, agentStakeMap }: ActionsRequiredSectionProps) {
   const [disputeDeal, setDisputeDeal] = useState<Deal | null>(null);
   const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
   const [infoDeal, setInfoDeal] = useState<Deal | null>(null);
@@ -206,7 +208,7 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, dispu
 
                   {/* Commission */}
                   <span className="text-sm font-semibold text-foreground text-right tabular-nums">
-                    {deal.currency}{deal.commissionAmount.toLocaleString()}
+                    {deal.currency}{computeAgentCommission(deal.commissionAmount, agentStakeMap?.get(deal.id)).toLocaleString()}
                   </span>
 
                   {/* Date */}

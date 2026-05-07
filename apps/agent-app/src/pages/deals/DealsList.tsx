@@ -14,7 +14,9 @@ import { agentDeals, agentStakeMap } from '@/data/mockDeals';
 
 export function DealsList() {
   const location = useLocation();
-  const [disputedDealIds, setDisputedDealIds] = useState<Set<string>>(new Set());
+  const [disputedDealIds, setDisputedDealIds] = useState<Set<string>>(
+    () => new Set(agentDeals.filter(d => d.isDisputed).map(d => d.id))
+  );
   const now = new Date();
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: startOfWeek(now, { weekStartsOn: 1 }),
@@ -57,6 +59,7 @@ export function DealsList() {
               pendingInfo={pendingInfo}
               disputedDealIds={disputedDealIds}
               onDealDisputed={handleDealDisputed}
+              agentStakeMap={agentStakeMap}
             />
             <div id="all-deals">
               <DealsTable deals={agentDeals} disputedDealIds={disputedDealIds} agentStakeMap={agentStakeMap} />

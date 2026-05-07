@@ -437,9 +437,6 @@ export interface Deal {
 
   // Receivables / Payables
   receivables?: ReceivableEntry[];
-  invoiceNumber?: string;
-  invoiceStatus?: InvoiceStatus;
-  invoiceDate?: string;
   paymentReceivedDate?: string;
   paymentReceivedAmount?: number;
   payables?: PayableEntry[];
@@ -458,7 +455,6 @@ export interface Deal {
   marketType?: "primary" | "secondary" | "leasing"; // alias for `market` used by agent-app UI
   commissionPercentage?: number;
   commissionAmount?: number;
-  invoiceDueDate?: string;
   paymentDate?: string;
   dispute?: DealDispute;
 }

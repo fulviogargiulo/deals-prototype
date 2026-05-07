@@ -27,6 +27,14 @@ function formatAmount(amount: number, currency: string): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 }
 
+function getDealInvoiceStatus(deal: Deal): InvoiceStatus | undefined {
+  const statuses = (deal.receivables || []).map(r => r.invoiceStatus).filter(Boolean) as InvoiceStatus[];
+  if (statuses.length === 0) return undefined;
+  if (statuses.every(s => s === "paid")) return "paid";
+  if (statuses.some(s => s === "issued")) return "issued";
+  return undefined;
+}
+
 const tileConfig = [
   { key: "awaiting", label: "pending-details", color: "text-[hsl(var(--deal-pending-details))]" },
   { key: "ready", label: "Ready to Invoice", color: "text-[hsl(var(--deal-reported))]" },
@@ -64,7 +72,7 @@ function computeTiles(deals: Deal[]) {
       tiles.awaiting.count++;
       tiles.awaiting.volume += d.huspyRevenue;
       tiles.awaiting.dealAmount += d.dealPrice;
-    } else if (!d.invoiceStatus || d.invoiceStatus === "issued") {
+    } else if (!getDealInvoiceStatus(d) || getDealInvoiceStatus(d) === "issued") {
       tiles.ready.count++;
       tiles.ready.volume += d.huspyRevenue;
       tiles.ready.dealAmount += d.dealPrice;
@@ -368,7 +376,7 @@ function EntityInvoiceModal({ payable, deal, currency, onClose, onApprove }: { p
 
 // Receivable Invoice Modal (Huspy → Client)
 function generateReceivableInvoiceData(deal: Deal) {
-  const issueDate = deal.invoiceDate || deal.reportDate || "2026-02-28";
+  const issueDate = deal.reportDate || "2026-02-28";
   const dueDate = new Date(new Date(issueDate).getTime() + 30 * 86400000).toISOString().split("T")[0];
   const lines: { description: string; subType: string; amount: number }[] = [
     { description: `Brokerage commission — ${deal.opportunityName || deal.buildingName || "Property transaction"}`, subType: "Brokerage Fee", amount: deal.huspyRevenue },
@@ -382,7 +390,7 @@ function generateReceivableInvoiceData(deal: Deal) {
   const total = subtotal + vatAmount;
   const derivedStatus = deal.status === "under-review" ? undefined
     : deal.status === "finalized" ? "paid" as const
-    : deal.invoiceStatus;
+    : getDealInvoiceStatus(deal);
   return { issueDate, dueDate, lines, subtotal, vatRate, vatAmount, total, status: derivedStatus };
 }
 
@@ -404,15 +412,15 @@ function ReceivableInvoiceModal({ deal, currency, onClose }: { deal: Deal; curre
             </div>
             <div>
               <h3 className="font-semibold text-[16px] text-foreground">Invoice</h3>
-              <p className="text-[12px] text-muted-foreground mt-0.5">{deal.invoiceNumber}</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">{deal.id}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <span className={cn("px-3 py-1 rounded-full text-[12px] font-medium", statusColor)}>{statusLabel}</span>
             <button onClick={() => {
-              const blob = new Blob([`Invoice: ${deal.invoiceNumber}\nClient: ${deal.clientName}\nTotal: ${inv.total}\nIssue Date: ${inv.issueDate}\nDue Date: ${inv.dueDate}\n\nLine Items:\n${inv.lines.map(l => `${l.description}: ${l.amount}`).join("\n")}\n\nSubtotal: ${inv.subtotal}\nVAT (${inv.vatRate}%): ${inv.vatAmount}\nTotal Due: ${inv.total}`], { type: "text/plain" });
+              const blob = new Blob([`Invoice: ${deal.id}\nClient: ${deal.clientName}\nTotal: ${inv.total}\nIssue Date: ${inv.issueDate}\nDue Date: ${inv.dueDate}\n\nLine Items:\n${inv.lines.map(l => `${l.description}: ${l.amount}`).join("\n")}\n\nSubtotal: ${inv.subtotal}\nVAT (${inv.vatRate}%): ${inv.vatAmount}\nTotal Due: ${inv.total}`], { type: "text/plain" });
               const url = URL.createObjectURL(blob);
-              const a = document.createElement("a"); a.href = url; a.download = `${deal.invoiceNumber || "invoice"}.txt`; a.click(); URL.revokeObjectURL(url);
+              const a = document.createElement("a"); a.href = url; a.download = `${deal.id}.txt`; a.click(); URL.revokeObjectURL(url);
             }} className="inline-flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-foreground border border-border bg-card rounded-md hover:bg-muted transition-colors">
               <Download className="h-3.5 w-3.5" /> Download
             </button>
@@ -498,7 +506,7 @@ function ReceivableInvoiceModal({ deal, currency, onClose }: { deal: Deal; curre
           </div>
           <div>
             <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Reference</p>
-            <p className="text-[13px] text-foreground">{deal.invoiceNumber}</p>
+            <p className="text-[13px] text-foreground">{deal.id}</p>
           </div>
         </div>
       </div>
@@ -765,8 +773,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
         d.agentName.toLowerCase().includes(q) ||
         d.clientName.toLowerCase().includes(q) ||
         d.id.toLowerCase().includes(q) ||
-        d.market.toLowerCase().includes(q) ||
-        (d.invoiceNumber || "").toLowerCase().includes(q)
+        d.market.toLowerCase().includes(q)
       );
     }
 
@@ -775,10 +782,10 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
       filtered = filtered.filter((d) => {
           switch (activeTile) {
             case "awaiting": return d.status === "under-review";
-            case "ready": return !d.invoiceStatus || d.invoiceStatus === "issued";
-            case "sent": return d.invoiceStatus === "issued";
-            case "received": return d.invoiceStatus === "paid" && d.payables.some(p => p.status !== "paid");
-            case "paid": return d.invoiceStatus === "paid" && d.payables.every(p => p.status === "paid");
+            case "ready": { const s = getDealInvoiceStatus(d); return !s || s === "issued"; }
+            case "sent": return getDealInvoiceStatus(d) === "issued";
+            case "received": return getDealInvoiceStatus(d) === "paid" && d.payables.some(p => p.status !== "paid");
+            case "paid": return getDealInvoiceStatus(d) === "paid" && d.payables.every(p => p.status === "paid");
             case "overdue": return d.payables.some(p => p.status === "overdue");
             default: return true;
         }
@@ -789,11 +796,18 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
 
   const handleCreateInvoice = (deal: Deal, invoices: ReceivableInvoice[]) => {
     if (!onDealUpdate) return;
+    const today = new Date().toISOString().split("T")[0];
+    const updatedReceivables = invoices.map((inv, i) => ({
+      entityName: inv.entityName,
+      entityType: "buyer" as const,
+      amount: inv.amount,
+      invoiceNumber: `INV-${deal.id.replace("DEAL-", "")}-${i + 1}`,
+      invoiceStatus: "issued" as InvoiceStatus,
+      invoiceDate: today,
+    }));
     const updatedDeal: Deal = {
       ...deal,
-      invoiceNumber: invoices.map((_, i) => `INV-${deal.id.replace("DEAL-", "")}-${i + 1}`).join(", "),
-      invoiceStatus: "issued" as InvoiceStatus,
-      invoiceDate: new Date().toISOString().split("T")[0],
+      receivables: updatedReceivables,
       status: "pending-receivables",
     };
     onDealUpdate(updatedDeal);
@@ -874,14 +888,11 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
       if (deal.receivables && deal.receivables.length > 0) {
         return deal.receivables.map((r, idx) => ({ deal, receivable: r, idx }));
       }
-      // Fallback for deals without receivables array — use legacy fields
+      // Fallback for deals without receivables array
       const fallback: ReceivableEntry = {
         entityName: deal.clientName,
         entityType: "buyer" as const,
         amount: deal.huspyRevenue,
-        invoiceNumber: deal.invoiceNumber,
-        invoiceStatus: deal.invoiceStatus,
-        invoiceDate: deal.invoiceDate,
         paymentReceivedDate: deal.paymentReceivedDate,
         paymentReceivedAmount: deal.paymentReceivedAmount,
       };
@@ -1145,7 +1156,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                                 updatedReceivables[idx] = { ...receivable, invoiceStatus: newStatus };
                                 const allPaid = updatedReceivables.every((r) => r.invoiceStatus === "paid");
                                 const updatedDealStatus = allPaid && deal.status === "pending-receivables" ? "finalized" : deal.status;
-                                onDealUpdate({ ...deal, receivables: updatedReceivables, invoiceStatus: newStatus, status: updatedDealStatus });
+                                onDealUpdate({ ...deal, receivables: updatedReceivables, status: updatedDealStatus });
                               }
                             }}
                             className={cn(

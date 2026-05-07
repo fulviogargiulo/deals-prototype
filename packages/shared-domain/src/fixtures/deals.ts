@@ -36,8 +36,6 @@ interface BaseInput {
   updatedAt: string;
   isDisputed?: boolean;
   commissionPercentage: number;
-  invoiceNumber?: string;
-  invoiceDueDate?: string;
   paymentDate?: string;
 }
 
@@ -163,8 +161,6 @@ function expand(b: BaseInput): Deal {
     marketType: b.market,
     commissionPercentage: b.commissionPercentage,
     commissionAmount: f.agentCommissionPayout,
-    invoiceNumber: b.invoiceNumber,
-    invoiceDueDate: b.invoiceDueDate,
     paymentDate: b.paymentDate,
   };
 }
@@ -175,8 +171,7 @@ export const sharedDeals: Deal[] = [
     type: "buy", status: "finalized", market: "primary", country: "es", currency: "EUR",
     dealAmount: 385000, reportDate: "2026-01-15",
     createdAt: "2026-01-15T00:00:00.000Z", updatedAt: "2026-01-12T00:00:00.000Z",
-    commissionPercentage: 3, invoiceNumber: "INV-2026-001",
-    invoiceDueDate: "2026-01-15", paymentDate: "2026-01-12",
+    commissionPercentage: 3, paymentDate: "2026-01-12",
   }),
   expand({
     id: "deal-002", opportunityId: "opp-002",
@@ -208,18 +203,17 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-006", opportunityId: "opp-006",
-    type: "sell", status: "reported", market: "secondary", country: "es", currency: "EUR",
+    type: "sell", status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 320000, reportDate: "2026-02-20",
     createdAt: "2026-02-20T00:00:00.000Z", updatedAt: "2026-02-20T00:00:00.000Z",
     commissionPercentage: 3,
   }),
   expand({
     id: "deal-007", opportunityId: "opp-001",
-    type: "buy", status: "pending-receivables", market: "secondary", country: "es", currency: "EUR",
+    type: "buy", status: "under-review", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 475000, reportDate: "2026-03-05",
     createdAt: "2026-03-05T00:00:00.000Z", updatedAt: "2026-03-05T00:00:00.000Z",
-    commissionPercentage: 2.5, invoiceNumber: "INV-2026-007",
-    invoiceDueDate: "2026-03-15",
+    commissionPercentage: 2.5,
     isDisputed: true,
   }),
   expand({
@@ -227,8 +221,7 @@ export const sharedDeals: Deal[] = [
     type: "sell", status: "pending-receivables", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 580000, reportDate: "2026-03-03",
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-03T00:00:00.000Z",
-    commissionPercentage: 2.5, invoiceNumber: "INV-2026-008",
-    invoiceDueDate: "2026-03-30",
+    commissionPercentage: 2.5,
   }),
   expand({
     id: "deal-009", opportunityId: "opp-007",
@@ -273,8 +266,7 @@ export const sharedDeals: Deal[] = [
     businessUnit: "mortgage",
     dealAmount: 496000, reportDate: "2026-04-15",
     createdAt: "2026-04-15T00:00:00.000Z", updatedAt: "2026-04-15T00:00:00.000Z",
-    commissionPercentage: 0.5, invoiceNumber: "INV-2026-014",
-    invoiceDueDate: "2026-04-30",
+    commissionPercentage: 0.5,
   }),
   expand({
     id: "deal-015", opportunityId: "opp-012",
@@ -282,16 +274,14 @@ export const sharedDeals: Deal[] = [
     businessUnit: "mortgage",
     dealAmount: 920000, reportDate: "2026-05-02",
     createdAt: "2026-05-02T00:00:00.000Z", updatedAt: "2026-05-02T00:00:00.000Z",
-    commissionPercentage: 0.5, invoiceNumber: "INV-2026-015",
-    invoiceDueDate: "2026-05-20",
+    commissionPercentage: 0.5,
   }),
   expand({
     id: "deal-016", opportunityId: "opp-007",
     type: "sell", status: "finalized", market: "primary", country: "ae", currency: "AED",
     dealAmount: 2100000, reportDate: "2026-05-04",
     createdAt: "2026-05-04T00:00:00.000Z", updatedAt: "2026-05-04T00:00:00.000Z",
-    commissionPercentage: 2, invoiceNumber: "INV-2026-016",
-    invoiceDueDate: "2026-05-15", paymentDate: "2026-05-04",
+    commissionPercentage: 2, paymentDate: "2026-05-04",
   }),
   expand({
     id: "deal-017", opportunityId: "opp-013",
