@@ -239,6 +239,8 @@ export interface Agent {
   id: string;
   partyId: string;
   employmentStatus?: string;
+  teamLeadName?: string;
+  managerName?: string;
   // UI-only display fields (not in ERD; prototype convenience)
   photo?: string;
   specialties?: string[];
@@ -520,6 +522,7 @@ export interface Invoice {
   id: string;
   direction: "outbound" | "inbound";
   partyId: string;
+  dealId?: string;
   invoiceNumber: string;
   status: InvoiceStatus;
   amount: number;

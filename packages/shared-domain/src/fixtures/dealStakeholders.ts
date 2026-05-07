@@ -83,4 +83,24 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   // deal-019 — buy (canceled), agent-felicia, client-003
   { id: "ds-deal-019-agent",  dealId: "deal-019", partyId: "party-agent-felicia",   role: "agent",   splitPercentage: 100 },
   { id: "ds-deal-019-client", dealId: "deal-019", partyId: "party-client-003",      role: "buyer" },
+
+  // ── Conveyance stakeholders (property deals only, not mortgages) ───────────
+  // Spain (ES) deals → Gestoría López & Asociados
+  { id: "ds-deal-001-conv", dealId: "deal-001", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-002-conv", dealId: "deal-002", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-003-conv", dealId: "deal-003", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-004-conv", dealId: "deal-004", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-006-conv", dealId: "deal-006", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-007-conv", dealId: "deal-007", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-008-conv", dealId: "deal-008", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-013-conv", dealId: "deal-013", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-017-conv", dealId: "deal-017", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-018-conv", dealId: "deal-018", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  { id: "ds-deal-019-conv", dealId: "deal-019", partyId: "party-conv-gestoria-lopez",   role: "conveyance" },
+  // KSA (SA) deals → Al Rajhi Notarial
+  { id: "ds-deal-005-conv", dealId: "deal-005", partyId: "party-conv-alrajhi-notarial", role: "conveyance" },
+  // UAE (AE) deals → TAMM Legal Services
+  { id: "ds-deal-009-conv", dealId: "deal-009", partyId: "party-conv-tamm-legal",       role: "conveyance" },
+  { id: "ds-deal-010-conv", dealId: "deal-010", partyId: "party-conv-tamm-legal",       role: "conveyance" },
+  { id: "ds-deal-016-conv", dealId: "deal-016", partyId: "party-conv-tamm-legal",       role: "conveyance" },
 ];

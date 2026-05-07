@@ -2,6 +2,7 @@ import type { Invoice } from "../entities";
 
 // Invoice fixtures — unified outbound (Huspy → client) and inbound (agent → Huspy).
 // partyId links to the Party being billed (outbound) or billing Huspy (inbound).
+// dealId links outbound invoices directly to the originating deal.
 // Multiple invoices per deal are intentional (e.g. seller + developer split).
 export const sharedInvoices: Invoice[] = [
   // ── Outbound: Huspy bills clients ──────────────────────────────────────────
@@ -9,6 +10,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-001 — buy, paid, EUR 385 000 @ 3% = 11 550
   {
     id: "inv-001",
+    dealId: "deal-001",
     direction: "outbound",
     partyId: "party-client-001",
     invoiceNumber: "INV-2026-001",
@@ -22,9 +24,10 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-01-12T00:00:00.000Z",
   },
 
-  // deal-007 — buy, pending-receivables, EUR 475 000 @ 2.5% = 11 875
+  // deal-007 — buy (under-review, disputed), EUR 475 000 @ 2.5% = 11 875
   {
     id: "inv-007",
+    dealId: "deal-007",
     direction: "outbound",
     partyId: "party-client-001",
     invoiceNumber: "INV-2026-007",
@@ -37,9 +40,10 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-03-05T00:00:00.000Z",
   },
 
-  // deal-008 — sell, pending-receivables, EUR 580 000 @ 2.5% = 14 500 split
+  // deal-008 — sell, pending-receivables, EUR 580 000 @ 2.5% = 14 500 split seller + developer
   {
     id: "inv-008-a",
+    dealId: "deal-008",
     direction: "outbound",
     partyId: "party-client-002",
     invoiceNumber: "INV-2026-008A",
@@ -53,6 +57,7 @@ export const sharedInvoices: Invoice[] = [
   },
   {
     id: "inv-008-b",
+    dealId: "deal-008",
     direction: "outbound",
     partyId: "party-third-inmobiliaria-grupo-norte",
     invoiceNumber: "INV-2026-008B",
@@ -68,6 +73,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-014 — mortgage, pending-receivables, EUR 496 000 @ 0.5% = 2 480
   {
     id: "inv-014",
+    dealId: "deal-014",
     direction: "outbound",
     partyId: "party-third-caixabank",
     invoiceNumber: "INV-2026-014",
@@ -83,6 +89,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-015 — mortgage, pending-receivables, SAR 920 000 @ 0.5% = 4 600
   {
     id: "inv-015",
+    dealId: "deal-015",
     direction: "outbound",
     partyId: "party-third-snb",
     invoiceNumber: "INV-2026-015",
@@ -95,9 +102,10 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-05-02T00:00:00.000Z",
   },
 
-  // deal-016 — sell, paid, AED 2 100 000 @ 2% = 42 000 split seller + developer
+  // deal-016 — sell, finalized, AED 2 100 000 @ 2% = 42 000 split seller + developer
   {
     id: "inv-016-a",
+    dealId: "deal-016",
     direction: "outbound",
     partyId: "party-client-007",
     invoiceNumber: "INV-2026-016A",
@@ -112,6 +120,7 @@ export const sharedInvoices: Invoice[] = [
   },
   {
     id: "inv-016-b",
+    dealId: "deal-016",
     direction: "outbound",
     partyId: "party-third-emaar",
     invoiceNumber: "INV-2026-016B",
@@ -123,6 +132,23 @@ export const sharedInvoices: Invoice[] = [
     paidDate: "2026-05-05",
     createdAt: "2026-05-04T00:00:00.000Z",
     updatedAt: "2026-05-05T00:00:00.000Z",
+  },
+
+  // deal-018 — buy, finalized, EUR 1 250 000 @ 2.5% = 31 250
+  {
+    id: "inv-018",
+    dealId: "deal-018",
+    direction: "outbound",
+    partyId: "party-client-004",
+    invoiceNumber: "INV-2026-018",
+    status: "paid",
+    amount: 31250,
+    currency: "EUR",
+    issueDate: "2026-04-15",
+    dueDate: "2026-04-30",
+    paidDate: "2026-04-22",
+    createdAt: "2026-04-15T00:00:00.000Z",
+    updatedAt: "2026-04-22T00:00:00.000Z",
   },
 
   // ── Inbound: agents bill Huspy ──────────────────────────────────────────────

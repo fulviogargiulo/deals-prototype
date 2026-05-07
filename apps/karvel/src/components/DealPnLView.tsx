@@ -40,7 +40,7 @@ export function DealPnLView({ deals, currency = "EUR", dateRange, onDealsUpdate 
   });
 
   const pendingDetailsDeals = searched.filter(d => d.status === "pending-details");
-  const disputedDeals = searched.filter(d => d.isDisputed === true && ["reported", "pending-details", "under-review"].includes(d.status));
+  const disputedDeals = searched.filter(d => d.isDisputed === true && ["pending-details", "under-review"].includes(d.status));
   const underReviewDeals = searched.filter(d => d.status === "under-review");
   const approvedDeals = searched.filter(d => d.status === "pending-agent-approval");
 

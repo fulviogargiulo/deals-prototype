@@ -36,7 +36,7 @@ interface EditHelpers {
   fmt: (n: number) => string;
 }
 
-const ALL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"];
+const ALL_STATUSES: DealStatus[] = ["pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"];
 const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
 const ALL_MARKETS: DealMarket[] = ["primary", "secondary", "leasing"];
 const ALL_COUNTRIES: Country[] = ["ae", "es", "sa"];
@@ -371,7 +371,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
     editRender: (d, _o, h) => <EditableCell computed value={d.huspyConveyanceShare} align="right" onChange={() => {}} formatter={h.fmt} />,
   });
 
-  const PRE_INVOICE_STATUSES = new Set(["reported", "pending-details", "under-review"]);
+  const PRE_INVOICE_STATUSES = new Set(["pending-details", "under-review"]);
 
   // ═══ RECEIVABLES (dynamic per receivable entry) ═══
   for (let i = 0; i < maxReceivables; i++) {
@@ -1064,8 +1064,10 @@ export function PnLDealTable({ deals, currency, onDealsUpdate }: Props) {
               {paginated.map((originalDeal) => {
                 const deal = getDeal(originalDeal);
                 const isDirty = dirtyDeals.has(deal.id);
-                const EDITABLE_STATUSES: Deal["status"][] = ["reported", "pending-details", "under-review"];
+                const EDITABLE_STATUSES: Deal["status"][] = ["pending-details", "under-review"];
                 const isRowEditable = EDITABLE_STATUSES.includes(deal.status);
+                const rowFmt = (amount: number) => formatAmount(amount, (deal.currency as string) || currency);
+                const rowEditHelpers: EditHelpers = { ...editHelpers, fmt: rowFmt };
 
                 return (
                   <tr
@@ -1126,7 +1128,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate }: Props) {
                       const frozenFixedStyle = frozenLeft ? { ...frozenLeft, ...(frozenWidth ? { minWidth: `${frozenWidth}px`, width: `${frozenWidth}px`, maxWidth: `${frozenWidth}px` } : {}) } : undefined;
 
                       if ((isRowEditable || col.group === "notes") && col.editable && col.editRender) {
-                        const el = col.editRender(deal, originalDeal, editHelpers);
+                        const el = col.editRender(deal, originalDeal, rowEditHelpers);
                         if (React.isValidElement(el)) {
                           const existingStyle = (el.props as { style?: React.CSSProperties }).style;
                           return React.cloneElement(el as React.ReactElement<{ className?: string; style?: React.CSSProperties }>, {
@@ -1139,7 +1141,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate }: Props) {
                         }
                         return <React.Fragment key={col.key}>{el}</React.Fragment>;
                       }
-                      const content = col.render(deal, fmt);
+                      const content = col.render(deal, rowFmt);
                       const disputeHighlight = col.key === "disputeNote" && deal.isDisputed && deal.disputeNote
                         ? "outline outline-1 outline-destructive -outline-offset-1 bg-destructive/5"
                         : "";

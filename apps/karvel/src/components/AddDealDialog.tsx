@@ -201,7 +201,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     const deal: Deal = {
       id,
       type: form.type,
-      status: "reported",
+      status: "under-review",
       market: form.market,
       businessUnit: form.businessUnit,
       country: form.country,

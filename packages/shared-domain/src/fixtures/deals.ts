@@ -1,9 +1,10 @@
-import type { Deal, AgentEntry } from "../entities";
+import type { Deal, AgentEntry, ReceivableEntry, ReceivableEntityType } from "../entities";
 import { sharedClients } from "./clients";
 import { sharedParties } from "./parties";
 import { sharedOpportunities } from "./opportunities";
 import { sharedDealStakeholders } from "./dealStakeholders";
 import { sharedAgents } from "./agents";
+import { sharedInvoices } from "./invoices";
 import { computeDealFinancials, COMMISSION_RATES } from "../commissionCalc";
 
 const agentDisplayName: Record<string, string> = {
@@ -19,6 +20,17 @@ const CLIENT_ROLES = new Set(["buyer", "seller", "tenant", "landlord", "borrower
 
 function findOpp(id: string) {
   return sharedOpportunities.find((o) => o.id === id);
+}
+
+function deriveReceivableEntityType(partyId: string, dealId: string): ReceivableEntityType {
+  const party = sharedParties.find((p) => p.id === partyId);
+  if (party?.legalType === "financial_institution") return "bank";
+  if (party?.legalType === "company") return "developer";
+  const stake = sharedDealStakeholders.find((s) => s.partyId === partyId && s.dealId === dealId);
+  if (stake?.role === "seller") return "seller";
+  if (stake?.role === "tenant") return "tenant";
+  if (stake?.role === "landlord") return "landlord";
+  return "buyer";
 }
 
 interface BaseInput {
@@ -37,6 +49,11 @@ interface BaseInput {
   isDisputed?: boolean;
   commissionPercentage: number;
   paymentDate?: string;
+  channel?: string;
+  rebatePercentage?: number;
+  subsidyAmount?: number;
+  disputeNote?: string;
+  latestNote?: string;
 }
 
 function expand(b: BaseInput): Deal {
@@ -57,8 +74,10 @@ function expand(b: BaseInput): Deal {
       agentIncentive: 0,
       agentDeductions: 0,
       agentTotalAmount: Math.round(f.agentCommissionPayout * split),
+      teamLeadName: agent?.teamLeadName,
       teamLeadRate: COMMISSION_RATES.teamLeadRate,
       teamLeadShare: Math.round(f.teamLeadShare * split),
+      managerName: agent?.managerName,
       managerOverrideRate: COMMISSION_RATES.managerOverrideRate,
       managerOverride: Math.round(f.managerOverride * split),
       referralPercentage: 0,
@@ -75,6 +94,31 @@ function expand(b: BaseInput): Deal {
   const clientStake = sharedDealStakeholders.find((s) => s.dealId === b.id && CLIENT_ROLES.has(s.role));
   const client = clientStake ? sharedClients.find((c) => c.partyId === clientStake.partyId) : undefined;
   const clientParty = client ? sharedParties.find((p) => p.id === client.partyId) : undefined;
+
+  // Derive conveyance agent name from DealStakeholders.
+  const conveyanceStake = sharedDealStakeholders.find((s) => s.dealId === b.id && s.role === "conveyance");
+  const conveyanceParty = conveyanceStake ? sharedParties.find((p) => p.id === conveyanceStake.partyId) : undefined;
+
+  // Derive receivables from outbound invoices linked to this deal.
+  const dealInvoices = sharedInvoices.filter((i) => i.dealId === b.id && i.direction === "outbound");
+  const receivables: ReceivableEntry[] = dealInvoices.map((inv) => {
+    const party = sharedParties.find((p) => p.id === inv.partyId);
+    return {
+      entityName: party?.displayName ?? "Unknown",
+      entityType: deriveReceivableEntityType(inv.partyId, b.id),
+      amount: inv.amount,
+      invoiceNumber: inv.invoiceNumber,
+      invoiceStatus: inv.status,
+      invoiceDate: inv.issueDate,
+      paymentReceivedDate: inv.paidDate,
+      paymentReceivedAmount: inv.paidDate ? inv.amount : undefined,
+    };
+  });
+
+  // Rebate (primary market) and subsidy (secondary market).
+  const rebatePercentage = b.rebatePercentage ?? 0;
+  const rebateAmount = b.market === "primary" ? Math.round((rebatePercentage / 100) * b.dealAmount) : 0;
+  const subsidyAmount = b.market === "secondary" ? (b.subsidyAmount ?? 0) : 0;
 
   return {
     // Canonical core
@@ -98,6 +142,7 @@ function expand(b: BaseInput): Deal {
     title: opp?.title ?? b.id,
 
     // Karvel — operational P&L
+    channel: b.channel,
     ofCaseNumber: `OF-${b.id.toUpperCase()}`,
     buildingName: opp?.title,
     community: opp?.neighborhoods[0],
@@ -118,24 +163,27 @@ function expand(b: BaseInput): Deal {
     agentShare: 100,
     agentCommissionRate: COMMISSION_RATES.agentGrossRate,
     agentCommissionPayout: f.agentCommissionPayout,
+    teamLeadName: primaryEntry?.teamLeadName,
     teamLeadRate: COMMISSION_RATES.teamLeadRate,
     teamLeadShare: primaryEntry?.teamLeadShare ?? f.teamLeadShare,
+    managerName: primaryEntry?.managerName,
     managerOverrideRate: COMMISSION_RATES.managerOverrideRate,
     managerOverride: primaryEntry?.managerOverride ?? f.managerOverride,
+    conveyanceAgentName: conveyanceParty?.displayName,
     conveyanceAgentRate: COMMISSION_RATES.conveyanceAgentRate,
     conveyanceAgentPayout: f.conveyanceAgentPayout,
     huspyConveyanceShare: f.huspyConveyanceShare,
     clientKickback: 0,
     referralPercentage: 0,
     referralAmount: 0,
-    rebatePercentage: 0,
-    rebateAmount: 0,
-    subsidyAmount: 0,
+    rebatePercentage,
+    rebateAmount,
+    subsidyAmount,
     cogsInternal: f.cogsInternal,
-    cogsExternal: 0,
+    cogsExternal: rebateAmount + subsidyAmount,
     cogsReferrals: 0,
-    cogsRebates: 0,
-    cogsSubsidy: 0,
+    cogsRebates: rebateAmount,
+    cogsSubsidy: subsidyAmount,
     numberOfTranches: 0,
     disbursedAmount: 0,
     bankSlab: 0,
@@ -151,13 +199,13 @@ function expand(b: BaseInput): Deal {
     externalPayout: 0,
     externalPartners: [],
     externalPartnerShare: 0,
-    receivables: [],
+    receivables,
     payables: [],
     isDisputed: b.isDisputed ?? false,
+    disputeNote: b.disputeNote,
+    latestNote: b.latestNote,
 
     // Agent-app — agent-facing.
-    // commissionAmount = total agent commission pool for the deal (before any split).
-    // Each agent's personal share is computed via computeAgentCommission + DealStakeholder.
     marketType: b.market,
     commissionPercentage: b.commissionPercentage,
     commissionAmount: f.agentCommissionPayout,
@@ -172,6 +220,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 385000, reportDate: "2026-01-15",
     createdAt: "2026-01-15T00:00:00.000Z", updatedAt: "2026-01-12T00:00:00.000Z",
     commissionPercentage: 3, paymentDate: "2026-01-12",
+    rebatePercentage: 1.5,
   }),
   expand({
     id: "deal-002", opportunityId: "opp-002",
@@ -179,6 +228,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 720000, reportDate: "2026-02-08",
     createdAt: "2026-02-08T00:00:00.000Z", updatedAt: "2026-02-08T00:00:00.000Z",
     commissionPercentage: 2.5,
+    subsidyAmount: 4000,
   }),
   expand({
     id: "deal-003", opportunityId: "opp-003",
@@ -186,6 +236,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 14400, reportDate: "2026-02-22",
     createdAt: "2026-02-22T00:00:00.000Z", updatedAt: "2026-02-22T00:00:00.000Z",
     commissionPercentage: 8,
+    latestNote: "Awaiting signed contract from landlord",
   }),
   expand({
     id: "deal-004", opportunityId: "opp-004",
@@ -193,6 +244,8 @@ export const sharedDeals: Deal[] = [
     dealAmount: 1250000, reportDate: "2026-03-03",
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-03T00:00:00.000Z",
     commissionPercentage: 2,
+    subsidyAmount: 6000,
+    latestNote: "Client requested extra time to gather mortgage documents",
   }),
   expand({
     id: "deal-005", opportunityId: "opp-005",
@@ -200,6 +253,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 540000, reportDate: "2026-02-15",
     createdAt: "2026-02-15T00:00:00.000Z", updatedAt: "2026-02-15T00:00:00.000Z",
     commissionPercentage: 2.5,
+    rebatePercentage: 2.0,
   }),
   expand({
     id: "deal-006", opportunityId: "opp-006",
@@ -207,6 +261,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 320000, reportDate: "2026-02-20",
     createdAt: "2026-02-20T00:00:00.000Z", updatedAt: "2026-02-20T00:00:00.000Z",
     commissionPercentage: 3,
+    subsidyAmount: 2500,
   }),
   expand({
     id: "deal-007", opportunityId: "opp-001",
@@ -215,6 +270,9 @@ export const sharedDeals: Deal[] = [
     createdAt: "2026-03-05T00:00:00.000Z", updatedAt: "2026-03-05T00:00:00.000Z",
     commissionPercentage: 2.5,
     isDisputed: true,
+    disputeNote: "Agent disputes deal price — client claims lower amount was agreed verbally",
+    latestNote: "Escalated to ops team for review",
+    subsidyAmount: 3000,
   }),
   expand({
     id: "deal-008", opportunityId: "opp-002",
@@ -222,13 +280,17 @@ export const sharedDeals: Deal[] = [
     dealAmount: 580000, reportDate: "2026-03-03",
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-03T00:00:00.000Z",
     commissionPercentage: 2.5,
+    subsidyAmount: 5000,
   }),
   expand({
     id: "deal-009", opportunityId: "opp-007",
-    type: "buy", status: "reported", market: "primary", country: "ae", currency: "AED",
+    type: "buy", status: "under-review", market: "primary", country: "ae", currency: "AED",
     dealAmount: 1850000, reportDate: "2026-05-01",
     createdAt: "2026-05-01T00:00:00.000Z", updatedAt: "2026-05-01T00:00:00.000Z",
     commissionPercentage: 2,
+    channel: "B2C/Digital",
+    rebatePercentage: 2.0,
+    latestNote: "New deal just reported, awaiting paperwork",
   }),
   expand({
     id: "deal-010", opportunityId: "opp-008",
@@ -236,6 +298,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 4200000, reportDate: "2026-03-18",
     createdAt: "2026-03-18T00:00:00.000Z", updatedAt: "2026-03-18T00:00:00.000Z",
     commissionPercentage: 2,
+    channel: "REA",
   }),
   expand({
     id: "deal-011", opportunityId: "opp-009",
@@ -244,6 +307,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 1400000, reportDate: "2026-04-20",
     createdAt: "2026-04-20T00:00:00.000Z", updatedAt: "2026-04-20T00:00:00.000Z",
     commissionPercentage: 0.5,
+    channel: "MA/Broker",
   }),
   expand({
     id: "deal-012", opportunityId: "opp-010",
@@ -252,6 +316,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 3200000, reportDate: "2026-04-28",
     createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-04-28T00:00:00.000Z",
     commissionPercentage: 0.5,
+    channel: "B2C/Digital",
   }),
   expand({
     id: "deal-013", opportunityId: "opp-011",
@@ -259,6 +324,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 620000, reportDate: "2026-04-10",
     createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-10T00:00:00.000Z",
     commissionPercentage: 3,
+    subsidyAmount: 4500,
   }),
   expand({
     id: "deal-014", opportunityId: "opp-011",
@@ -282,6 +348,8 @@ export const sharedDeals: Deal[] = [
     dealAmount: 2100000, reportDate: "2026-05-04",
     createdAt: "2026-05-04T00:00:00.000Z", updatedAt: "2026-05-04T00:00:00.000Z",
     commissionPercentage: 2, paymentDate: "2026-05-04",
+    channel: "REA",
+    rebatePercentage: 1.5,
   }),
   expand({
     id: "deal-017", opportunityId: "opp-013",
@@ -289,6 +357,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 530000, reportDate: "2026-04-28",
     createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-04-28T00:00:00.000Z",
     commissionPercentage: 3,
+    rebatePercentage: 1.5,
   }),
   expand({
     id: "deal-018", opportunityId: "opp-004",
@@ -296,6 +365,7 @@ export const sharedDeals: Deal[] = [
     dealAmount: 1250000, reportDate: "2026-04-15",
     createdAt: "2026-04-15T00:00:00.000Z", updatedAt: "2026-04-15T00:00:00.000Z",
     commissionPercentage: 2.5,
+    subsidyAmount: 7000,
   }),
   expand({
     id: "deal-019", opportunityId: "opp-003",

@@ -9,7 +9,6 @@ interface Props {
 }
 
 const statusColumns: DealStatus[] = [
-  "reported",
   "pending-details",
   "under-review",
   "pending-agent-approval",

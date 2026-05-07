@@ -15,7 +15,6 @@ import { DealTimeline } from '@/components/deals/deal-timeline';
 import { MissingInfoSection } from '@/components/deals/missing-info-section';
 
 const statusLabels: Record<DealStatus, string> = {
-  reported: 'Reported',
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
   'pending-agent-approval': 'Pending Approval',
@@ -25,7 +24,6 @@ const statusLabels: Record<DealStatus, string> = {
 };
 
 const statusColors: Record<DealStatus, { color: string; bg: string }> = {
-  reported: { color: 'hsl(var(--accent-indigo))', bg: 'hsl(var(--accent-indigo) / 0.1)' },
   'pending-details': { color: 'hsl(var(--ds-orange))', bg: 'hsl(var(--ds-orange) / 0.1)' },
   'under-review': { color: 'hsl(var(--accent-orchid))', bg: 'hsl(var(--accent-orchid) / 0.1)' },
   'pending-agent-approval': { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },

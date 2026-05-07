@@ -184,7 +184,7 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
           <ReadonlyField label="Deal ID" value={draft.id} />
           <EditField label="OF/Case Number" value={draft.ofCaseNumber || ""} onChange={(v) => update("ofCaseNumber", v)} />
           <SelectField label="Type" value={draft.type} options={["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"] as DealType[]} onChange={(v) => update("type", v)} />
-          <SelectField label="Status" value={draft.status} options={["reported", "pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"] as DealStatus[]} onChange={(v) => update("status", v)} />
+          <SelectField label="Status" value={draft.status} options={["pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"] as DealStatus[]} onChange={(v) => update("status", v)} />
           <SelectField label="Market" value={draft.market} options={["primary", "secondary", "leasing"] as DealMarket[]} onChange={(v) => update("market", v)} />
           <EditField label="Opportunity" value={draft.opportunityName} onChange={(v) => update("opportunityName", v)} />
 

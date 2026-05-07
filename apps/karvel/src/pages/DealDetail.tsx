@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { RequiredDocumentsSection } from "@/components/RequiredDocumentsSection";
 
 const STAGE_ORDER: { key: DealStatus; label: string }[] = [
-  { key: "reported", label: "reported" },
   { key: "pending-details", label: "pending-details" },
   { key: "under-review", label: "under-review" },
   { key: "pending-agent-approval", label: "Approval" },
@@ -26,7 +25,7 @@ function getStageIndex(status: DealStatus): number {
 function getStageDates(deal: Deal): Record<string, string | null> {
   const dates: Record<string, string | null> = {};
   STAGE_ORDER.forEach((stage) => { dates[stage.key] = null; });
-  dates["reported"] = new Date(deal.reportDate).toISOString();
+  dates["pending-details"] = dates["pending-details"] ?? new Date(deal.reportDate).toISOString();
   if (deal.statusHistory) {
     for (const entry of deal.statusHistory) {
       if (dates[entry.to] === null) dates[entry.to] = entry.timestamp;
@@ -198,7 +197,7 @@ const DealDetail = () => {
   const fmt = (amount: number) => formatAmount(amount, currency);
   const stageDates = getStageDates(draft);
   const currentIdx = getStageIndex(draft.status);
-  const showFinancials = draft.status !== "reported";
+  const showFinancials = true;
   const isPendingDetails = draft.status === "pending-details";
   const netPnL = draft.huspyRevenue + draft.conveyanceRevenue - draft.cogsInternal - draft.cogsExternal - draft.cogsReferrals;
   const isREBU = draft.businessUnit === "rebu";
@@ -344,7 +343,7 @@ const DealDetail = () => {
                 <DetailRow label="Deal ID" value={draft.id} />
                 <EditField label="OF/Case Number" value={draft.ofCaseNumber || ""} onChange={(v) => update("ofCaseNumber", v)} />
                 <SelectField label="Type" value={draft.type} options={["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"] as DealType[]} onChange={(v) => update("type", v)} />
-                <SelectField label="Status" value={draft.status} options={["reported", "pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"] as DealStatus[]} onChange={(v) => update("status", v)} />
+                <SelectField label="Status" value={draft.status} options={["pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"] as DealStatus[]} onChange={(v) => update("status", v)} />
                 <SelectField label="Market" value={draft.market} options={["primary", "secondary", "leasing"] as DealMarket[]} onChange={(v) => update("market", v)} />
                 <EditField label="Opportunity" value={draft.opportunityName} onChange={(v) => update("opportunityName", v)} />
               </div>

@@ -8,16 +8,13 @@ interface StatusSentence {
 }
 
 const statusSentences: Record<DealStatus, StatusSentence> = {
-  reported: {
-    text: "We\u2019ve logged your deal \u2014 we\u2019ll review it and may ask for more details.",
-  },
   'pending-details': {
     text: 'We need a bit more info \u2014 ',
     actionText: 'provide the requested details',
     suffix: ' so we can move forward.',
   },
   'under-review': {
-    text: "We\u2019re reviewing the details \u2014 once verified, we\u2019ll approve your commission.",
+    text: "We\u2019ve logged your deal and are reviewing the details \u2014 once verified, we\u2019ll approve your commission.",
   },
   'pending-agent-approval': {
     text: "We\u2019ve approved this deal \u2014 ",
@@ -36,7 +33,6 @@ const statusSentences: Record<DealStatus, StatusSentence> = {
 };
 
 const timelineSteps: { status: DealStatus; label: string }[] = [
-  { status: 'reported', label: 'Reported' },
   { status: 'pending-details', label: 'Pending Details' },
   { status: 'under-review', label: 'Under Review' },
   { status: 'pending-agent-approval', label: 'Approval' },

@@ -16,7 +16,7 @@ const COUNTRIES: Country[] = ["ae", "es", "sa"];
 const BUSINESS_UNITS: BusinessUnit[] = ["rebu", "mortgage"];
 const MARKET_TYPES: DealMarket[] = ["primary", "secondary", "leasing"];
 const CHANNELS = ["MA/Broker", "BBG/Commercial", "B2C/Digital", "REA", "REA Purchase", "BYOB", "Direct Sales"];
-const DEAL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"];
+const DEAL_STATUSES: DealStatus[] = ["pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"];
 
 export const countryCurrencyMap: Record<Country, string> = {
   ae: "AED",

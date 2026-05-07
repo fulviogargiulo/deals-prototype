@@ -27,7 +27,7 @@ const statusGroups: StatusGroup[] = [
   {
     key: 'active',
     label: 'In progress',
-    statuses: ['reported', 'pending-details', 'under-review'],
+    statuses: ['pending-details', 'under-review'],
     icon: Clock,
     color: 'hsl(var(--ds-orange))',
     bgColor: 'hsl(var(--ds-orange) / 0.1)',
@@ -59,7 +59,6 @@ const statusGroups: StatusGroup[] = [
 ];
 
 const statusLabels: Record<DealStatus, string> = {
-  'reported': 'Reported',
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
   'pending-agent-approval': 'Pending Approval',
@@ -69,7 +68,6 @@ const statusLabels: Record<DealStatus, string> = {
 };
 
 const statusDotColors: Record<DealStatus, string> = {
-  'reported': 'hsl(var(--ds-orange))',
   'pending-details': 'hsl(var(--ds-orange))',
   'under-review': 'hsl(var(--ds-orange))',
   'pending-agent-approval': 'hsl(var(--ds-green))',

@@ -15,7 +15,6 @@ interface Props {
 }
 
 const STAGE_ORDER: { key: DealStatus; label: string }[] = [
-  { key: "reported", label: "reported" },
   { key: "pending-details", label: "pending-details" },
   { key: "under-review", label: "under-review" },
   { key: "pending-agent-approval", label: "Approval" },
@@ -294,7 +293,7 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
 
 
         {/* PnL Summary for Under Review+ deals */}
-        {deal.status !== "reported" && deal.status !== "pending-details" && (
+        {deal.status !== "pending-details" && (
           <Section title="P&L Summary" defaultOpen={true}>
             <div className="space-y-0.5">
               <DetailRow label="Total Revenue" value={formatAmount(deal.huspyRevenue + deal.conveyanceRevenue, currency)} />
@@ -318,7 +317,7 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
           </Section>
         )}
 
-        {deal.status !== "reported" && deal.status !== "pending-details" && (
+        {deal.status !== "pending-details" && (
           <Section title="Receivables" defaultOpen={deal.status === "pending-receivables"}>
             <div className="space-y-1.5">
               {(deal.receivables || []).length === 0 ? (
@@ -352,7 +351,7 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
           </Section>
         )}
 
-        {deal.status !== "reported" && deal.status !== "pending-details" && (
+        {deal.status !== "pending-details" && (
           <Section title="Payables" defaultOpen={deal.status === "pending-receivables"}>
             <div className="space-y-1.5">
               {(deal.payables || []).length === 0 ? (

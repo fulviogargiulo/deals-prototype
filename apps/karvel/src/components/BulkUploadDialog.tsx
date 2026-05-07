@@ -34,7 +34,7 @@ function csvToDeal(row: Record<string, string>, index: number): Deal {
   return {
     id,
     type: (row.type as Deal["type"]) || "buy",
-    status: "reported",
+    status: "under-review",
     market: (row.market as Deal["market"]) || "primary",
     businessUnit: (row.businessUnit as Deal["businessUnit"]) || "rebu",
     country: (row.country as Deal["country"]) || "ae",
@@ -214,7 +214,7 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
           <div className="text-center py-8">
             <CheckCircle className="h-12 w-12 mx-auto text-[hsl(var(--deal-paid))] mb-4" />
             <p className="text-[16px] font-semibold text-foreground">{createdCount} Deals Created Successfully</p>
-            <p className="text-[13px] text-muted-foreground mt-1">All deals have been added with status "reported"</p>
+            <p className="text-[13px] text-muted-foreground mt-1">All deals have been added with status "under-review"</p>
           </div>
         )}
 

@@ -2,7 +2,6 @@
 // Convention: lowercase kebab-case for all serialized values (matches typical API/DB representation).
 
 export type DealStatus =
-  | "reported"
   | "pending-details"
   | "under-review"
   | "pending-agent-approval"
@@ -66,4 +65,5 @@ export type StakeholderRole =
   | "landlord"
   | "borrower"
   | "developer"
-  | "bank";
+  | "bank"
+  | "conveyance";

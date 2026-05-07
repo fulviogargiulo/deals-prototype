@@ -139,4 +139,21 @@ export const sharedParties: Party[] = [
     displayName: "Emaar Properties",
     legalType: "company",
   },
+
+  // ── Conveyance firms ───────────────────────────────────────────────────────
+  {
+    id: "party-conv-gestoria-lopez",
+    displayName: "Gestoría López & Asociados",
+    legalType: "company",
+  },
+  {
+    id: "party-conv-tamm-legal",
+    displayName: "TAMM Legal Services",
+    legalType: "company",
+  },
+  {
+    id: "party-conv-alrajhi-notarial",
+    displayName: "Al Rajhi Notarial",
+    legalType: "company",
+  },
 ];
