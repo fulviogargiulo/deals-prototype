@@ -7,6 +7,10 @@ import { sharedOpportunities } from "./opportunities";
 import { sharedTasks } from "./tasks";
 import { sharedDocuments } from "./documents";
 import { sharedAgents } from "./agents";
+import { sharedInvoices } from "./invoices";
+import { sharedLedgers } from "./ledgers";
+import { sharedPostings, sharedPostingLines } from "./postings";
+import { sharedAgentInvoices } from "./agentInvoices";
 
 export const getClientWithOpportunities = (clientId: string): ClientWithOpportunities | undefined => {
   const client = sharedClients.find((c) => c.id === clientId);
@@ -29,3 +33,13 @@ export const getTasksForOpportunity = (opportunityId: string) => sharedTasks.fil
 export const getDocumentsForClient = (clientId: string) => sharedDocuments.filter((d) => d.clientId === clientId);
 export const getDocumentsForOpportunity = (opportunityId: string) => sharedDocuments.filter((d) => d.opportunityId === opportunityId);
 export const getAgentById = (id: string) => sharedAgents.find((a) => a.id === id);
+export const getInvoiceById = (id: string) => sharedInvoices.find((i) => i.id === id);
+export const getInvoicesForDeal = (dealId: string) => sharedInvoices.filter((i) => i.dealId === dealId);
+export const getLedgerById = (id: string) => sharedLedgers.find((l) => l.id === id);
+export const getSubledgersForGL = (glId: string) => sharedLedgers.filter((l) => l.glId === glId);
+export const getPostingsForDeal = (dealId: string) => sharedPostings.filter((p) => p.metadata?.deal_id === dealId);
+export const getPostingLinesForPosting = (postingId: string) => sharedPostingLines.filter((l) => l.postingId === postingId);
+export const getPostingLinesForLedger = (ledgerId: string) => sharedPostingLines.filter((l) => l.ledgerId === ledgerId);
+export const getAgentInvoiceById = (id: string) => sharedAgentInvoices.find((i) => i.id === id);
+export const getAgentInvoicesForAgent = (agentId: string) => sharedAgentInvoices.filter((i) => i.agentId === agentId);
+export const getPostingLinesForAgentInvoice = (agentInvoiceId: string) => sharedPostingLines.filter((l) => l.agentInvoiceId === agentInvoiceId);

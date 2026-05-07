@@ -49,3 +49,18 @@ export type InvoiceStatus =
   | "cancelled";
 
 export type PayableStatus = "pending" | "approved" | "paid" | "rejected" | "overdue";
+
+export type LedgerType = "asset" | "liability" | "revenue" | "expense";
+
+export type PostingSide = "DEBIT" | "CREDIT";
+
+export type PostingStatus = "draft" | "posted" | "reversed";
+
+export type BusinessProcess =
+  | "deal_close"
+  | "soa_approved"
+  | "bank_statement_inbound_matched"
+  | "bank_statement_outbound_matched"
+  | "payout_instructed"
+  | "manual_adjustment"
+  | "reversal";

@@ -270,12 +270,12 @@ export function DealsTable({ deals, disputedDealIds = new Set() }: DealsTablePro
 
                   {/* Amount */}
                   <span className="text-sm text-foreground text-right tabular-nums font-semibold">
-                    €{deal.dealAmount.toLocaleString()}
+                    {deal.currency}{deal.dealAmount.toLocaleString()}
                   </span>
 
                   {/* Commission */}
                   <span className="text-sm text-foreground text-right tabular-nums font-semibold">
-                    €{deal.commissionAmount.toLocaleString()}
+                    {deal.currency}{deal.commissionAmount.toLocaleString()}
                   </span>
 
                   {/* Status badge */}

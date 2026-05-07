@@ -1,14 +1,18 @@
 import type {
+  BusinessProcess,
   BusinessUnit,
   Country,
   Currency,
   DealStatus,
   DealType,
   InvoiceStatus,
+  LedgerType,
   Market,
   OpportunityStatus,
   OpportunityType,
   PayableStatus,
+  PostingSide,
+  PostingStatus,
 } from "./enums";
 
 // ============================================================
@@ -452,4 +456,83 @@ export interface Deal {
   invoiceDueDate?: string;
   paymentDate?: string;
   dispute?: DealDispute;
+}
+
+// ============================================================
+// Accounting — Ledger / Posting / PostingLine
+// ============================================================
+
+export interface Ledger {
+  id: string;
+  code: string;
+  name: string;
+  type: LedgerType;
+  glId?: string;
+  entityType?: "agent" | "bank" | "developer" | "buyer" | "seller" | "tenant" | "landlord";
+  entityId?: string;
+}
+
+export interface Posting {
+  id: string;
+  externalRef?: string;
+  businessProcess: BusinessProcess;
+  createdBy: string;
+  createdAt: string;
+  valueDate: string;
+  currency: Currency;
+  status: PostingStatus;
+  reversedByPostingId?: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PostingLine {
+  id: string;
+  postingId: string;
+  ledgerId: string;
+  side: PostingSide;
+  amount: number;
+  agentInvoiceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type AgentInvoiceStatus = "draft" | "issued" | "acknowledged" | "disputed" | "paid";
+
+export interface AgentInvoice {
+  id: string;
+  agentId: string;
+  invoiceNumber: string;
+  period: string;
+  status: AgentInvoiceStatus;
+  currency: Currency;
+  totalAmount: number;
+  issueDate: string;
+  dueDate?: string;
+  paidDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================
+// Invoice
+// ============================================================
+export interface Invoice {
+  id: string;
+  dealId: string;
+
+  entityType: ReceivableEntityType;
+  entityName: string;
+
+  invoiceNumber: string;
+  status: InvoiceStatus;
+  amount: number;
+  currency: Currency;
+  invoiceDate: string;
+  dueDate?: string;
+
+  paymentReceivedDate?: string;
+  paymentReceivedAmount?: number;
+
+  createdAt: string;
+  updatedAt: string;
 }

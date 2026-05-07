@@ -210,12 +210,12 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, state
 
                   {/* Amount */}
                   <span className="text-sm font-semibold text-foreground text-right tabular-nums">
-                    €{deal.dealAmount.toLocaleString()}
+                    {deal.currency}{deal.dealAmount.toLocaleString()}
                   </span>
 
                   {/* Commission */}
                   <span className="text-sm font-semibold text-foreground text-right tabular-nums">
-                    €{deal.commissionAmount.toLocaleString()}
+                    {deal.currency}{deal.commissionAmount.toLocaleString()}
                   </span>
 
                   {/* Date */}
