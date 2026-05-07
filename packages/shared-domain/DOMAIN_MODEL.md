@@ -124,6 +124,7 @@ erDiagram
     Client      ||--o{ Document         : "has"
     Opportunity ||--o{ Document         : "has"
     Ledger      ||--o{ Ledger           : "subledger of"
+    Agent       ||--o{ Opportunity      : "assigned"
 ```
 
 ## Key architectural decisions
