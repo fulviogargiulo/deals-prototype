@@ -17,10 +17,9 @@ const statusColorMap: Record<DealStatus, string> = {
   reported: "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]",
   "pending-details": "bg-[hsl(var(--deal-pending-details)/0.1)] text-[hsl(var(--deal-pending-details))]",
   "under-review": "bg-[hsl(var(--deal-under-review)/0.1)] text-[hsl(var(--deal-under-review))]",
-  "ready-for-invoicing": "bg-[hsl(var(--deal-ready-invoicing)/0.1)] text-[hsl(var(--deal-ready-invoicing))]",
+  "pending-agent-approval": "bg-[hsl(var(--deal-ready-invoicing)/0.1)] text-[hsl(var(--deal-ready-invoicing))]",
   "pending-receivables": "bg-[hsl(var(--deal-pending-receivables)/0.1)] text-[hsl(var(--deal-pending-receivables))]",
-  "pending-payment": "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]",
-  paid: "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]",
+  finalized: "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]",
   canceled: "bg-muted text-muted-foreground",
 };
 

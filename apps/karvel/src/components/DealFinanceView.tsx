@@ -50,7 +50,7 @@ function computeTiles(deals: Deal[]) {
 
   for (const d of deals) {
     // Check "Payment Received" first — deals with status Pending Payment or Paid
-    if (d.status === "pending-payment" || d.status === "paid") {
+    if (d.status === "pending-receivables" || d.status === "finalized") {
       if (d.payables.every(p => p.status === "paid")) {
         tiles.paid.count++;
         tiles.paid.volume += d.huspyRevenue;
@@ -64,7 +64,7 @@ function computeTiles(deals: Deal[]) {
       tiles.awaiting.count++;
       tiles.awaiting.volume += d.huspyRevenue;
       tiles.awaiting.dealAmount += d.dealPrice;
-    } else if (d.status === "ready-for-invoicing" && (!d.invoiceStatus || d.invoiceStatus === "created")) {
+    } else if (d.status === "pending-agent-approval" && (!d.invoiceStatus || d.invoiceStatus === "created")) {
       tiles.ready.count++;
       tiles.ready.volume += d.huspyRevenue;
       tiles.ready.dealAmount += d.dealPrice;
@@ -581,7 +581,7 @@ function generateReceivableInvoiceData(deal: Deal) {
   const vatAmount = Math.round(subtotal * (vatRate / 100));
   const total = subtotal + vatAmount;
   const derivedStatus = deal.status === "under-review" ? undefined
-    : deal.status === "pending-payment" ? "paid" as const
+    : deal.status === "finalized" ? "paid" as const
     : deal.invoiceStatus;
   return { issueDate, dueDate, lines, subtotal, vatRate, vatAmount, total, status: derivedStatus };
 }
@@ -745,10 +745,9 @@ const soaStatusColor = (s?: SOAStatus) => {
 const dealStatusColor = (status: string) => {
   const map: Record<string, string> = {
     "under-review": "bg-[hsl(var(--deal-under-review)/0.1)] text-[hsl(var(--deal-under-review))]",
-    "ready-for-invoicing": "bg-[hsl(var(--deal-ready-invoicing)/0.1)] text-[hsl(var(--deal-ready-invoicing))]",
+    "pending-agent-approval": "bg-[hsl(var(--deal-ready-invoicing)/0.1)] text-[hsl(var(--deal-ready-invoicing))]",
     "pending-receivables": "bg-[hsl(var(--deal-pending-receivables)/0.1)] text-[hsl(var(--deal-pending-receivables))]",
-    "pending-payment": "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]",
-    "paid": "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]",
+    "finalized": "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]",
   };
   return map[status] || "bg-muted text-muted-foreground";
 };
@@ -958,7 +957,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
 
   const tiles = useMemo(() => computeTiles(deals), [deals]);
 
-  const financeStatuses = ["under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"];
+  const financeStatuses = ["under-review", "pending-agent-approval", "pending-receivables", "finalized"];
   const financeDeals = useMemo(() => {
     // 1. Status filter
     let filtered = deals.filter((d) => financeStatuses.includes(d.status));
@@ -988,7 +987,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
       filtered = filtered.filter((d) => {
           switch (activeTile) {
             case "awaiting": return d.status === "under-review";
-            case "ready": return d.status === "ready-for-invoicing" && (!d.invoiceStatus || d.invoiceStatus === "created");
+            case "ready": return d.status === "pending-agent-approval" && (!d.invoiceStatus || d.invoiceStatus === "created");
             case "sent": return d.invoiceStatus === "sent";
             case "received": return d.invoiceStatus === "paid" && d.payables.some(p => p.status !== "paid");
             case "paid": return d.invoiceStatus === "paid" && d.payables.every(p => p.status === "paid");
@@ -1304,7 +1303,7 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
               <tbody>
                 {receivableRowsSorted.map(({ deal, receivable, idx }) => {
                   const rowKey = `${deal.id}-${idx}`;
-                  const canCreateInvoice = deal.status === "ready-for-invoicing" && (!receivable.invoiceStatus || receivable.invoiceStatus === "created");
+                  const canCreateInvoice = deal.status === "pending-agent-approval" && (!receivable.invoiceStatus || receivable.invoiceStatus === "created");
                   const entityTypeLabel = receivable.entityType.charAt(0).toUpperCase() + receivable.entityType.slice(1);
 
                   return (
@@ -1354,20 +1353,20 @@ export function DealFinanceView({ deals, currency = "EUR", dateRange, onDealUpda
                           <span className="text-muted-foreground text-[11px]">No invoice</span>
                         ) : receivable.invoiceNumber ? (
                           <select
-                            value={deal.status === "pending-payment" ? "paid" : (receivable.invoiceStatus || "created")}
+                            value={deal.status === "finalized" ? "paid" : (receivable.invoiceStatus || "created")}
                             onChange={(e) => {
                               const newStatus = e.target.value as InvoiceStatus;
                               if (onDealUpdate) {
                                 const updatedReceivables = [...(deal.receivables || [])];
                                 updatedReceivables[idx] = { ...receivable, invoiceStatus: newStatus };
                                 const allPaid = updatedReceivables.every((r) => r.invoiceStatus === "paid");
-                                const updatedDealStatus = allPaid && deal.status === "pending-receivables" ? "pending-payment" : deal.status;
+                                const updatedDealStatus = allPaid && deal.status === "pending-receivables" ? "finalized" : deal.status;
                                 onDealUpdate({ ...deal, receivables: updatedReceivables, invoiceStatus: newStatus, status: updatedDealStatus });
                               }
                             }}
                             className={cn(
                               "px-2 py-1 rounded-full text-[11px] font-medium border-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring appearance-none pr-5 bg-no-repeat text-center",
-                              invoiceStatusColor(deal.status === "pending-payment" ? "paid" : (receivable.invoiceStatus || "created"))
+                              invoiceStatusColor(deal.status === "finalized" ? "paid" : (receivable.invoiceStatus || "created"))
                             )}
                             style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundPosition: "right 6px center", backgroundSize: "10px" }}
                           >

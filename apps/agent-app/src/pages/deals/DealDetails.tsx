@@ -5,10 +5,9 @@ import { TrackedTitle } from '@/components/ui/tracked-title';
 import { Button } from '@/components/ui/button';
 import { FileText, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import { DocumentRow } from '@/components/deals/document-row';
-import { InvoiceDetailModal } from '@/components/modals/invoice-detail-modal';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ExpectedPayoutSection } from '@/components/deals/expected-payout-section';
-import { mockDeals, mockStatement } from '@/data/mockDeals';
+import { mockDeals } from '@/data/mockDeals';
+import { computeDealFinancials, COMMISSION_RATES } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -19,10 +18,9 @@ const statusLabels: Record<DealStatus, string> = {
   reported: 'Reported',
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
-  'ready-for-invoicing': 'Ready For Invoicing',
-  'pending-payment': 'Pending Payment',
+  'pending-agent-approval': 'Pending Approval',
   'pending-receivables': 'Pending Receivables',
-  paid: 'Paid',
+  finalized: 'Finalized',
   canceled: 'Canceled',
 };
 
@@ -30,10 +28,9 @@ const statusColors: Record<DealStatus, { color: string; bg: string }> = {
   reported: { color: 'hsl(var(--accent-indigo))', bg: 'hsl(var(--accent-indigo) / 0.1)' },
   'pending-details': { color: 'hsl(var(--ds-orange))', bg: 'hsl(var(--ds-orange) / 0.1)' },
   'under-review': { color: 'hsl(var(--accent-orchid))', bg: 'hsl(var(--accent-orchid) / 0.1)' },
-  'ready-for-invoicing': { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
-  'pending-payment': { color: 'hsl(var(--accent-teal))', bg: 'hsl(var(--accent-teal) / 0.1)' },
+  'pending-agent-approval': { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
   'pending-receivables': { color: 'hsl(var(--accent-terracotta))', bg: 'hsl(var(--accent-terracotta) / 0.1)' },
-  paid: { color: 'hsl(var(--fg-secondary))', bg: 'hsl(var(--fg-secondary) / 0.1)' },
+  finalized: { color: 'hsl(var(--fg-secondary))', bg: 'hsl(var(--fg-secondary) / 0.1)' },
   canceled: { color: 'hsl(var(--ds-red))', bg: 'hsl(var(--ds-red) / 0.1)' },
 };
 
@@ -86,7 +83,6 @@ export function DealDetails() {
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeSubmitted, setDisputeSubmitted] = useState(false);
   
-  const [showInvoiceDetail, setShowInvoiceDetail] = useState(false);
   const [confirmedForInvoicing, setConfirmedForInvoicing] = useState(false);
 
   if (!deal) {
@@ -108,7 +104,7 @@ export function DealDetails() {
   };
 
 
-  const allDocsUploaded = ['ready-for-invoicing', 'pending-payment', 'pending-receivables', 'paid'].includes(deal.status);
+  const allDocsUploaded = ['pending-agent-approval', 'pending-receivables', 'finalized'].includes(deal.status);
   const documents = getDocumentsForMarketType(deal.marketType).map(doc => 
     allDocsUploaded ? { ...doc, uploaded: true } : doc
   );
@@ -195,7 +191,7 @@ export function DealDetails() {
                   {new Date(deal.reportDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
               </div>
-              {deal.status === 'paid' && deal.paymentDate && (
+              {deal.status === 'finalized' && deal.paymentDate && (
                 <div>
                   <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%]">Payment Date</p>
                   <p className="text-[16px] font-semibold text-foreground leading-[120%] mt-0.5">
@@ -210,116 +206,44 @@ export function DealDetails() {
         {/* Deal Timeline */}
         <DealTimeline currentStatus={deal.status} reportDate={deal.reportDate} paymentDate={deal.paymentDate} />
 
-        {/* Linked Invoice — for pending-payment and paid deals */}
-        {(['pending-payment', 'pending-receivables'].includes(deal.status)) && (
-          <ExpectedPayoutSection statement={{
-            ...mockStatement,
-            status: deal.status === 'pending-receivables' ? 'confirmed' : mockStatement.status,
-          }} title="Linked Invoice" />
-        )}
 
-        {deal.status === 'paid' && (
-          <div className="space-y-3">
-            {/* Invoice Card */}
-                <div
-                  className="bg-card rounded-2xl p-5 cursor-pointer hover:bg-[hsl(var(--surface-raised)/0.5)] transition-colors"
-                  onClick={() => setShowInvoiceDetail(true)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--accent-indigo) / 0.1)' }}>
-                        <FileText className="w-4 h-4" style={{ color: 'hsl(var(--accent-indigo))' }} />
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-semibold text-foreground leading-[120%]">Invoice</p>
-                        <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%] mt-0.5">
-                          INV-{deal.id.replace('deal-', '').padStart(4, '0')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 text-[hsl(var(--fg-secondary))]">
-                      <span className="text-[12px] font-semibold leading-[140%]">View Details</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </div>
-                  </div>
-                </div>
-
-                <InvoiceDetailModal
-                  open={showInvoiceDetail}
-                  onOpenChange={setShowInvoiceDetail}
-                  statement={{
-                    ...mockStatement,
-                    status: 'paid',
-                  }}
-                />
-
-                {/* Payment Receipt Card */}
-                <div className="bg-card rounded-2xl p-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[hsl(var(--ds-green)/0.1)]">
-                        <CheckCircle2 className="w-4 h-4 text-[hsl(var(--ds-green))]" />
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-semibold text-foreground leading-[120%]">Payment Receipt</p>
-                        <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%] mt-0.5">
-                          Paid on {deal.paymentDate ? new Date(deal.paymentDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 gap-1.5 rounded-full text-[12px] font-semibold"
-                      onClick={() => toast.success('Receipt downloaded successfully')}
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      Download Receipt
-                    </Button>
-                  </div>
-                </div>
-          </div>
-        )}
-
-        {/* Commission Breakdown — for finalised, pending-receivables, pending-payment, paid */}
-        {['ready-for-invoicing', 'pending-receivables', 'pending-payment', 'paid'].includes(deal.status) && (() => {
-          const netHuspyRevenue = Math.round(deal.dealAmount * 0.15);
-          const incentive = 500;
-          const commissionPayout = Math.round(deal.commissionPercentage / 100 * netHuspyRevenue) - incentive;
-          const isExpandable = deal.status !== 'ready-for-invoicing';
+        {/* Commission Breakdown — visible once deal is approved or further along */}
+        {['pending-agent-approval', 'pending-receivables', 'finalized'].includes(deal.status) && (() => {
+          const f = computeDealFinancials(deal.dealAmount);
+          const isExpandable = deal.status !== 'pending-agent-approval';
 
           const content = (
             <>
               {/* Formula */}
               <div className="px-4 py-3 border-b border-border-ds-primary">
                 <p className="text-[12px] text-fg-secondary leading-[140%]">
-                  Commission Payout (H) = Deal Commission Rate (G) × Net Huspy Revenue − Incentive
+                  Your Payout = Deal Price × {COMMISSION_RATES.takeRate}% (Huspy rate) × {COMMISSION_RATES.agentGrossRate}% (your commission rate)
                 </p>
               </div>
 
               {/* Breakdown rows */}
               <div className="divide-y divide-border-ds-primary">
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                  <span className="text-[12px] text-fg-secondary leading-[140%]">Deal Commission Rate (G)</span>
-                  <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{deal.commissionPercentage}%</span>
+                  <span className="text-[12px] text-fg-secondary leading-[140%]">Deal Price</span>
+                  <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{deal.currency}{deal.dealAmount.toLocaleString()}</span>
                 </div>
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                  <span className="text-[12px] text-fg-secondary leading-[140%]">Net Huspy Revenue</span>
-                  <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>+{deal.currency}{netHuspyRevenue.toLocaleString()}</span>
+                  <span className="text-[12px] text-fg-secondary leading-[140%]">Huspy Revenue (×{COMMISSION_RATES.takeRate}%)</span>
+                  <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>{deal.currency}{f.huspyRevenue.toLocaleString()}</span>
                 </div>
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                  <span className="text-[12px] text-fg-secondary leading-[140%]">Incentive</span>
-                  <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-red))' }}>−{deal.currency}{incentive.toLocaleString()}</span>
+                  <span className="text-[12px] text-fg-secondary leading-[140%]">Your Commission Rate</span>
+                  <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{COMMISSION_RATES.agentGrossRate}%</span>
                 </div>
               </div>
 
               {/* Total */}
               <div className="border-t border-border-ds-primary px-4 py-3 flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-semibold text-foreground">Commission Payout (H)</span>
-                  <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">{deal.currency}{commissionPayout.toLocaleString()}</span>
+                  <span className="text-sm font-semibold text-foreground">Your Commission Payout</span>
+                  <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">{deal.currency}{f.agentCommissionPayout.toLocaleString()}</span>
                 </div>
-                {deal.status === 'ready-for-invoicing' && !confirmedForInvoicing && !disputeSubmitted && (
+                {deal.status === 'pending-agent-approval' && !confirmedForInvoicing && !disputeSubmitted && (
                   <Button
                     size="sm"
                     className="h-7 rounded-full text-xs"
@@ -336,7 +260,7 @@ export function DealDetails() {
               </div>
 
               {/* Confirmed message */}
-              {deal.status === 'ready-for-invoicing' && confirmedForInvoicing && (
+              {deal.status === 'pending-agent-approval' && confirmedForInvoicing && (
                 <div className="border-t border-border-ds-primary px-4 py-3 flex items-center gap-2" style={{ backgroundColor: 'hsl(var(--ds-green) / 0.06)' }}>
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--ds-green))' }} />
                   <p className="text-[12px] font-semibold leading-[140%]" style={{ color: 'hsl(var(--ds-green))' }}>
@@ -346,7 +270,7 @@ export function DealDetails() {
               )}
 
               {/* Dispute form — only for finalised */}
-              {deal.status === 'ready-for-invoicing' && showDisputeForm && !disputeSubmitted && (
+              {deal.status === 'pending-agent-approval' && showDisputeForm && !disputeSubmitted && (
                 <div className="border-t border-border-ds-primary px-4 py-4 space-y-3">
                   <p className="text-[14px] font-semibold text-foreground leading-[140%]">Raise a Dispute</p>
                   <textarea
@@ -390,7 +314,7 @@ export function DealDetails() {
 
           const disputeBadges = (
             <div className="flex items-center gap-2">
-              {deal.status === 'ready-for-invoicing' && (
+              {deal.status === 'pending-agent-approval' && (
                 disputeSubmitted ? (
                   <div className="flex items-center gap-1.5">
                     <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-orange) / 0.1)', color: 'hsl(var(--ds-orange))' }}>Under Review</span>
@@ -418,7 +342,7 @@ export function DealDetails() {
                     <div className="flex items-center gap-3">
                       {header}
                       <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--accent-indigo) / 0.1)', color: 'hsl(var(--accent-indigo))' }}>
-                        {deal.currency}{commissionPayout.toLocaleString()}
+                        {deal.currency}{f.agentCommissionPayout.toLocaleString()}
                       </span>
                     </div>
                     <ChevronDown className="w-4 h-4 text-[hsl(var(--fg-secondary))] transition-transform duration-200 [[data-state=open]>&]:rotate-180" />

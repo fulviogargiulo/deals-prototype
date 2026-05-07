@@ -5,10 +5,9 @@ export type DealStatus =
   | "reported"
   | "pending-details"
   | "under-review"
-  | "ready-for-invoicing"
+  | "pending-agent-approval"
   | "pending-receivables"
-  | "pending-payment"
-  | "paid"
+  | "finalized"
   | "canceled";
 
 export type OpportunityType =

@@ -12,10 +12,9 @@ const STAGE_ORDER: { key: DealStatus; label: string }[] = [
   { key: "reported", label: "reported" },
   { key: "pending-details", label: "pending-details" },
   { key: "under-review", label: "under-review" },
-  { key: "ready-for-invoicing", label: "Invoicing" },
+  { key: "pending-agent-approval", label: "Approval" },
   { key: "pending-receivables", label: "Receivables" },
-  { key: "pending-payment", label: "Payment" },
-  { key: "paid", label: "paid" },
+  { key: "finalized", label: "Finalized" },
 ];
 
 const MBU_CHANNELS = ["MA/Broker", "BBG/Commercial", "B2C/Digital", "REA", "REA Purchase", "BYOB", "Direct Sales"];
@@ -285,7 +284,7 @@ const DealDetail = () => {
   };
 
   const handleApprove = () => {
-    const approved = { ...draft, status: "ready-for-invoicing" as DealStatus };
+    const approved = { ...draft, status: "pending-agent-approval" as DealStatus };
     setDraft(approved);
     setBaseline(approved);
     toast.success("Deal approved and moved to Ready For Invoicing");
@@ -345,7 +344,7 @@ const DealDetail = () => {
                 <DetailRow label="Deal ID" value={draft.id} />
                 <EditField label="OF/Case Number" value={draft.ofCaseNumber || ""} onChange={(v) => update("ofCaseNumber", v)} />
                 <SelectField label="Type" value={draft.type} options={["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"] as DealType[]} onChange={(v) => update("type", v)} />
-                <SelectField label="Status" value={draft.status} options={["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"] as DealStatus[]} onChange={(v) => update("status", v)} />
+                <SelectField label="Status" value={draft.status} options={["reported", "pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"] as DealStatus[]} onChange={(v) => update("status", v)} />
                 <SelectField label="Market" value={draft.market} options={["primary", "secondary", "leasing"] as DealMarket[]} onChange={(v) => update("market", v)} />
                 <EditField label="Opportunity" value={draft.opportunityName} onChange={(v) => update("opportunityName", v)} />
               </div>
@@ -668,7 +667,7 @@ const DealDetail = () => {
 
             {/* Payables */}
             {showFinancials && !isPendingDetails && (
-              <Section title="Payables" defaultOpen={draft.status === "pending-payment"}>
+              <Section title="Payables" defaultOpen={draft.status === "pending-receivables"}>
                 <div className="space-y-2">
                   {(draft.payables || []).length === 0 ? (
                     <span className="text-[12px] text-muted-foreground italic">No payable entities — add COGS entries first.</span>
@@ -704,7 +703,7 @@ const DealDetail = () => {
                   const isCurrent = i === currentIdx;
                   const dateStr = stageDates[stage.key];
                   const disputeEntry = draft.statusHistory?.find(
-                    (h) => h.to === stage.key && (h.from === "ready-for-invoicing" || h.from === "pending-details") && h.note
+                    (h) => h.to === stage.key && (h.from === "pending-agent-approval" || h.from === "pending-details") && h.note
                   );
 
                   return (

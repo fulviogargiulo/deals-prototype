@@ -5,16 +5,16 @@ import { PageContainer } from '@/components/layout/page-container';
 import { TrackedTitle } from '@/components/ui/tracked-title';
 import { ExpectedPayoutSection } from '@/components/deals/expected-payout-section';
 import { PaidInvoicesModal } from '@/components/modals/paid-invoices-modal';
-import { mockDeals, mockStatement } from '@/data/mockDeals';
+import { agentDeals, mockStatement } from '@/data/mockDeals';
 
-const PIPELINE_STATUSES = ['under-review', 'ready-for-invoicing', 'pending-payment', 'pending-receivables'];
-const CLOSED_STATUSES = ['paid'];
+const PIPELINE_STATUSES = ['under-review', 'pending-agent-approval', 'pending-receivables'];
+const CLOSED_STATUSES = ['finalized'];
 
 export function PaymentHistory() {
   const navigate = useNavigate();
   const [showPaidInvoices, setShowPaidInvoices] = useState(false);
-  const closedDeals = mockDeals.filter(d => CLOSED_STATUSES.includes(d.status));
-  const pipelineDeals = mockDeals.filter(d => PIPELINE_STATUSES.includes(d.status));
+  const closedDeals = agentDeals.filter(d => CLOSED_STATUSES.includes(d.status));
+  const pipelineDeals = agentDeals.filter(d => PIPELINE_STATUSES.includes(d.status));
 
   const totalClosedDeals = closedDeals.length;
   const totalIncome = closedDeals.reduce((sum, d) => sum + d.commissionAmount, 0);

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ChevronDown, TrendingUp, Clock, CheckCircle2, Banknote } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
-import { mockDeals } from "@/data/mockDeals";
+import { agentDeals } from "@/data/mockDeals";
 import { DealStatus } from "@/types";
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from "@/components/opportunities/opportunity-bare-icons";
 import { cn } from "@/lib/utils";
@@ -33,9 +33,9 @@ const statusGroups: StatusGroup[] = [
     bgColor: 'hsl(var(--ds-orange) / 0.1)',
   },
   {
-    key: 'ready',
-    label: 'Invoice Pending',
-    statuses: ['ready-for-invoicing'],
+    key: 'approval',
+    label: 'Pending Approval',
+    statuses: ['pending-agent-approval'],
     icon: CheckCircle2,
     color: 'hsl(var(--ds-green))',
     bgColor: 'hsl(var(--ds-green) / 0.1)',
@@ -43,15 +43,15 @@ const statusGroups: StatusGroup[] = [
   {
     key: 'payment',
     label: 'Payment Pending',
-    statuses: ['pending-payment', 'pending-receivables'],
+    statuses: ['pending-receivables'],
     icon: Banknote,
     color: 'hsl(var(--accent-indigo))',
     bgColor: 'hsl(var(--accent-indigo) / 0.1)',
   },
   {
-    key: 'paid',
-    label: 'Payment Complete',
-    statuses: ['paid'],
+    key: 'finalized',
+    label: 'Finalized',
+    statuses: ['finalized'],
     icon: TrendingUp,
     color: 'hsl(var(--ds-green))',
     bgColor: 'hsl(var(--ds-green) / 0.1)',
@@ -62,10 +62,9 @@ const statusLabels: Record<DealStatus, string> = {
   'reported': 'Reported',
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
-  'ready-for-invoicing': 'Finalised',
-  'pending-payment': 'Pending Payment',
+  'pending-agent-approval': 'Pending Approval',
   'pending-receivables': 'Pending Receivables',
-  'paid': 'Paid',
+  'finalized': 'Finalized',
   'canceled': 'Canceled',
 };
 
@@ -73,10 +72,9 @@ const statusDotColors: Record<DealStatus, string> = {
   'reported': 'hsl(var(--ds-orange))',
   'pending-details': 'hsl(var(--ds-orange))',
   'under-review': 'hsl(var(--ds-orange))',
-  'ready-for-invoicing': 'hsl(var(--ds-green))',
-  'pending-payment': 'hsl(var(--accent-indigo))',
+  'pending-agent-approval': 'hsl(var(--ds-green))',
   'pending-receivables': 'hsl(var(--accent-indigo))',
-  'paid': 'hsl(var(--ds-green))',
+  'finalized': 'hsl(var(--ds-green))',
   'canceled': 'hsl(var(--ds-red))',
 };
 
@@ -85,7 +83,7 @@ export function DealsTypeGrid() {
   const [expanded, setExpanded] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
-  const deals = mockDeals;
+  const deals = agentDeals;
 
   const getGroupCount = (group: StatusGroup) =>
     deals.filter(d => group.statuses.includes(d.status)).length;

@@ -1,19 +1,19 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, AlertCircle, FileText, Clock } from "lucide-react";
-import { mockDeals } from "@/data/mockDeals";
+import { agentDeals } from "@/data/mockDeals";
 import { cn } from "@/lib/utils";
 
 export function DealsSummaryWidget({ className }: { className?: string }) {
   const navigate = useNavigate();
 
-  const needsAttention = mockDeals.filter(d =>
+  const needsAttention = agentDeals.filter(d =>
     ['pending-details', 'under-review'].includes(d.status)
   ).length;
 
-  const pendingPayment = mockDeals.filter(d => d.status === 'pending-payment').length;
+  const pendingPayment = agentDeals.filter(d => d.status === 'pending-receivables').length;
 
   const now = new Date();
-  const reportedThisMonth = mockDeals.filter(d => {
+  const reportedThisMonth = agentDeals.filter(d => {
     const date = new Date(d.reportDate);
     return date.getMonth() === now.getMonth();
   }).length;

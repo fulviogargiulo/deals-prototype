@@ -9,6 +9,9 @@ import type { Deal, StatementOfAccount } from "@/types";
 // values in OpportunityType, so the cast is safe at runtime.
 export const mockDeals: Deal[] = sharedDeals as unknown as Deal[];
 
+export const CURRENT_AGENT_ID = 'agent-felicia';
+export const agentDeals: Deal[] = mockDeals.filter(d => d.agentId === CURRENT_AGENT_ID);
+
 export const mockStatement: StatementOfAccount = {
   id: "stmt-1",
   cycleLabel: "February 2026",

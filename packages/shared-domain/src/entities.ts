@@ -492,7 +492,8 @@ export interface PostingLine {
   ledgerId: string;
   side: PostingSide;
   amount: number;
-  agentInvoiceId?: string;
+  invoiceId?: string;       // receivable Invoice this line is claimed by
+  agentInvoiceId?: string;  // AgentInvoice this line is claimed by
   metadata?: Record<string, unknown>;
 }
 
@@ -518,7 +519,6 @@ export interface AgentInvoice {
 // ============================================================
 export interface Invoice {
   id: string;
-  dealId: string;
 
   entityType: ReceivableEntityType;
   entityName: string;

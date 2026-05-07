@@ -42,7 +42,6 @@ erDiagram
     }
     Invoice {
         string id
-        string dealId FK
         ReceivableEntityType entityType
         string entityName
         string invoiceNumber
@@ -97,7 +96,18 @@ erDiagram
         string ledgerId FK
         PostingSide side
         number amount
+        string invoiceId FK
+        string agentInvoiceId FK
         JSON metadata
+    }
+    AgentInvoice {
+        string id
+        string agentId FK
+        string invoiceNumber
+        string period
+        AgentInvoiceStatus status
+        Currency currency
+        number totalAmount
     }
 
     Client      ||--o{ Opportunity  : "has"
@@ -105,7 +115,6 @@ erDiagram
     Opportunity ||--o{ Deal         : "produces"
     Client      ||--o{ Deal         : "party to"
     Agent       ||--o{ Deal         : "closes"
-    Deal        ||--o{ Invoice      : "has"
     Deal        ||--o| DealDispute  : "may have"
     Client      ||--o{ Task         : "has"
     Opportunity ||--o{ Task         : "has"
@@ -115,9 +124,14 @@ erDiagram
     Ledger      ||--o{ Ledger       : "subledger of"
     Posting     ||--|{ PostingLine  : "has"
     Ledger      ||--o{ PostingLine  : "receives"
+    Invoice     ||--o{ PostingLine  : "claimed by"
+    AgentInvoice ||--o{ PostingLine : "claimed by"
+    Agent       ||--o{ AgentInvoice : "has"
 ```
 
 > **Deal → Posting link is soft (via `metadata.deal_id`).** A `Posting` has no FK to `Deal` — this is intentional so standalone postings (bonuses, adjustments, FX bridge entries) are first-class without a deal reference. Use `getPostingsForDeal(dealId)` to query.
+
+> **Invoice → Deal link is via PostingLine.** `Invoice` has no `dealId` FK. The receivable DEBIT `PostingLine` on a `deal_close` posting carries `invoiceId` to claim that Invoice. Use `getInvoicesForDeal(dealId)` which traverses PostingLines via `metadata.deal_id`.
 
 ## Cardinality notes
 
@@ -128,7 +142,9 @@ erDiagram
 | Opportunity → Deal | 1 : N | Usually 1:1 in practice; N allowed for edge cases (e.g. deal reopened after cancellation) |
 | Client → Deal | 1 : N | Denormalized FK — mirrors the Opportunity → Deal → Client path for query convenience |
 | Agent → Deal | 1 : N | Primary agent on the deal; multi-agent splits live in `AgentEntry[]` |
-| Deal → Invoice | 1 : N | One deal can produce invoices to multiple counterparties (buyer, seller, developer, bank, etc.) |
+| PostingLine → Invoice | N : 0‒1 | `invoiceId` on the receivable DEBIT line claims that line for a specific Invoice; one Invoice can span multiple PostingLines |
+| PostingLine → AgentInvoice | N : 0‒1 | `agentInvoiceId` on AgentLiability CREDIT/DEBIT lines claims that line for a periodic agent statement |
+| Agent → AgentInvoice | 1 : N | One AgentInvoice per agent per period |
 | Deal → AgentEntry | 1 : N | Embedded — models commission splits across co-agents, team leads, managers |
 | Deal → PayableEntry | 1 : N | Embedded — tracks what Huspy owes out (agent payouts, referrals, SOAs) |
 | Deal → DealDispute | 1 : 0‒1 | At most one open dispute per deal |
@@ -142,22 +158,42 @@ erDiagram
 
 ## Invoice entity
 
-`Invoice` is the canonical record for a receivable issued to a specific counterparty on a deal. A deal with both a seller and a developer counterparty will have two invoices. A mortgage deal invoices the bank.
+`Invoice` is the canonical document artifact for a receivable issued to a specific counterparty. It has **no direct FK to `Deal`** — the deal link is via `PostingLine.invoiceId`: the receivable DEBIT line on the deal's `deal_close` posting claims an Invoice. Use `getInvoicesForDeal(dealId)` which traverses PostingLines.
 
 **`entityType`** maps to `ReceivableEntityType`: `buyer | seller | developer | tenant | bank | landlord`
 
 **Fixture coverage** (`src/fixtures/invoices.ts`):
 
-| Invoice ID | Deal | Counterparty | Amount | Status |
+| Invoice ID | Deal (via PostingLine) | Counterparty | Amount | Status |
 |---|---|---|---|---|
-| INV-2026-001 | deal-001 | Buyer (Mariana Dañobeitia) | EUR 11 550 | paid |
-| INV-2026-007 | deal-007 | Buyer (Mariana Dañobeitia) | EUR 11 875 | sent |
-| INV-2026-008A | deal-008 | Seller (Carlos Fernández) | EUR 8 700 | sent |
-| INV-2026-008B | deal-008 | Developer (Inmobiliaria Grupo Norte) | EUR 5 800 | created |
-| INV-2026-014 | deal-014 | Bank (CaixaBank) | EUR 2 480 | overdue |
-| INV-2026-015 | deal-015 | Bank (Saudi National Bank) | SAR 4 600 | sent |
-| INV-2026-016A | deal-016 | Seller (Fatima Al Mansouri) | AED 25 200 | paid |
-| INV-2026-016B | deal-016 | Developer (Emaar Properties) | AED 16 800 | paid |
+| inv-001 | deal-001 (pline-001-1) | Buyer | EUR 11 550 | paid |
+| inv-007 | deal-007 (pline not in fixtures) | Buyer | EUR 11 875 | sent |
+| inv-008-a | deal-008 (pline-005-1) | Seller | EUR 8 700 | sent |
+| inv-008-b | deal-008 (pline-005-2) | Developer | EUR 5 800 | created |
+| inv-014 | deal-014 (pline-006-1) | Bank | EUR 2 480 | overdue |
+| inv-015 | deal-015 | Bank | SAR 4 600 | sent |
+| inv-016-a | deal-016 (pline-007-1) | Seller | AED 25 200 | paid |
+| inv-016-b | deal-016 (pline-007-2) | Developer | AED 16 800 | paid |
+
+## Deal status state machine
+
+```
+reported → pending-details → under-review → pending-agent-approval → pending-receivables → finalized
+                                                                                          ↘
+                                                        (any state) → canceled
+```
+
+| Status | Meaning |
+|---|---|
+| `reported` | Deal logged; awaiting ops review |
+| `pending-details` | Ops requests more info from agent |
+| `under-review` | Ops verifying details |
+| `pending-agent-approval` | Ops approved; agent must confirm commission breakdown |
+| `pending-receivables` | Invoice sent to client; waiting for payment to arrive |
+| `finalized` | Client payment received and deal accounting closed |
+| `canceled` | Deal voided (cross-cutting; can be reached from any state) |
+
+> **`isDisputed`** (`boolean`) is a cross-cutting flag, NOT a state. A deal can be disputed at any lifecycle state. Dispute details are in the embedded `DealDispute` entity.
 
 ## Accounting model
 

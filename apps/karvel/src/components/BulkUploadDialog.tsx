@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileText, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { Deal, AgentEntry, PayableEntry, ReceivableEntry, ExternalPartnerEntry } from "@/data/types";
 import { toast } from "@/hooks/use-toast";
+import { COMMISSION_RATES } from "@huspy/shared-domain";
+import { recalculateDeal } from "@/lib/dealCalculations";
 
 interface Props {
   open: boolean;
@@ -25,8 +27,9 @@ function makeDefaultAgent(): AgentEntry {
 function csvToDeal(row: Record<string, string>, index: number): Deal {
   const id = `DEAL-${String(Date.now()).slice(-6)}-${String(index + 1).padStart(3, "0")}`;
   const dealPrice = parseFloat(row.dealPrice) || 0;
-  const takeRate = parseFloat(row.takeRate || "1.5");
+  const takeRate = parseFloat(row.takeRate) || COMMISSION_RATES.takeRate;
   const huspyRevenue = dealPrice * (takeRate / 100);
+  const conveyanceRevenue = huspyRevenue * (COMMISSION_RATES.conveyanceSplit / 100);
 
   return {
     id,
@@ -43,10 +46,10 @@ function csvToDeal(row: Record<string, string>, index: number): Deal {
     dealPrice,
     takeRate,
     huspyRevenue,
-    netHuspyRevenue: huspyRevenue * 0.88,
-    conveyanceRevenue: huspyRevenue * 0.12,
+    netHuspyRevenue: huspyRevenue - conveyanceRevenue,
+    conveyanceRevenue,
     agentShare: parseFloat(row.agentShare || "50"),
-    agentCommissionRate: parseFloat(row.agentCommissionRate || "40"),
+    agentCommissionRate: parseFloat(row.agentCommissionRate) || COMMISSION_RATES.agentGrossRate,
     agentCommissionPayout: 0,
     teamLeadRate: 0, teamLeadShare: 0,
     managerOverrideRate: 0, managerOverride: 0,
@@ -123,7 +126,7 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
 
   const handleCreate = () => {
     if (!preview) return;
-    const deals = preview.rows.map((row, i) => csvToDeal(row, i));
+    const deals = preview.rows.map((row, i) => recalculateDeal(csvToDeal(row, i)));
     onDealsCreated(deals);
     setCreatedCount(deals.length);
     setStep("success");

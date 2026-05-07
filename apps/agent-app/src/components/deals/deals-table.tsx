@@ -26,10 +26,9 @@ const statusLabels: Record<DealStatus, string> = {
   reported: 'Reported',
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
-  'ready-for-invoicing': 'Ready For Invoicing',
-  'pending-payment': 'Pending Payment',
+  'pending-agent-approval': 'Pending Approval',
   'pending-receivables': 'Pending Receivables',
-  paid: 'Paid',
+  finalized: 'Finalized',
   canceled: 'Canceled',
 };
 
@@ -37,10 +36,9 @@ const statusColors: Record<DealStatus, { color: string; bg: string }> = {
   reported: { color: 'hsl(var(--accent-indigo))', bg: 'hsl(var(--accent-indigo) / 0.1)' },
   'pending-details': { color: 'hsl(var(--ds-orange))', bg: 'hsl(var(--ds-orange) / 0.1)' },
   'under-review': { color: 'hsl(var(--accent-orchid))', bg: 'hsl(var(--accent-orchid) / 0.1)' },
-  'ready-for-invoicing': { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
-  'pending-payment': { color: 'hsl(var(--accent-teal))', bg: 'hsl(var(--accent-teal) / 0.1)' },
+  'pending-agent-approval': { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
   'pending-receivables': { color: 'hsl(var(--accent-terracotta))', bg: 'hsl(var(--accent-terracotta) / 0.1)' },
-  paid: { color: 'hsl(var(--fg-secondary))', bg: 'hsl(var(--fg-secondary) / 0.1)' },
+  finalized: { color: 'hsl(var(--fg-secondary))', bg: 'hsl(var(--fg-secondary) / 0.1)' },
   canceled: { color: 'hsl(var(--ds-red))', bg: 'hsl(var(--ds-red) / 0.1)' },
 };
 
@@ -54,7 +52,7 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
 type SortKey = 'title' | 'dealAmount' | 'commissionAmount' | 'reportDate';
 type SortDir = 'asc' | 'desc';
 
-const allStatuses: DealStatus[] = ['reported', 'pending-details', 'under-review', 'ready-for-invoicing', 'pending-payment', 'pending-receivables', 'paid', 'canceled'];
+const allStatuses: DealStatus[] = ['reported', 'pending-details', 'under-review', 'pending-agent-approval', 'pending-receivables', 'finalized', 'canceled'];
 const allTypes: OpportunityType[] = ['buy', 'sell', 'rent', 'lease', 'mortgage'];
 
 export function DealsTable({ deals, disputedDealIds = new Set() }: DealsTableProps) {
@@ -262,7 +260,7 @@ export function DealsTable({ deals, disputedDealIds = new Set() }: DealsTablePro
                   {/* Title + type label */}
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate leading-[120%]">{deal.title}</p>
-                    <p className="text-xs text-fg-secondary leading-[140%] capitalize">{deal.type}</p>
+                    <p className="text-xs text-fg-secondary leading-[140%] capitalize">{deal.id} · {deal.type}</p>
                   </div>
 
                   {/* Client */}

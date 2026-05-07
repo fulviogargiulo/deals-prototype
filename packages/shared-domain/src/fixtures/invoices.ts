@@ -7,7 +7,6 @@ export const sharedInvoices: Invoice[] = [
   // deal-001 — buy, paid, EUR 385 000 @ 3% = 11 550
   {
     id: "inv-001",
-    dealId: "deal-001",
     entityType: "buyer",
     entityName: "Mariana Dañobeitia",
     invoiceNumber: "INV-2026-001",
@@ -22,10 +21,9 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-01-12T00:00:00.000Z",
   },
 
-  // deal-007 — buy, pending-payment, EUR 475 000 @ 2.5% = 11 875
+  // deal-007 — buy, pending-receivables, EUR 475 000 @ 2.5% = 11 875
   {
     id: "inv-007",
-    dealId: "deal-007",
     entityType: "buyer",
     entityName: "Mariana Dañobeitia",
     invoiceNumber: "INV-2026-007",
@@ -41,7 +39,6 @@ export const sharedInvoices: Invoice[] = [
   // deal-008 — sell, pending-receivables, EUR 580 000 @ 2.5% = 14 500 split across two counterparties
   {
     id: "inv-008-a",
-    dealId: "deal-008",
     entityType: "seller",
     entityName: "Carlos Fernández",
     invoiceNumber: "INV-2026-008A",
@@ -55,7 +52,6 @@ export const sharedInvoices: Invoice[] = [
   },
   {
     id: "inv-008-b",
-    dealId: "deal-008",
     entityType: "developer",
     entityName: "Inmobiliaria Grupo Norte",
     invoiceNumber: "INV-2026-008B",
@@ -71,7 +67,6 @@ export const sharedInvoices: Invoice[] = [
   // deal-014 — mortgage, pending-receivables, EUR 496 000 @ 0.5% = 2 480 — overdue
   {
     id: "inv-014",
-    dealId: "deal-014",
     entityType: "bank",
     entityName: "CaixaBank",
     invoiceNumber: "INV-2026-014",
@@ -84,10 +79,9 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-05-01T00:00:00.000Z",
   },
 
-  // deal-015 — mortgage, pending-payment, SAR 920 000 @ 0.5% = 4 600
+  // deal-015 — mortgage, pending-receivables, SAR 920 000 @ 0.5% = 4 600
   {
     id: "inv-015",
-    dealId: "deal-015",
     entityType: "bank",
     entityName: "Saudi National Bank",
     invoiceNumber: "INV-2026-015",
@@ -103,7 +97,6 @@ export const sharedInvoices: Invoice[] = [
   // deal-016 — sell, paid, AED 2 100 000 @ 2% = 42 000 split across seller + developer
   {
     id: "inv-016-a",
-    dealId: "deal-016",
     entityType: "seller",
     entityName: "Fatima Al Mansouri",
     invoiceNumber: "INV-2026-016A",
@@ -119,7 +112,6 @@ export const sharedInvoices: Invoice[] = [
   },
   {
     id: "inv-016-b",
-    dealId: "deal-016",
     entityType: "developer",
     entityName: "Emaar Properties",
     invoiceNumber: "INV-2026-016B",

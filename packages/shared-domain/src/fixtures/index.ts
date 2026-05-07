@@ -3,7 +3,8 @@ export { sharedOpportunities } from "./opportunities";
 export { sharedDeals } from "./deals";
 export { sharedInvoices } from "./invoices";
 export { sharedLedgers } from "./ledgers";
-export { sharedPostings, sharedPostingLines } from "./postings";
+export { sharedPostings } from "./postings";
+export { sharedPostingLines } from "./postingLines";
 export { sharedAgentInvoices } from "./agentInvoices";
 export { sharedTasks } from "./tasks";
 export { sharedDocuments } from "./documents";
@@ -36,5 +37,6 @@ export {
   getAgentInvoiceById,
   getAgentInvoicesForAgent,
   getPostingLinesForAgentInvoice,
+  getPostingLinesForInvoice,
 } from "./queries";
 export { generateManyClients } from "./manyClientsGenerator";

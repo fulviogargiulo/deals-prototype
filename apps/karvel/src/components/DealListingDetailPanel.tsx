@@ -18,10 +18,9 @@ const STAGE_ORDER: { key: DealStatus; label: string }[] = [
   { key: "reported", label: "reported" },
   { key: "pending-details", label: "pending-details" },
   { key: "under-review", label: "under-review" },
-  { key: "ready-for-invoicing", label: "Invoicing" },
+  { key: "pending-agent-approval", label: "Approval" },
   { key: "pending-receivables", label: "Receivables" },
-  { key: "pending-payment", label: "Payment" },
-  { key: "paid", label: "paid" },
+  { key: "finalized", label: "Finalized" },
 ];
 
 function getStageIndex(status: DealStatus): number {
@@ -229,7 +228,7 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
 
               // Find dispute entries in statusHistory that relate to this stage
               const disputeEntry = deal.statusHistory?.find(
-                (h) => h.to === stage.key && (h.from === "ready-for-invoicing" || h.from === "pending-details") && h.note
+                (h) => h.to === stage.key && (h.from === "pending-agent-approval" || h.from === "pending-details") && h.note
               );
 
               return (
@@ -357,7 +356,7 @@ export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwit
         )}
 
         {deal.status !== "reported" && deal.status !== "pending-details" && (
-          <Section title="Payables" defaultOpen={deal.status === "pending-payment"}>
+          <Section title="Payables" defaultOpen={deal.status === "pending-receivables"}>
             <div className="space-y-1.5">
               {(deal.payables || []).length === 0 ? (
                 <span className="text-[12px] text-muted-foreground italic">No payable entities yet.</span>

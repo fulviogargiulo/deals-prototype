@@ -18,7 +18,7 @@ interface ColumnFilter {
   values: Set<string>;
 }
 
-const ALL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid", "canceled"];
+const ALL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"];
 const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
 
 const thBase = "px-4 py-3 font-semibold text-foreground text-[13px] whitespace-nowrap border-b border-border bg-muted/20";

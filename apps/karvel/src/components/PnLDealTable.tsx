@@ -36,7 +36,7 @@ interface EditHelpers {
   fmt: (n: number) => string;
 }
 
-const ALL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"];
+const ALL_STATUSES: DealStatus[] = ["reported", "pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"];
 const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
 const ALL_MARKETS: DealMarket[] = ["primary", "secondary", "leasing"];
 const ALL_COUNTRIES: Country[] = ["ae", "es", "sa"];

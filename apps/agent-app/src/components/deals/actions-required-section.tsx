@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Deal, StatementOfAccount } from '@/types';
-import { AlertCircle, Clock, FileText, AlertTriangle, CheckCircle2, MoreVertical, Timer, ArrowRight } from 'lucide-react';
+import { Deal } from '@/types';
+import { AlertCircle, Clock, AlertTriangle, CheckCircle2, MoreVertical, Timer, ArrowRight } from 'lucide-react';
 import { CountdownTimer, CountdownLabels } from '@/components/ui/countdown-timer';
 import { Button } from '@/components/ui/button';
 import { OpportunityIcon } from '@/components/opportunities/opportunity-icon';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealDisputeModal } from '@/components/modals/deal-dispute-modal';
-import { StatementDisputeModal } from '@/components/modals/statement-dispute-modal';
 import { ProvideInfoModal } from '@/components/modals/provide-info-modal';
-import { CreateInvoiceModal } from '@/components/modals/create-invoice-modal';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -18,8 +16,6 @@ import { toast } from 'sonner';
 interface ActionsRequiredSectionProps {
   pendingConfirmation: Deal[];
   pendingInfo: Deal[];
-  statement: StatementOfAccount | null;
-  onInvoiceCreated?: () => void;
   disputedDealIds: Set<string>;
   onDealDisputed?: (dealId: string) => void;
 }
@@ -31,26 +27,21 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
   lease: { icon: LeaseBareIcon, color: '#CD52C3' },
 };
 
-export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, statement, onInvoiceCreated, disputedDealIds, onDealDisputed }: ActionsRequiredSectionProps) {
+export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, disputedDealIds, onDealDisputed }: ActionsRequiredSectionProps) {
   const [disputeDeal, setDisputeDeal] = useState<Deal | null>(null);
-  const [showStatementDispute, setShowStatementDispute] = useState(false);
   const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
   const [infoDeal, setInfoDeal] = useState<Deal | null>(null);
   const [submittedInfoDealIds, setSubmittedInfoDealIds] = useState<Set<string>>(new Set());
-  const [showCreateInvoice, setShowCreateInvoice] = useState(false);
   const [confirmedDealIds, setConfirmedDealIds] = useState<Set<string>>(new Set());
-  const [disputedLineItemIds, setDisputedLineItemIds] = useState<Set<string>>(new Set());
 
   // Deadline for confirming deals (48h from now, cached)
   const [dealsExpiresAt] = useState(() => new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString());
 
   const activePendingInfo = pendingInfo.filter(d => !submittedInfoDealIds.has(d.id));
   const remainingConfirmation = pendingConfirmation.filter(d => !confirmedDealIds.has(d.id) && !disputedDealIds.has(d.id));
-  const allDealsConfirmed = pendingConfirmation.length > 0 && (confirmedDealIds.size + disputedDealIds.size) >= pendingConfirmation.length;
-  const showStatement = allDealsConfirmed && statement;
-  const hasActions = remainingConfirmation.length > 0 || activePendingInfo.length > 0 || showStatement;
+  const hasActions = remainingConfirmation.length > 0 || activePendingInfo.length > 0;
 
-  if (!hasActions && !allDealsConfirmed) return null;
+  if (!hasActions) return null;
 
   const allSelected = remainingConfirmation.length > 0 && selectedDeals.size === remainingConfirmation.length;
   const someSelected = selectedDeals.size > 0;
@@ -262,109 +253,6 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, state
         </div>
       )}
 
-      {/* Statement of Account */}
-      {showStatement && (
-        <div className="bg-card rounded-2xl overflow-hidden">
-          {/* Section header with countdown */}
-          <div className="px-4 py-3 border-b border-border-ds-primary flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4" style={{ color: 'hsl(var(--accent-indigo))' }} />
-              <h3 className="text-sm font-semibold text-foreground">
-                Statement of Account — {statement.cycleLabel}
-              </h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <Timer className="w-3.5 h-3.5 text-fg-secondary" />
-              <span className="text-[10px] font-semibold text-fg-secondary uppercase tracking-wide">Confirm by</span>
-              <CountdownTimer
-                expiresAt={statement.expiresAt}
-                variant="light"
-                size="inline"
-              />
-            </div>
-          </div>
-
-          {/* Credits */}
-          <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--ds-green))' }} />
-            <h4 className="text-[14px] font-semibold leading-[120%] text-foreground">Credits</h4>
-            <span className="text-[12px] font-semibold tabular-nums ml-auto" style={{ color: 'hsl(var(--ds-green))' }}>
-              +€{statement.totalCredit.toLocaleString()}
-            </span>
-          </div>
-          <div className="divide-y divide-border-ds-primary">
-            {statement.lineItems.filter(li => li.type === 'credit').map((item) => (
-              <div key={item.id} className="grid grid-cols-[1fr_auto_100px] px-4 py-2.5 items-center gap-3 pl-8">
-                <span className="text-[12px] text-fg-secondary leading-[140%]">{item.description}</span>
-                {disputedLineItemIds.has(item.id) ? (
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-orange) / 0.1)', color: 'hsl(var(--ds-orange))' }}>Under Review</span>
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-red) / 0.1)', color: 'hsl(var(--ds-red))' }}>Disputed</span>
-                  </div>
-                ) : <span />}
-                <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>
-                  +€{item.amount.toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Debits */}
-          <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--ds-red))' }} />
-            <h4 className="text-[14px] font-semibold leading-[120%] text-foreground">Debits</h4>
-            <span className="text-[12px] font-semibold tabular-nums ml-auto" style={{ color: 'hsl(var(--ds-red))' }}>
-              −€{statement.totalDebit.toLocaleString()}
-            </span>
-          </div>
-          <div className="divide-y divide-border-ds-primary">
-            {statement.lineItems.filter(li => li.type === 'debit').map((item) => (
-              <div key={item.id} className="grid grid-cols-[1fr_auto_100px] px-4 py-2.5 items-center gap-3 pl-8">
-                <span className="text-[12px] text-fg-secondary leading-[140%]">{item.description}</span>
-                {disputedLineItemIds.has(item.id) ? (
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-orange) / 0.1)', color: 'hsl(var(--ds-orange))' }}>Under Review</span>
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-red) / 0.1)', color: 'hsl(var(--ds-red))' }}>Disputed</span>
-                  </div>
-                ) : <span />}
-                <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-red))' }}>
-                  −€{item.amount.toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Balance + actions */}
-          <div className="border-t border-border-ds-primary px-4 py-3 flex items-center justify-between">
-            <div>
-              <span className="text-sm font-semibold text-foreground">Balance</span>
-              <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">€{statement.balance.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-fg-secondary h-8 rounded-full"
-                onClick={() => setShowStatementDispute(true)}
-                disabled={disputedLineItemIds.size > 0}
-              >
-                Raise Dispute
-              </Button>
-              <Button
-                size="sm"
-                className="h-8 rounded-full text-xs"
-                style={disputedLineItemIds.size > 0 ? {} : { backgroundColor: 'hsl(var(--ds-green))', color: 'white' }}
-                onClick={() => setShowCreateInvoice(true)}
-                disabled={disputedLineItemIds.size > 0}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                Confirm
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Deals Pending Information */}
       {activePendingInfo.length > 0 && (
         <div className="bg-card rounded-2xl overflow-hidden">
@@ -450,16 +338,6 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, state
           onDealDisputed?.(dealId);
         }}
       />
-      {statement && (
-        <StatementDisputeModal
-          open={showStatementDispute}
-          onOpenChange={setShowStatementDispute}
-          statement={statement}
-          onDisputeSubmitted={(lineItemId) => {
-            setDisputedLineItemIds(prev => new Set(prev).add(lineItemId));
-          }}
-        />
-      )}
       <ProvideInfoModal
         open={!!infoDeal}
         onOpenChange={(open) => !open && setInfoDeal(null)}
@@ -468,14 +346,6 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, state
           setSubmittedInfoDealIds(prev => new Set(prev).add(dealId));
         }}
       />
-      {statement && (
-        <CreateInvoiceModal
-          open={showCreateInvoice}
-          onOpenChange={setShowCreateInvoice}
-          statement={statement}
-          onInvoiceCreated={onInvoiceCreated}
-        />
-      )}
     </div>
   );
 }

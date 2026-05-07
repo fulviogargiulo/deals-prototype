@@ -184,7 +184,7 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
           <ReadonlyField label="Deal ID" value={draft.id} />
           <EditField label="OF/Case Number" value={draft.ofCaseNumber || ""} onChange={(v) => update("ofCaseNumber", v)} />
           <SelectField label="Type" value={draft.type} options={["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"] as DealType[]} onChange={(v) => update("type", v)} />
-          <SelectField label="Status" value={draft.status} options={["reported", "pending-details", "under-review", "ready-for-invoicing", "pending-receivables", "pending-payment", "paid"] as DealStatus[]} onChange={(v) => update("status", v)} />
+          <SelectField label="Status" value={draft.status} options={["reported", "pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"] as DealStatus[]} onChange={(v) => update("status", v)} />
           <SelectField label="Market" value={draft.market} options={["primary", "secondary", "leasing"] as DealMarket[]} onChange={(v) => update("market", v)} />
           <EditField label="Opportunity" value={draft.opportunityName} onChange={(v) => update("opportunityName", v)} />
 
@@ -470,7 +470,7 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
           {draft.status === "under-review" && (
             <button
               onClick={() => {
-                const approved = { ...draft, status: "ready-for-invoicing" as DealStatus };
+                const approved = { ...draft, status: "pending-agent-approval" as DealStatus };
                 onSave?.(approved);
               }}
               className="w-full py-2.5 bg-[hsl(var(--deal-ready-invoicing))] text-primary-foreground rounded-md text-[13px] font-semibold hover:opacity-90 transition-opacity"

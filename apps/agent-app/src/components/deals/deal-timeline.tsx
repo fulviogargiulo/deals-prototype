@@ -17,21 +17,18 @@ const statusSentences: Record<DealStatus, StatusSentence> = {
     suffix: ' so we can move forward.',
   },
   'under-review': {
-    text: "We\u2019re reviewing the details \u2014 once verified, we\u2019ll approve it for invoicing.",
+    text: "We\u2019re reviewing the details \u2014 once verified, we\u2019ll approve your commission.",
   },
-  'ready-for-invoicing': {
+  'pending-agent-approval': {
     text: "We\u2019ve approved this deal \u2014 ",
-    actionText: 'confirm for invoicing',
+    actionText: 'confirm your commission',
     suffix: ' to proceed.',
   },
   'pending-receivables': {
-    text: "We\u2019ve sent the invoice to the buyer \u2014 we\u2019re now collecting payment.",
+    text: "We\u2019ve sent the invoice to the client \u2014 waiting for payment to be received.",
   },
-  'pending-payment': {
-    text: "We\u2019re transferring the commission to your account.",
-  },
-  paid: {
-    text: "We\u2019ve paid your commission.",
+  finalized: {
+    text: "The deal is finalized and your commission has been crystallised.",
   },
   canceled: {
     text: '',
@@ -42,10 +39,9 @@ const timelineSteps: { status: DealStatus; label: string }[] = [
   { status: 'reported', label: 'Reported' },
   { status: 'pending-details', label: 'Pending Details' },
   { status: 'under-review', label: 'Under Review' },
-  { status: 'ready-for-invoicing', label: 'Invoicing' },
+  { status: 'pending-agent-approval', label: 'Approval' },
   { status: 'pending-receivables', label: 'Receivables' },
-  { status: 'pending-payment', label: 'Payment' },
-  { status: 'paid', label: 'Paid' },
+  { status: 'finalized', label: 'Finalized' },
 ];
 
 function getStepIndex(status: DealStatus): number {
@@ -78,7 +74,7 @@ export function DealTimeline({ currentStatus }: DealTimelineProps) {
       <div className="grid items-center gap-y-1.5" style={{ gridTemplateColumns: gridCols }}>
         {/* Row 1: Nodes + Connectors */}
         {timelineSteps.map((step, i) => {
-          const isTerminal = currentStatus === 'paid';
+          const isTerminal = currentStatus === 'finalized';
           const isCompleted = !isCanceled && (i < currentIndex || (isTerminal && i === currentIndex));
           const isCurrent = !isCanceled && !isTerminal && i === currentIndex;
 
@@ -127,7 +123,7 @@ export function DealTimeline({ currentStatus }: DealTimelineProps) {
 
         {/* Row 2: Labels */}
         {timelineSteps.map((step, i) => {
-          const isTerminal = currentStatus === 'paid';
+          const isTerminal = currentStatus === 'finalized';
           const isCompleted = !isCanceled && (i < currentIndex || (isTerminal && i === currentIndex));
 
           return (

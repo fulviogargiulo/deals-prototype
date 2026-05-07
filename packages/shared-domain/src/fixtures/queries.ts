@@ -9,7 +9,8 @@ import { sharedDocuments } from "./documents";
 import { sharedAgents } from "./agents";
 import { sharedInvoices } from "./invoices";
 import { sharedLedgers } from "./ledgers";
-import { sharedPostings, sharedPostingLines } from "./postings";
+import { sharedPostings } from "./postings";
+import { sharedPostingLines } from "./postingLines";
 import { sharedAgentInvoices } from "./agentInvoices";
 
 export const getClientWithOpportunities = (clientId: string): ClientWithOpportunities | undefined => {
@@ -34,7 +35,15 @@ export const getDocumentsForClient = (clientId: string) => sharedDocuments.filte
 export const getDocumentsForOpportunity = (opportunityId: string) => sharedDocuments.filter((d) => d.opportunityId === opportunityId);
 export const getAgentById = (id: string) => sharedAgents.find((a) => a.id === id);
 export const getInvoiceById = (id: string) => sharedInvoices.find((i) => i.id === id);
-export const getInvoicesForDeal = (dealId: string) => sharedInvoices.filter((i) => i.dealId === dealId);
+// Invoice → Deal is now via PostingLines (no direct dealId FK on Invoice).
+export const getInvoicesForDeal = (dealId: string) => {
+  const ids = new Set(
+    sharedPostingLines
+      .filter((l) => l.metadata?.deal_id === dealId && l.invoiceId)
+      .map((l) => l.invoiceId as string)
+  );
+  return sharedInvoices.filter((i) => ids.has(i.id));
+};
 export const getLedgerById = (id: string) => sharedLedgers.find((l) => l.id === id);
 export const getSubledgersForGL = (glId: string) => sharedLedgers.filter((l) => l.glId === glId);
 export const getPostingsForDeal = (dealId: string) => sharedPostings.filter((p) => p.metadata?.deal_id === dealId);
@@ -43,3 +52,4 @@ export const getPostingLinesForLedger = (ledgerId: string) => sharedPostingLines
 export const getAgentInvoiceById = (id: string) => sharedAgentInvoices.find((i) => i.id === id);
 export const getAgentInvoicesForAgent = (agentId: string) => sharedAgentInvoices.filter((i) => i.agentId === agentId);
 export const getPostingLinesForAgentInvoice = (agentInvoiceId: string) => sharedPostingLines.filter((l) => l.agentInvoiceId === agentInvoiceId);
+export const getPostingLinesForInvoice = (invoiceId: string) => sharedPostingLines.filter((l) => l.invoiceId === invoiceId);

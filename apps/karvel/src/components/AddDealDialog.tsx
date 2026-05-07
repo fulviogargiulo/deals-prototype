@@ -9,6 +9,8 @@ import { Deal, DealType, DealMarket, BusinessUnit, Country, PaymentMode, AgentEn
 import { Opportunity } from "@/data/types";
 import { mockOpportunities } from "@/data/mockData";
 import { toast } from "@/hooks/use-toast";
+import { COMMISSION_RATES } from "@huspy/shared-domain";
+import { recalculateDeal } from "@/lib/dealCalculations";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Props {
@@ -115,7 +117,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     type: "buy", market: "primary", businessUnit: "rebu", country: "ae", ofCaseNumber: "", channel: "",
     buildingName: "", unitNumber: "", community: "", subCommunity: "", propertyType: "", projectName: "", fullAddress: "",
     buyerName: "", buyerPhone: "", buyerEmail: "", sellerName: "", sellerEmail: "", sellerTaxId: "", paymentMode: "cash",
-    dealPrice: "", takeRate: "1.5",
+    dealPrice: "", takeRate: String(COMMISSION_RATES.takeRate),
     conveyanceAgentName: "", conveyanceAgentRate: "25",
     agentName: "", agentShare: "50", agentCommissionRate: "40",
     teamLeadName: "", teamLeadRate: "10", managerName: "", managerOverrideRate: "5",
@@ -183,10 +185,10 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
 
   const handleCreate = () => {
     const dealPrice = parseFloat(form.dealPrice) || 0;
-    const takeRate = parseFloat(form.takeRate) || 1.5;
+    const takeRate = parseFloat(form.takeRate) || COMMISSION_RATES.takeRate;
     const huspyRevenue = dealPrice * (takeRate / 100);
     const convRate = parseFloat(form.conveyanceAgentRate) || 0;
-    const conveyanceRevenue = huspyRevenue * 0.12;
+    const conveyanceRevenue = huspyRevenue * (COMMISSION_RATES.conveyanceSplit / 100);
     const netHuspyRevenue = huspyRevenue - conveyanceRevenue;
     const agentShare = parseFloat(form.agentShare) || 50;
     const agentCommRate = parseFloat(form.agentCommissionRate) || 40;
@@ -248,8 +250,8 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       rebatePercentage: 0,
       rebateAmount: 0,
       subsidyAmount: 0,
-      cogsInternal: Math.round(huspyRevenue * 0.15),
-      cogsExternal: Math.round(huspyRevenue * 0.1),
+      cogsInternal: 0,
+      cogsExternal: 0,
       cogsReferrals: 0,
       cogsRebates: 0,
       cogsSubsidy: 0,
@@ -282,7 +284,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       latestNote: form.latestNote || undefined,
     };
 
-    onDealCreated(deal);
+    onDealCreated(recalculateDeal(deal));
     setCreatedDealId(id);
     setStep("success");
     toast({ title: "Deal Created", description: `Deal ${id} has been created successfully.` });
@@ -298,7 +300,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       type: "buy", market: "primary", businessUnit: "rebu", country: "ae", ofCaseNumber: "", channel: "",
       buildingName: "", unitNumber: "", community: "", subCommunity: "", propertyType: "", projectName: "", fullAddress: "",
       buyerName: "", buyerPhone: "", buyerEmail: "", sellerName: "", sellerEmail: "", sellerTaxId: "", paymentMode: "cash",
-      dealPrice: "", takeRate: "1.5",
+      dealPrice: "", takeRate: String(COMMISSION_RATES.takeRate),
       conveyanceAgentName: "", conveyanceAgentRate: "25",
       agentName: "", agentShare: "50", agentCommissionRate: "40",
       teamLeadName: "", teamLeadRate: "10", managerName: "", managerOverrideRate: "5",

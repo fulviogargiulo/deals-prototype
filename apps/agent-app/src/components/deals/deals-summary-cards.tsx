@@ -19,7 +19,7 @@ export function DealsSummaryCards({ deals, dateRange }: DealsSummaryCardsProps) 
 
   const totalDealValue = filteredDeals.reduce((sum, d) => sum + d.dealAmount, 0);
   const totalCommissionsPaid = filteredDeals
-    .filter(d => d.status === 'paid')
+    .filter(d => d.status === 'finalized')
     .reduce((sum, d) => sum + d.commissionAmount, 0);
 
   const cards = [

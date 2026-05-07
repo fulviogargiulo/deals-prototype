@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, TrendingUp } from "lucide-react";
-import { mockDeals } from "@/data/mockDeals";
+import { agentDeals } from "@/data/mockDeals";
 import { cn } from "@/lib/utils";
 import {
   AreaChart,
@@ -16,7 +16,7 @@ function generateMonthlyIncome() {
   const months = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
 
   // Simulated monthly income based on mock deals spread across months
-  const paidDeals = mockDeals.filter(d => d.status === 'paid');
+  const paidDeals = agentDeals.filter(d => d.status === 'finalized');
   const totalPaid = paidDeals.reduce((sum, d) => sum + (d.commissionAmount || 0), 0);
   const baseMonthly = totalPaid / 4;
 
