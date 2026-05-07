@@ -13,46 +13,52 @@ import type {
   PayableStatus,
   PostingSide,
   PostingStatus,
+  StakeholderRole,
 } from "./enums";
 
 // ============================================================
-// Client
+// Party — central identity record shared by Agent, Client, and
+// any other counterparty (bank, developer, third-party firm).
+// Agent and Client link here via partyId instead of embedding
+// contact fields directly.
 // ============================================================
-//
-// One canonical Client type. Karvel and agent-app each consume the same
-// records; each renders the subset of fields it cares about.
-//
-// Field-name notes (collisions resolved):
-//   - `creationChannel`  = where the client record was created (karvel concept,
-//     formerly `source` in karvel)
-//   - `inquirySource`    = where an inbound inquiry originated (agent-app
-//     concept, formerly `source` in agent-app)
+export interface Party {
+  id: string;
+  displayName: string;
+  email?: string;
+  phone?: string;
+  legalType?: string;
+}
+
+// ============================================================
+// Client — sub-type of Party for real-estate clients.
+// Contact fields (displayName, email, phone) live on the linked Party.
 // ============================================================
 export interface Client {
-  // Required core
   id: string;
-  fullName: string;
-  phone: string;
+  partyId: string;
   createdAt: string;
   updatedAt: string;
-
-  // Optional canonical
-  email?: string;
-  description?: string;
-  location?: string;
-  preferredLanguage?: string;
 
   // Lifecycle / verification
   status?: "active" | "inactive";
   verificationStatus?: "incoming" | "pending" | "verified";
-
-  // Where the client/inquiry came from. Loose string — values vary by app:
-  //   karvel: "AGENT_APP" | "BACKOFFICE"
-  //   agent-app: "self-created" | "idealista" | "fotocasa"
   source?: string;
-  origin?: string; // karvel-only; secondary categorisation
+  origin?: string;
   expiresAt?: string;
   lastActivity?: string;
+
+  // Optional canonical
+  description?: string;
+  location?: string;
+  preferredLanguage?: string;
+
+  /** @deprecated Access via the linked Party (partyId) instead. */
+  fullName?: string;
+  /** @deprecated Access via the linked Party (partyId) instead. */
+  phone?: string;
+  /** @deprecated Access via the linked Party (partyId) instead. */
+  email?: string;
 }
 
 // ============================================================
@@ -231,14 +237,20 @@ export interface Document {
 
 export interface Agent {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
+  partyId: string;
+  employmentStatus?: string;
+  // UI-only display fields (not in ERD; prototype convenience)
   photo?: string;
   specialties?: string[];
   experience?: number;
   rating?: number;
   totalSales?: number;
+  /** @deprecated Access via the linked Party (partyId) instead. */
+  name?: string;
+  /** @deprecated Access via the linked Party (partyId) instead. */
+  email?: string;
+  /** @deprecated Access via the linked Party (partyId) instead. */
+  phone?: string;
 }
 
 export type ScheduleActivityType = "viewing" | "task";
@@ -316,8 +328,6 @@ export interface Deal {
 
   // Optional canonical
   opportunityId?: string;
-  clientId?: string;
-  agentId?: string;
   market?: Market;
   businessUnit?: BusinessUnit;
   country?: Country;
@@ -454,6 +464,19 @@ export interface Deal {
 }
 
 // ============================================================
+// DealStakeholder — links a Party to a Deal with a specific role.
+// Replaces the agentId/clientId FKs that were embedded on Deal.
+// ============================================================
+export interface DealStakeholder {
+  id: string;
+  dealId: string;
+  partyId: string;
+  role: StakeholderRole;
+  splitPercentage?: number;
+  fixedAmount?: number;
+}
+
+// ============================================================
 // Accounting — Ledger / Posting / PostingLine
 // ============================================================
 
@@ -463,12 +486,12 @@ export interface Ledger {
   name: string;
   type: LedgerType;
   glId?: string;
-  entityType?: "agent" | "bank" | "developer" | "buyer" | "seller" | "tenant" | "landlord";
-  entityId?: string;
+  partyId?: string;
 }
 
 export interface Posting {
   id: string;
+  dealId?: string;
   externalRef?: string;
   businessProcess: BusinessProcess;
   createdBy: string;
@@ -488,47 +511,27 @@ export interface PostingLine {
   side: PostingSide;
   amount: number;
   lineType?: string;        // e.g. "commission" | "incentive" | "platform_support_fee" | "payout" | "bonus"
-  invoiceId?: string;       // receivable Invoice this line is claimed by
-  agentInvoiceId?: string;  // AgentInvoice this line is claimed by
+  invoiceId?: string;       // Invoice this line is claimed by
   metadata?: Record<string, unknown>;
 }
 
-export type AgentInvoiceStatus = "draft" | "issued" | "acknowledged" | "disputed" | "paid";
-
-export interface AgentInvoice {
-  id: string;
-  agentId: string;
-  invoiceNumber: string;
-  period: string;
-  status: AgentInvoiceStatus;
-  currency: Currency;
-  totalAmount: number;
-  issueDate: string;
-  dueDate?: string;
-  paidDate?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 // ============================================================
-// Invoice
+// Invoice — unified outbound (Huspy → client) and inbound (agent → Huspy).
+// partyId links to the Party that Huspy is billing (outbound) or
+// that is billing Huspy (inbound). Replaces entityType/entityName/counterpartyId.
 // ============================================================
 export interface Invoice {
   id: string;
-
-  entityType: ReceivableEntityType;
-  entityName: string;
-
+  direction: "outbound" | "inbound";
+  partyId: string;
   invoiceNumber: string;
   status: InvoiceStatus;
   amount: number;
   currency: Currency;
-  invoiceDate: string;
+  issueDate: string;
   dueDate?: string;
-
-  paymentReceivedDate?: string;
-  paymentReceivedAmount?: number;
-
+  paidDate?: string;
+  period?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -7,7 +7,7 @@ import { FileText, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from
 import { DocumentRow } from '@/components/deals/document-row';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { mockDeals } from '@/data/mockDeals';
-import { computeDealFinancials, COMMISSION_RATES } from '@huspy/shared-domain';
+import { computeDealFinancials, COMMISSION_RATES, getClientForDeal } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -183,7 +183,7 @@ export function DealDetails() {
             <div className="space-y-2">
               <div>
                 <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%]">Client</p>
-                <Link to={`/clients/${deal.clientId}`} className="text-[16px] font-semibold leading-[120%] mt-0.5 hover:underline" style={{ color: 'hsl(var(--accent-indigo))' }}>{deal.clientName}</Link>
+                <Link to={`/clients/${getClientForDeal(deal.id)?.id ?? ''}`} className="text-[16px] font-semibold leading-[120%] mt-0.5 hover:underline" style={{ color: 'hsl(var(--accent-indigo))' }}>{deal.clientName}</Link>
               </div>
               <div>
                 <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%]">Report Date</p>

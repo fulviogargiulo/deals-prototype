@@ -39,13 +39,7 @@ export type Currency = "AED" | "EUR" | "SAR";
 
 export type Market = "primary" | "secondary" | "leasing";
 
-export type InvoiceStatus =
-  | "created"
-  | "sent"
-  | "overdue"
-  | "paid"
-  | "paid-partial"
-  | "cancelled";
+export type InvoiceStatus = "issued" | "paid" | "cancelled";
 
 export type PayableStatus = "pending" | "approved" | "paid" | "rejected" | "overdue";
 
@@ -63,3 +57,13 @@ export type BusinessProcess =
   | "payout_instructed"
   | "manual_adjustment"
   | "reversal";
+
+export type StakeholderRole =
+  | "agent"
+  | "buyer"
+  | "seller"
+  | "tenant"
+  | "landlord"
+  | "borrower"
+  | "developer"
+  | "bank";

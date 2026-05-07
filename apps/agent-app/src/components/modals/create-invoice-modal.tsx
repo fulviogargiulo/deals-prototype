@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FileText, Building2, User, Calendar, Hash, CreditCard, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createAgentInvoice } from '@/data/earningsStore';
+import { createInvoice } from '@/data/earningsStore';
+import { sharedAgents } from '@huspy/shared-domain';
 
 interface CreateInvoiceModalProps {
   open: boolean;
@@ -50,15 +51,17 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
   const handleCreate = () => {
     const now = new Date().toISOString();
     const lineIds = statement.lineItems.map(li => li.id);
-    createAgentInvoice(
+    const agentPartyId = sharedAgents.find((a) => a.id === agentId)?.partyId ?? agentId;
+    createInvoice(
       {
         id: `agent-inv-${agentId}-${Date.now()}`,
-        agentId,
+        direction: 'inbound',
+        partyId: agentPartyId,
         invoiceNumber,
         period: statement.period,
         status: 'issued',
         currency: 'EUR',
-        totalAmount: statement.balance,
+        amount: statement.balance,
         issueDate,
         dueDate,
         createdAt: now,

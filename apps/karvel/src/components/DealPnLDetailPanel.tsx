@@ -379,7 +379,7 @@ export function DealPnLDetailPanel({ deal, currency, onClose, onSave }: Props) {
         {!isPendingDetails && (
         <CollapsibleSection title="Receivables" id="receivables" collapsed={collapsedSections} toggle={toggleSection}>
           <EditField label="Invoice Number" value={draft.invoiceNumber || ""} onChange={(v) => update("invoiceNumber", v)} />
-          <SelectField label="Invoice Status" value={draft.invoiceStatus || "created"} options={["created", "sent", "overdue", "paid", "paid-partial", "cancelled"] as InvoiceStatus[]} onChange={(v) => update("invoiceStatus", v)} />
+          <SelectField label="Invoice Status" value={draft.invoiceStatus || "issued"} options={["issued", "paid", "cancelled"] as InvoiceStatus[]} onChange={(v) => update("invoiceStatus", v)} />
           <ComputedField label="Invoice Amount" value={draft.invoiceNumber ? fmt(draft.huspyRevenue) : "—"} />
           <EditField label="Invoice Date" value={draft.invoiceDate || ""} type="date" placeholder="Select date" onChange={(v) => update("invoiceDate", v)} />
           {draft.invoiceStatus === "paid" && (

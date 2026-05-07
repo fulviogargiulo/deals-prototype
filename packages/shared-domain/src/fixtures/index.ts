@@ -5,10 +5,11 @@ export { sharedInvoices } from "./invoices";
 export { sharedLedgers } from "./ledgers";
 export { sharedPostings } from "./postings";
 export { sharedPostingLines } from "./postingLines";
-export { sharedAgentInvoices } from "./agentInvoices";
 export { sharedTasks } from "./tasks";
 export { sharedDocuments } from "./documents";
 export { sharedAgents } from "./agents";
+export { sharedParties } from "./parties";
+export { sharedDealStakeholders } from "./dealStakeholders";
 export {
   generateMockScheduleActivities,
   sharedScheduleActivities,
@@ -27,16 +28,20 @@ export {
   getDocumentsForClient,
   getDocumentsForOpportunity,
   getAgentById,
+  getPartyById,
+  getPartyForAgent,
+  getPartyForClient,
   getInvoiceById,
   getInvoicesForDeal,
+  getInvoicesForAgent,
   getLedgerById,
   getSubledgersForGL,
   getPostingsForDeal,
   getPostingLinesForPosting,
   getPostingLinesForLedger,
-  getAgentInvoiceById,
-  getAgentInvoicesForAgent,
-  getPostingLinesForAgentInvoice,
   getPostingLinesForInvoice,
+  getDealStakeholdersForDeal,
+  getDealStakeholdersForParty,
+  getClientForDeal,
 } from "./queries";
 export { generateManyClients } from "./manyClientsGenerator";

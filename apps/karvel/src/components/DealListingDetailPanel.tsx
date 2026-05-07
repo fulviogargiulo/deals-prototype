@@ -89,10 +89,7 @@ function DetailRow({ label, value }: { label: string; value: string | React.Reac
 const invoiceStatusColor = (s?: InvoiceStatus | string) => {
   switch (s) {
     case "paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "paid-partial": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "sent": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "created": return "bg-muted text-muted-foreground";
+    case "issued": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
     case "cancelled": return "bg-muted text-muted-foreground line-through";
     default: return "bg-muted text-muted-foreground";
   }

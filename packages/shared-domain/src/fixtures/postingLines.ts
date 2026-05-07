@@ -15,7 +15,7 @@ export const sharedPostingLines: PostingLine[] = [
 
   // posting-003 — agent_invoice — agent payout crystallised (EUR 4 620)
   { id: "pline-003-1", postingId: "posting-003", ledgerId: "Revenue_Commission_REBU",        side: "DEBIT",  amount: 4620, metadata: { deal_id: "deal-001" } },
-  { id: "pline-003-2", postingId: "posting-003", ledgerId: "AgentLiability_agent-felicia",   side: "CREDIT", amount: 4620, lineType: "commission", agentInvoiceId: "agent-inv-felicia-2026-01", metadata: { deal_id: "deal-001", agent_id: "agent-felicia" } },
+  { id: "pline-003-2", postingId: "posting-003", ledgerId: "AgentLiability_agent-felicia",   side: "CREDIT", amount: 4620, lineType: "commission", invoiceId: "agent-inv-felicia-2026-01", metadata: { deal_id: "deal-001", agent_id: "agent-felicia" } },
 
   // posting-004 — payout instructed (EUR 4 620)
   { id: "pline-004-1", postingId: "posting-004", ledgerId: "AgentLiability_agent-felicia",   side: "DEBIT",  amount: 4620, lineType: "payout", metadata: { payout_ref: "PAY-001", agent_id: "agent-felicia" } },
@@ -36,22 +36,22 @@ export const sharedPostingLines: PostingLine[] = [
 
   // posting-010 — standalone bonus — no deal_id (EUR 500)
   { id: "pline-010-1", postingId: "posting-010", ledgerId: "Revenue_Commission_REBU",       side: "DEBIT",  amount: 500, metadata: { agent_id: "agent-felicia" } },
-  { id: "pline-010-2", postingId: "posting-010", ledgerId: "AgentLiability_agent-felicia",  side: "CREDIT", amount: 500, lineType: "bonus", agentInvoiceId: "agent-inv-felicia-2026-q1", metadata: { agent_id: "agent-felicia" } },
+  { id: "pline-010-2", postingId: "posting-010", ledgerId: "AgentLiability_agent-felicia",  side: "CREDIT", amount: 500, lineType: "bonus", invoiceId: "agent-inv-felicia-2026-q1", metadata: { agent_id: "agent-felicia" } },
 
   // posting-011 — agent_invoice — deal-016, agent-gelo (AED 16 800)
   { id: "pline-011-1", postingId: "posting-011", ledgerId: "Revenue_Commission_REBU",     side: "DEBIT",  amount: 16800, metadata: { deal_id: "deal-016" } },
-  { id: "pline-011-2", postingId: "posting-011", ledgerId: "AgentLiability_agent-gelo",   side: "CREDIT", amount: 16800, lineType: "commission", agentInvoiceId: "agent-inv-gelo-2026-05", metadata: { deal_id: "deal-016", agent_id: "agent-gelo" } },
+  { id: "pline-011-2", postingId: "posting-011", ledgerId: "AgentLiability_agent-gelo",   side: "CREDIT", amount: 16800, lineType: "commission", invoiceId: "agent-inv-gelo-2026-05", metadata: { deal_id: "deal-016", agent_id: "agent-gelo" } },
 
   // posting-012 — incentive — agent-gelo, no deal (AED 1 200)
   { id: "pline-012-1", postingId: "posting-012", ledgerId: "Revenue_Commission_REBU",     side: "DEBIT",  amount: 1200, metadata: { agent_id: "agent-gelo" } },
-  { id: "pline-012-2", postingId: "posting-012", ledgerId: "AgentLiability_agent-gelo",   side: "CREDIT", amount: 1200, lineType: "incentive", agentInvoiceId: "agent-inv-gelo-2026-05", metadata: { agent_id: "agent-gelo" } },
+  { id: "pline-012-2", postingId: "posting-012", ledgerId: "AgentLiability_agent-gelo",   side: "CREDIT", amount: 1200, lineType: "incentive", invoiceId: "agent-inv-gelo-2026-05", metadata: { agent_id: "agent-gelo" } },
 
   // posting-013 — platform support fee — agent-gelo, no deal (AED 300 deduction)
-  { id: "pline-013-1", postingId: "posting-013", ledgerId: "AgentLiability_agent-gelo",   side: "DEBIT",  amount: 300, lineType: "platform_support_fee", agentInvoiceId: "agent-inv-gelo-2026-05", metadata: { agent_id: "agent-gelo" } },
+  { id: "pline-013-1", postingId: "posting-013", ledgerId: "AgentLiability_agent-gelo",   side: "DEBIT",  amount: 300, lineType: "platform_support_fee", invoiceId: "agent-inv-gelo-2026-05", metadata: { agent_id: "agent-gelo" } },
   { id: "pline-013-2", postingId: "posting-013", ledgerId: "Revenue_PlatformFees",         side: "CREDIT", amount: 300, metadata: { agent_id: "agent-gelo" } },
 
   // posting-014 — platform support fee — agent-felicia, no deal (EUR 150 deduction)
-  { id: "pline-014-1", postingId: "posting-014", ledgerId: "AgentLiability_agent-felicia", side: "DEBIT",  amount: 150, lineType: "platform_support_fee", agentInvoiceId: "agent-inv-felicia-2026-01", metadata: { agent_id: "agent-felicia" } },
+  { id: "pline-014-1", postingId: "posting-014", ledgerId: "AgentLiability_agent-felicia", side: "DEBIT",  amount: 150, lineType: "platform_support_fee", invoiceId: "agent-inv-felicia-2026-01", metadata: { agent_id: "agent-felicia" } },
   { id: "pline-014-2", postingId: "posting-014", ledgerId: "Revenue_PlatformFees",          side: "CREDIT", amount: 150, metadata: { agent_id: "agent-felicia" } },
 
   // posting-015 — agent_invoice — deal-018, agent-felicia (EUR 15 000) — UNALLOCATED

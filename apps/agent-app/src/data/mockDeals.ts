@@ -1,7 +1,7 @@
 // Deals come from shared canonical fixtures (visible in both apps).
 // `mockStatement` is agent-app-only (StatementOfAccount is a financial UI
 // concept karvel doesn't share), so it lives here.
-import { sharedDeals } from "@huspy/shared-domain";
+import { sharedDeals, sharedDealStakeholders, sharedAgents } from "@huspy/shared-domain";
 import type { Deal, StatementOfAccount } from "@/types";
 
 // Cast: shared.Deal.type is `DealType` (includes buy-sell, rent-lease);
@@ -10,7 +10,17 @@ import type { Deal, StatementOfAccount } from "@/types";
 export const mockDeals: Deal[] = sharedDeals as unknown as Deal[];
 
 export const CURRENT_AGENT_ID = 'agent-felicia';
-export const agentDeals: Deal[] = mockDeals.filter(d => d.agentId === CURRENT_AGENT_ID);
+
+// Resolve the current agent's partyId, then find all deals where they are an agent stakeholder.
+const currentAgent = sharedAgents.find((a) => a.id === CURRENT_AGENT_ID);
+const agentDealIds = new Set(
+  currentAgent
+    ? sharedDealStakeholders
+        .filter((s) => s.partyId === currentAgent.partyId && s.role === 'agent')
+        .map((s) => s.dealId)
+    : []
+);
+export const agentDeals: Deal[] = mockDeals.filter((d) => agentDealIds.has(d.id));
 
 export const mockStatement: StatementOfAccount = {
   id: "stmt-1",

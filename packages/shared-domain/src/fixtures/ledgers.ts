@@ -21,8 +21,7 @@ export const sharedLedgers: Ledger[] = [
     name: "Agent Liability — Felicia Canovas",
     type: "liability",
     glId: "AgentLiability",
-    entityType: "agent",
-    entityId: "agent-felicia",
+    partyId: "party-agent-felicia",
   },
   {
     id: "AgentLiability_agent-guilherme",
@@ -30,8 +29,7 @@ export const sharedLedgers: Ledger[] = [
     name: "Agent Liability — Guilherme Castro",
     type: "liability",
     glId: "AgentLiability",
-    entityType: "agent",
-    entityId: "agent-guilherme",
+    partyId: "party-agent-guilherme",
   },
   {
     id: "AgentLiability_agent-omar",
@@ -39,8 +37,7 @@ export const sharedLedgers: Ledger[] = [
     name: "Agent Liability — Omar Al Saleem",
     type: "liability",
     glId: "AgentLiability",
-    entityType: "agent",
-    entityId: "agent-omar",
+    partyId: "party-agent-omar",
   },
   {
     id: "AgentLiability_agent-gelo",
@@ -48,7 +45,6 @@ export const sharedLedgers: Ledger[] = [
     name: "Agent Liability — Gelo Huspy",
     type: "liability",
     glId: "AgentLiability",
-    entityType: "agent",
-    entityId: "agent-gelo",
+    partyId: "party-agent-gelo",
   },
 ];

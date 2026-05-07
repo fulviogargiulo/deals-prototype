@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { sharedPostings } from '@huspy/shared-domain';
+import { sharedPostings, sharedAgents } from '@huspy/shared-domain';
 import type { PostingLine } from '@huspy/shared-domain';
 import { Button } from '@/components/ui/button';
 import { FileText, TrendingUp, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CreateInvoiceModal } from '@/components/modals/create-invoice-modal';
-import { getPostingLines, getAgentInvoices } from '@/data/earningsStore';
+import { getPostingLines, getInvoices } from '@/data/earningsStore';
 import type { StatementOfAccount } from '@/types';
 
 // Prototype: hardcoded to the current agent. In production this comes from auth context.
 const AGENT_ID = 'agent-felicia';
+const AGENT_PARTY_ID = sharedAgents.find((a) => a.id === AGENT_ID)?.partyId ?? AGENT_ID;
 const AGENT_LEDGER = `AgentLiability_${AGENT_ID}`;
 
 // Settlement entries (cash movement bookkeeping) — hidden from the agent-facing ledger.
@@ -52,8 +53,8 @@ export function AgentEarningsView() {
   const [refreshKey, setRefreshKey] = useState(0);
   void refreshKey;
 
-  const allAgentInvoices = getAgentInvoices().filter(i => i.agentId === AGENT_ID);
-  // Map agentInvoiceId → invoiceNumber for the Invoice column in the ledger table.
+  const allAgentInvoices = getInvoices().filter(i => i.direction === "inbound" && i.partyId === AGENT_PARTY_ID);
+  // Map invoiceId → invoiceNumber for the Invoice column in the ledger table.
   const invoiceNumberMap = new Map(allAgentInvoices.map(i => [i.id, i.invoiceNumber]));
 
   // All PostingLines on this agent's subledger, joined with parent Posting.
@@ -69,11 +70,11 @@ export function AgentEarningsView() {
     : agentLines;
 
   const filteredInvoices = selectedPeriod
-    ? allAgentInvoices.filter(i => i.period.startsWith(selectedPeriod) || selectedPeriod.startsWith(i.period.substring(0, 7)))
+    ? allAgentInvoices.filter(i => (i.period ?? "").startsWith(selectedPeriod) || selectedPeriod.startsWith((i.period ?? "").substring(0, 7)))
     : allAgentInvoices;
 
-  // Lines eligible for statement generation: uninvoiced (no agentInvoiceId)
-  const statementEligibleLines = filteredLines.filter(l => !l.agentInvoiceId);
+  // Lines eligible for statement generation: uninvoiced (no invoiceId)
+  const statementEligibleLines = filteredLines.filter(l => !l.invoiceId);
   const canGenerateStatement = statementEligibleLines.length > 0;
 
   const periodNet = filteredLines.reduce((s, l) => l.side === 'CREDIT' ? s + l.amount : s - l.amount, 0);
@@ -173,8 +174,8 @@ export function AgentEarningsView() {
             {filteredLines.map(line => {
               const { text, color } = formatAmount(line.amount, line.side, line.posting.currency);
               const dealId = line.metadata?.deal_id as string | undefined;
-              const invoiceNumber = line.agentInvoiceId
-                ? (invoiceNumberMap.get(line.agentInvoiceId) ?? line.agentInvoiceId)
+              const invoiceNumber = line.invoiceId
+                ? (invoiceNumberMap.get(line.invoiceId) ?? line.invoiceId)
                 : null;
               return (
                 <div
@@ -252,7 +253,7 @@ export function AgentEarningsView() {
                     <div>
                       <p className="text-sm font-semibold text-foreground leading-[120%]">{inv.invoiceNumber}</p>
                       <p className="text-xs text-fg-secondary leading-[140%] mt-0.5">
-                        {inv.period} · {symbol}{inv.totalAmount.toLocaleString()}
+                        {inv.period} · {symbol}{inv.amount.toLocaleString()}
                       </p>
                     </div>
                   </div>

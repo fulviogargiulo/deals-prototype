@@ -68,11 +68,8 @@ export const countryLabel: Record<Country, string> = {
 };
 
 export const invoiceStatusLabel: Record<InvoiceStatus, string> = {
-  created: "Created",
-  sent: "Sent",
-  overdue: "Overdue",
+  issued: "Issued",
   paid: "Paid",
-  "paid-partial": "Paid Partial",
   cancelled: "Cancelled",
 };
 

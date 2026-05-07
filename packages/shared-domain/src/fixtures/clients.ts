@@ -1,10 +1,13 @@
 import type { Client } from "../entities";
 
-// Canonical client fixtures with all fields populated.
-// Both apps consume these directly — no per-app extension layer.
+// Canonical client fixtures. Contact fields (displayName, email, phone)
+// now live on the linked Party record — partyId is the FK.
+// fullName/phone/email are kept here as deprecated convenience fields
+// so existing UI code continues to render without changes.
 export const sharedClients: Client[] = [
   {
     id: "client-001",
+    partyId: "party-client-001",
     fullName: "Mariana Dañobeitia",
     phone: "+34612345678",
     email: "mariana.danobeitia@email.com",
@@ -18,6 +21,7 @@ export const sharedClients: Client[] = [
   },
   {
     id: "client-002",
+    partyId: "party-client-002",
     fullName: "Carlos Fernández",
     phone: "+34698765432",
     email: "carlos.fernandez@email.com",
@@ -31,6 +35,7 @@ export const sharedClients: Client[] = [
   },
   {
     id: "client-003",
+    partyId: "party-client-003",
     fullName: "Ana Rodríguez",
     phone: "+34611223344",
     email: "ana.rodriguez@email.com",
@@ -44,6 +49,7 @@ export const sharedClients: Client[] = [
   },
   {
     id: "client-004",
+    partyId: "party-client-004",
     fullName: "Javier Martínez",
     phone: "+34699887766",
     email: "javier.martinez@email.com",
@@ -57,6 +63,7 @@ export const sharedClients: Client[] = [
   },
   {
     id: "client-005",
+    partyId: "party-client-005",
     fullName: "Khalid Alharbi",
     phone: "+966504269287",
     email: "khalid.alharbi@email.com",
@@ -70,6 +77,7 @@ export const sharedClients: Client[] = [
   },
   {
     id: "client-006",
+    partyId: "party-client-006",
     fullName: "Esra Sertcetin",
     phone: "+905387764299",
     email: "esra.sertcetin@email.com",
@@ -83,6 +91,7 @@ export const sharedClients: Client[] = [
   },
   {
     id: "client-007",
+    partyId: "party-client-007",
     fullName: "Fatima Al Mansouri",
     phone: "+971501234567",
     email: "fatima.almansouri@email.com",
@@ -96,6 +105,7 @@ export const sharedClients: Client[] = [
   },
   {
     id: "client-008",
+    partyId: "party-client-008",
     fullName: "Ahmed Al Rashidi",
     phone: "+971509876543",
     email: "ahmed.alrashidi@email.com",
@@ -109,6 +119,7 @@ export const sharedClients: Client[] = [
   },
   {
     id: "client-009",
+    partyId: "party-client-009",
     fullName: "Lorenzo Romano",
     phone: "+34612998877",
     email: "lorenzo.romano@email.com",
@@ -122,6 +133,7 @@ export const sharedClients: Client[] = [
   },
   {
     id: "client-010",
+    partyId: "party-client-010",
     fullName: "Nadia Al Zubairi",
     phone: "+966551122334",
     email: "nadia.alzubairi@email.com",

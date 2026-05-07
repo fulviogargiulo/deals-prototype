@@ -41,7 +41,7 @@ const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
 const ALL_MARKETS: DealMarket[] = ["primary", "secondary", "leasing"];
 const ALL_COUNTRIES: Country[] = ["ae", "es", "sa"];
 const ALL_TYPES: DealType[] = ["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"];
-const ALL_INVOICE_STATUSES: InvoiceStatus[] = ["created", "sent", "overdue", "paid", "paid-partial", "cancelled"];
+const ALL_INVOICE_STATUSES: InvoiceStatus[] = ["issued", "paid", "cancelled"];
 const ALL_PAYABLE_STATUSES: PayableStatus[] = ["pending", "approved", "paid", "rejected"];
 
 function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: number, maxPayables: number): ColDef[] {
@@ -474,10 +474,7 @@ function buildColumns(maxAgents: number, maxPartners: number, maxReceivables: nu
 const invoiceStatusColor = (s?: InvoiceStatus | string) => {
   switch (s) {
     case "paid": return "bg-[hsl(var(--deal-paid)/0.1)] text-[hsl(var(--deal-paid))]";
-    case "paid-partial": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "sent": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
-    case "overdue": return "bg-[hsl(var(--deal-pending-payment)/0.1)] text-[hsl(var(--deal-pending-payment))]";
-    case "created": return "bg-muted text-muted-foreground";
+    case "issued": return "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]";
     case "cancelled": return "bg-muted text-muted-foreground line-through";
     default: return "bg-muted text-muted-foreground";
   }

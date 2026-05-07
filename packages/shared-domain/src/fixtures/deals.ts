@@ -73,8 +73,6 @@ function expand(b: BaseInput): Deal {
     // Canonical core
     id: b.id,
     opportunityId: b.opportunityId,
-    clientId: b.clientId,
-    agentId: b.agentId,
     type: b.type,
     status: b.status,
     market: b.market,

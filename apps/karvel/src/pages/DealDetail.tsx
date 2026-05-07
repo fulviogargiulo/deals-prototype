@@ -649,9 +649,9 @@ const DealDetail = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0.5">
                           <EditField label="Invoice #" value={entry.invoiceNumber || ""} onChange={(v) => updateReceivable(idx, "invoiceNumber", v)} />
                           <NumericField label="Amount" value={entry.amount} onChange={(v) => updateReceivable(idx, "amount", v)} />
-                          <SelectField label="Status" value={entry.invoiceStatus || "created"} options={["created", "sent", "overdue", "paid", "paid-partial", "cancelled"] as InvoiceStatus[]} onChange={(v) => updateReceivable(idx, "invoiceStatus", v)} />
+                          <SelectField label="Status" value={entry.invoiceStatus || "issued"} options={["issued", "paid", "cancelled"] as InvoiceStatus[]} onChange={(v) => updateReceivable(idx, "invoiceStatus", v)} />
                           <EditField label="Invoice Date" value={entry.invoiceDate || ""} type="date" onChange={(v) => updateReceivable(idx, "invoiceDate", v)} />
-                          {(entry.invoiceStatus === "paid" || entry.invoiceStatus === "paid-partial") && (
+                          {entry.invoiceStatus === "paid" && (
                             <>
                               <EditField label="Payment Date" value={entry.paymentReceivedDate || ""} type="date" onChange={(v) => updateReceivable(idx, "paymentReceivedDate", v)} />
                               <NumericField label="Amount Received" value={entry.paymentReceivedAmount ?? 0} onChange={(v) => updateReceivable(idx, "paymentReceivedAmount", v)} />
