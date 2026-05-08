@@ -38,7 +38,7 @@ export type Currency = "AED" | "EUR" | "SAR";
 
 export type Market = "primary" | "secondary" | "leasing";
 
-export type InvoiceStatus = "issued" | "paid" | "cancelled";
+export type InvoiceStatus = "draft" | "issued" | "paid" | "cancelled";
 
 export type PayableStatus = "pending" | "approved" | "paid" | "rejected" | "overdue";
 
