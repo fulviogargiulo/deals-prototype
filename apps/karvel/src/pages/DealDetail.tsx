@@ -7,6 +7,7 @@ import { ArrowLeft, CheckCircle2, Circle, AlertTriangle, ChevronDown, ChevronRig
 import { recalculateDeal, createEmptyAgent } from "@/lib/dealCalculations";
 import { toast } from "sonner";
 import { RequiredDocumentsSection } from "@/components/RequiredDocumentsSection";
+import { canTransitionDealStatus, getAllowedDealTransitions } from "@huspy/shared-domain";
 
 const STAGE_ORDER: { key: DealStatus; label: string }[] = [
   { key: "pending-details", label: "pending-details" },
@@ -202,6 +203,22 @@ const DealDetail = () => {
   const netPnL = draft.huspyRevenue + draft.conveyanceRevenue - draft.cogsInternal - draft.cogsExternal - draft.cogsReferrals;
   const isREBU = draft.businessUnit === "rebu";
   const isMBU = draft.businessUnit === "mortgage";
+  const workflowStatusOptions: DealStatus[] = [draft.status, ...getAllowedDealTransitions(draft.status)];
+
+  const transitionDraftStatus = (to: DealStatus, note?: string) => {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      if (!canTransitionDealStatus(prev.status, to)) return prev;
+      return {
+        ...prev,
+        status: to,
+        statusHistory: [
+          ...(prev.statusHistory || []),
+          { from: prev.status, to, timestamp: new Date().toISOString(), note },
+        ],
+      };
+    });
+  };
 
   const update = (field: keyof Deal, value: string | number) => {
     setDraft((prev) => prev ? recalculateDeal({ ...prev, [field]: value } as Deal) : prev);
@@ -283,10 +300,24 @@ const DealDetail = () => {
   };
 
   const handleApprove = () => {
-    const approved = { ...draft, status: "pending-agent-approval" as DealStatus };
-    setDraft(approved);
-    setBaseline(approved);
-    toast.success("Deal approved and moved to Ready For Invoicing");
+    if (!canTransitionDealStatus(draft.status, "pending-agent-approval")) {
+      toast.error("Deal cannot move to pending-agent-approval from the current status");
+      return;
+    }
+    transitionDraftStatus("pending-agent-approval", "Approved by Ops");
+    setBaseline((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: "pending-agent-approval",
+            statusHistory: [
+              ...(prev.statusHistory || []),
+              { from: draft.status, to: "pending-agent-approval", timestamp: new Date().toISOString(), note: "Approved by Ops" },
+            ],
+          }
+        : prev,
+    );
+    toast.success("Deal approved and moved to pending-agent-approval");
   };
 
   return (
@@ -343,7 +374,19 @@ const DealDetail = () => {
                 <DetailRow label="Deal ID" value={draft.id} />
                 <EditField label="OF/Case Number" value={draft.ofCaseNumber || ""} onChange={(v) => update("ofCaseNumber", v)} />
                 <SelectField label="Type" value={draft.type} options={["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"] as DealType[]} onChange={(v) => update("type", v)} />
-                <SelectField label="Status" value={draft.status} options={["pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"] as DealStatus[]} onChange={(v) => update("status", v)} />
+                <SelectField
+                  label="Status"
+                  value={draft.status}
+                  options={workflowStatusOptions}
+                  onChange={(v) => {
+                    if (v === draft.status) return;
+                    if (!canTransitionDealStatus(draft.status, v)) {
+                      toast.error(`Invalid status transition: ${draft.status} -> ${v}`);
+                      return;
+                    }
+                    transitionDraftStatus(v, "Manual prototype transition");
+                  }}
+                />
                 <SelectField label="Market" value={draft.market} options={["primary", "secondary", "leasing"] as DealMarket[]} onChange={(v) => update("market", v)} />
                 <EditField label="Opportunity" value={draft.opportunityName} onChange={(v) => update("opportunityName", v)} />
               </div>

@@ -7,7 +7,7 @@ import { FileText, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from
 import { DocumentRow } from '@/components/deals/document-row';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { mockDeals, agentStakeMap } from '@/data/mockDeals';
-import { computeDealFinancials, COMMISSION_RATES, getClientForDeal, computeAgentCommission } from '@huspy/shared-domain';
+import { computeDealFinancials, COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -75,15 +75,15 @@ function getDocumentsForMarketType(marketType: string) {
 
 export function DealDetails() {
   const { id } = useParams<{ id: string }>();
-  const deal = mockDeals.find(d => d.id === id);
+  const initialDeal = mockDeals.find(d => d.id === id);
   const [uploadedDocs, setUploadedDocs] = useState<Set<number>>(new Set());
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeSubmitted, setDisputeSubmitted] = useState(false);
-  
+  const [dealState, setDealState] = useState(initialDeal);
   const [confirmedForInvoicing, setConfirmedForInvoicing] = useState(false);
 
-  if (!deal) {
+  if (!dealState) {
     return (
       <PageContainer>
         <div className="space-y-4 animate-fade-in">
@@ -93,8 +93,9 @@ export function DealDetails() {
     );
   }
 
-  const config = typeConfig[deal.type];
-  const colors = statusColors[deal.status];
+  const viewDeal = dealState;
+  const config = typeConfig[viewDeal.type];
+  const colors = statusColors[viewDeal.status];
 
   const handleUpload = (index: number, fileName: string) => {
     setUploadedDocs(prev => new Set(prev).add(index));
@@ -102,15 +103,15 @@ export function DealDetails() {
   };
 
 
-  const allDocsUploaded = ['pending-agent-approval', 'pending-receivables', 'finalized'].includes(deal.status);
-  const documents = getDocumentsForMarketType(deal.marketType).map(doc => 
+  const allDocsUploaded = ['pending-agent-approval', 'pending-receivables', 'finalized'].includes(viewDeal.status);
+  const documents = getDocumentsForMarketType(viewDeal.marketType).map(doc =>
     allDocsUploaded ? { ...doc, uploaded: true } : doc
   );
 
   return (
     <PageContainer>
       <div className="space-y-5 animate-fade-in">
-        <TrackedTitle title={deal.title}>
+        <TrackedTitle title={viewDeal.title}>
           <div className="h-px w-full" aria-hidden="true" />
         </TrackedTitle>
 
@@ -129,10 +130,10 @@ export function DealDetails() {
             )}
             <div>
               <h1 className="text-[28px] font-semibold leading-[120%] text-foreground">
-                {deal.title}
+                {viewDeal.title}
               </h1>
               <p className="text-[14px] text-[hsl(var(--fg-secondary))] leading-[140%] capitalize mt-0.5">
-                {deal.type} · {deal.marketType} · <Link to={`/opportunities/${deal.opportunityId}`} className="hover:underline normal-case" style={{ color: 'hsl(var(--accent-indigo))' }}>{deal.opportunityName}</Link>
+                {viewDeal.type} · {viewDeal.marketType} · <Link to={`/opportunities/${viewDeal.opportunityId}`} className="hover:underline normal-case" style={{ color: 'hsl(var(--accent-indigo))' }}>{viewDeal.opportunityName}</Link>
               </p>
             </div>
           </div>
@@ -140,7 +141,7 @@ export function DealDetails() {
             className="inline-flex px-3 py-1 rounded-full text-[12px] font-semibold whitespace-nowrap"
             style={{ backgroundColor: colors.bg, color: colors.color }}
           >
-            {statusLabels[deal.status]}
+            {statusLabels[viewDeal.status]}
           </span>
         </div>
 
@@ -152,7 +153,7 @@ export function DealDetails() {
               Deal Price
             </p>
             <p className="text-[28px] font-semibold leading-[120%] text-foreground tabular-nums">
-              {deal.currency}{deal.dealAmount.toLocaleString()}
+              {viewDeal.currency}{viewDeal.dealAmount.toLocaleString()}
             </p>
           </div>
 
@@ -181,19 +182,19 @@ export function DealDetails() {
             <div className="space-y-2">
               <div>
                 <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%]">Client</p>
-                <Link to={`/clients/${getClientForDeal(deal.id)?.id ?? ''}`} className="text-[16px] font-semibold leading-[120%] mt-0.5 hover:underline" style={{ color: 'hsl(var(--accent-indigo))' }}>{deal.clientName}</Link>
+                <Link to={`/clients/${getClientForDeal(viewDeal.id)?.id ?? ''}`} className="text-[16px] font-semibold leading-[120%] mt-0.5 hover:underline" style={{ color: 'hsl(var(--accent-indigo))' }}>{viewDeal.clientName}</Link>
               </div>
               <div>
                 <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%]">Report Date</p>
                 <p className="text-[16px] font-semibold text-foreground leading-[120%] mt-0.5">
-                  {new Date(deal.reportDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {new Date(viewDeal.reportDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
               </div>
-              {deal.status === 'finalized' && deal.paymentDate && (
+              {viewDeal.status === 'finalized' && viewDeal.paymentDate && (
                 <div>
                   <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%]">Payment Date</p>
                   <p className="text-[16px] font-semibold text-foreground leading-[120%] mt-0.5">
-                    {new Date(deal.paymentDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {new Date(viewDeal.paymentDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
               )}
@@ -202,16 +203,16 @@ export function DealDetails() {
         </div>
 
         {/* Deal Timeline */}
-        <DealTimeline currentStatus={deal.status} reportDate={deal.reportDate} paymentDate={deal.paymentDate} />
+        <DealTimeline currentStatus={viewDeal.status} reportDate={viewDeal.reportDate} paymentDate={viewDeal.paymentDate} />
 
 
         {/* Commission Breakdown — visible once deal is approved or further along */}
-        {['pending-agent-approval', 'pending-receivables', 'finalized'].includes(deal.status) && (() => {
-          const f = computeDealFinancials(deal.dealAmount);
-          const stake = agentStakeMap.get(deal.id);
+        {['pending-agent-approval', 'pending-receivables', 'finalized'].includes(viewDeal.status) && (() => {
+          const f = computeDealFinancials(viewDeal.dealAmount);
+          const stake = agentStakeMap.get(viewDeal.id);
           const personalCommission = computeAgentCommission(f.agentCommissionPayout, stake);
           const splitPct = stake?.splitPercentage ?? 100;
-          const isExpandable = deal.status !== 'pending-agent-approval';
+          const isExpandable = viewDeal.status !== 'pending-agent-approval';
 
           const content = (
             <>
@@ -226,11 +227,11 @@ export function DealDetails() {
               <div className="divide-y divide-border-ds-primary">
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
                   <span className="text-[12px] text-fg-secondary leading-[140%]">Deal Price</span>
-                  <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{deal.currency}{deal.dealAmount.toLocaleString()}</span>
+                  <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{viewDeal.currency}{viewDeal.dealAmount.toLocaleString()}</span>
                 </div>
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
                   <span className="text-[12px] text-fg-secondary leading-[140%]">Huspy Revenue (×{COMMISSION_RATES.takeRate}%)</span>
-                  <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>{deal.currency}{f.huspyRevenue.toLocaleString()}</span>
+                  <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>{viewDeal.currency}{f.huspyRevenue.toLocaleString()}</span>
                 </div>
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
                   <span className="text-[12px] text-fg-secondary leading-[140%]">Your Commission Rate</span>
@@ -248,16 +249,21 @@ export function DealDetails() {
               <div className="border-t border-border-ds-primary px-4 py-3 flex items-center justify-between">
                 <div>
                   <span className="text-sm font-semibold text-foreground">Your Commission Payout</span>
-                  <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">{deal.currency}{personalCommission.toLocaleString()}</span>
+                  <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">{viewDeal.currency}{personalCommission.toLocaleString()}</span>
                 </div>
-                {deal.status === 'pending-agent-approval' && !confirmedForInvoicing && !disputeSubmitted && (
+                {viewDeal.status === 'pending-agent-approval' && !confirmedForInvoicing && !disputeSubmitted && (
                   <Button
                     size="sm"
                     className="h-7 rounded-full text-xs"
                     style={{ backgroundColor: 'hsl(var(--ds-green))', color: 'white' }}
                     onClick={() => {
+                      if (!canTransitionDealStatus(viewDeal.status, 'pending-receivables')) {
+                        toast.error('This deal cannot move to Pending Receivables from the current status.');
+                        return;
+                      }
+                      setDealState(prev => prev ? { ...prev, status: 'pending-receivables' } : prev);
                       setConfirmedForInvoicing(true);
-                      toast.success('Deal confirmed for invoicing');
+                      toast.success('Deal confirmed and moved to Pending Receivables');
                     }}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
@@ -267,7 +273,7 @@ export function DealDetails() {
               </div>
 
               {/* Confirmed message */}
-              {deal.status === 'pending-agent-approval' && confirmedForInvoicing && (
+              {viewDeal.status === 'pending-receivables' && confirmedForInvoicing && (
                 <div className="border-t border-border-ds-primary px-4 py-3 flex items-center gap-2" style={{ backgroundColor: 'hsl(var(--ds-green) / 0.06)' }}>
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--ds-green))' }} />
                   <p className="text-[12px] font-semibold leading-[140%]" style={{ color: 'hsl(var(--ds-green))' }}>
@@ -277,7 +283,7 @@ export function DealDetails() {
               )}
 
               {/* Dispute form — only for finalised */}
-              {deal.status === 'pending-agent-approval' && showDisputeForm && !disputeSubmitted && (
+              {viewDeal.status === 'pending-agent-approval' && showDisputeForm && !disputeSubmitted && (
                 <div className="border-t border-border-ds-primary px-4 py-4 space-y-3">
                   <p className="text-[14px] font-semibold text-foreground leading-[140%]">Raise a Dispute</p>
                   <textarea
@@ -297,9 +303,14 @@ export function DealDetails() {
                       style={{ backgroundColor: 'hsl(var(--ds-red))', color: 'white' }}
                       disabled={!disputeReason.trim()}
                       onClick={() => {
+                        if (!canTransitionDealStatus(viewDeal.status, 'under-review')) {
+                          toast.error('This deal cannot be moved back to Under Review from the current status.');
+                          return;
+                        }
+                        setDealState(prev => prev ? { ...prev, status: 'under-review' } : prev);
                         setDisputeSubmitted(true);
                         setShowDisputeForm(false);
-                        toast.success('Dispute raised successfully');
+                        toast.success('Dispute raised and sent back to Under Review');
                       }}
                     >
                       Submit Dispute
@@ -321,7 +332,7 @@ export function DealDetails() {
 
           const disputeBadges = (
             <div className="flex items-center gap-2">
-              {deal.status === 'pending-agent-approval' && (
+              {viewDeal.status === 'pending-agent-approval' && (
                 disputeSubmitted ? (
                   <div className="flex items-center gap-1.5">
                     <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-orange) / 0.1)', color: 'hsl(var(--ds-orange))' }}>Under Review</span>
@@ -349,7 +360,7 @@ export function DealDetails() {
                     <div className="flex items-center gap-3">
                       {header}
                       <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--accent-indigo) / 0.1)', color: 'hsl(var(--accent-indigo))' }}>
-                        {deal.currency}{f.agentCommissionPayout.toLocaleString()}
+                        {viewDeal.currency}{f.agentCommissionPayout.toLocaleString()}
                       </span>
                     </div>
                     <ChevronDown className="w-4 h-4 text-[hsl(var(--fg-secondary))] transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -374,9 +385,9 @@ export function DealDetails() {
         })()}
 
         {/* Missing Information + Documents (combined) — only for pending-details */}
-        {deal.status === 'pending-details' && (
+        {viewDeal.status === 'pending-details' && (
           <MissingInfoSection
-            deal={deal}
+            deal={viewDeal}
             documents={documents}
             uploadedDocs={uploadedDocs}
             onUploadDoc={handleUpload}
@@ -384,7 +395,7 @@ export function DealDetails() {
         )}
 
         {/* Attached Documents — hidden for pending-details (merged above) */}
-        {deal.status !== 'pending-details' && (() => {
+        {viewDeal.status !== 'pending-details' && (() => {
           const uploadedCount = documents.filter((doc, i) => doc.uploaded || uploadedDocs.has(i)).length;
           const totalCount = documents.length;
           return (
