@@ -2,202 +2,208 @@ import type { Posting } from "../entities";
 
 // Posting fixtures — canonical double-entry records.
 // Each posting is self-balancing: Σ DEBIT lines = Σ CREDIT lines (same currency).
-// dealId is a direct FK (replaces the old metadata.deal_id soft link).
-// Standalone postings (no deal) have dealId omitted — see posting-010, posting-012, etc.
+// dealId is a direct FK. businessUnit carries the BU dimension so that standalone
+// postings (no dealId) can still be attributed to a reporting segment.
 
 export const sharedPostings: Posting[] = [
-  // ── deal-001 full lifecycle ─────────────────────────────────────────────────
+  // ── deal-001 full lifecycle (REBU, EUR) ────────────────────────────────────
 
-  // Commission earned when deal-001 closes (EUR 11 550)
   {
     id: "posting-001",
     dealId: "deal-001",
+    businessUnit: "rebu",
     externalRef: "P0001",
     businessProcess: "deal_close",
     createdBy: "system",
     createdAt: "2026-01-10T09:00:00.000Z",
     valueDate: "2026-01-10",
     currency: "EUR",
-    status: "posted",
+
     description: "Commission earned — deal-001 (Mariana Dañobeitia, Buy, €385k)",
   },
-  // Payment received from buyer — INV-2026-001
   {
     id: "posting-002",
     dealId: "deal-001",
+    businessUnit: "rebu",
     externalRef: "P0002",
     businessProcess: "bank_statement_inbound_matched",
     createdBy: "system",
     createdAt: "2026-01-12T14:00:00.000Z",
     valueDate: "2026-01-12",
     currency: "EUR",
-    status: "posted",
+
     description: "Payment received — INV-2026-001 (Mariana Dañobeitia)",
   },
-  // Agent invoice — commission crystallised for agent-felicia (40% of 11 550 = 4 620)
   {
     id: "posting-003",
     dealId: "deal-001",
+    businessUnit: "rebu",
     externalRef: "AGINV-001",
     businessProcess: "agent_invoice",
     createdBy: "user-ops-finance",
     createdAt: "2026-01-20T11:00:00.000Z",
     valueDate: "2026-01-20",
     currency: "EUR",
-    status: "posted",
+
     description: "Agent invoice — Felicia Canovas, deal-001",
   },
-  // Payout instructed — cash leaves bank
   {
     id: "posting-004",
     dealId: "deal-001",
+    businessUnit: "rebu",
     externalRef: "PAY-001",
     businessProcess: "payout_instructed",
     createdBy: "user-ops-finance",
     createdAt: "2026-01-25T10:00:00.000Z",
     valueDate: "2026-01-25",
     currency: "EUR",
-    status: "posted",
+
     description: "Agent payout — Felicia Canovas, deal-001",
   },
 
-  // ── deal-016 — AED, split receivable, fully paid ───────────────────────────
+  // ── deal-016 — AED, split receivable, fully paid (REBU) ───────────────────
 
-  // Commission earned — AED 42 000 split: seller 25 200 + developer 16 800
   {
     id: "posting-007",
     dealId: "deal-016",
+    businessUnit: "rebu",
     externalRef: "P0007",
     businessProcess: "deal_close",
     createdBy: "system",
     createdAt: "2026-05-04T09:00:00.000Z",
     valueDate: "2026-05-04",
     currency: "AED",
-    status: "posted",
+
     description: "Commission earned — deal-016 (Fatima Al Mansouri, Sell, AED 2.1M, split receivable)",
   },
-  // Payment received — seller (Fatima Al Mansouri)
   {
     id: "posting-008",
     dealId: "deal-016",
+    businessUnit: "rebu",
     externalRef: "P0008",
     businessProcess: "bank_statement_inbound_matched",
     createdBy: "system",
     createdAt: "2026-05-04T16:00:00.000Z",
     valueDate: "2026-05-04",
     currency: "AED",
-    status: "posted",
+
     description: "Payment received — INV-2026-016A (Fatima Al Mansouri, seller)",
   },
-  // Payment received — developer (Emaar Properties)
   {
     id: "posting-009",
     dealId: "deal-016",
+    businessUnit: "rebu",
     externalRef: "P0009",
     businessProcess: "bank_statement_inbound_matched",
     createdBy: "system",
     createdAt: "2026-05-05T10:00:00.000Z",
     valueDate: "2026-05-05",
     currency: "AED",
-    status: "posted",
+
     description: "Payment received — INV-2026-016B (Emaar Properties, developer)",
   },
 
-  // ── Standalone — no dealId ─────────────────────────────────────────────────
+  // ── Standalone — Q1 2026 performance bonus, agent-felicia (REBU, EUR) ─────
 
-  // Q1 2026 performance bonus for Felicia Canovas — not tied to any deal
   {
     id: "posting-010",
+    businessUnit: "rebu",
     externalRef: "ADJ-2026-Q1-001",
     businessProcess: "bonus",
     createdBy: "user-ops-finance",
     createdAt: "2026-04-01T09:00:00.000Z",
     valueDate: "2026-04-01",
     currency: "EUR",
-    status: "posted",
+
     description: "Q1 2026 performance bonus — Felicia Canovas",
   },
 
-  // ── deal-016 — agent invoice, agent-gelo ────────────────────────────────────
+  // ── deal-016 — agent invoice, agent-gelo (REBU, AED) ─────────────────────
 
-  // Commission crystallised for agent-gelo: AED 42 000 × 40% = 16 800
   {
     id: "posting-011",
     dealId: "deal-016",
+    businessUnit: "rebu",
     externalRef: "AGINV-016",
     businessProcess: "agent_invoice",
     createdBy: "user-ops-finance",
     createdAt: "2026-05-10T11:00:00.000Z",
     valueDate: "2026-05-10",
     currency: "AED",
-    status: "posted",
+
     description: "Agent invoice — Gelo Huspy, deal-016",
   },
 
-  // ── Standalone — no dealId (agent-gelo) ───────────────────────────────────
+  // ── Standalone — Q2 2026 incentive + platform fee, agent-gelo (REBU, AED) ─
 
-  // Q2 2026 performance incentive for agent-gelo
   {
     id: "posting-012",
+    businessUnit: "rebu",
     externalRef: "ADJ-2026-Q2-GELO-INC",
     businessProcess: "incentive",
     createdBy: "user-ops-finance",
     createdAt: "2026-05-10T11:30:00.000Z",
     valueDate: "2026-05-10",
     currency: "AED",
-    status: "posted",
+
     description: "Q2 2026 incentive — Gelo Huspy",
   },
-  // May 2026 platform support fee — agent-gelo (deduction)
   {
     id: "posting-013",
+    businessUnit: "rebu",
     externalRef: "FEE-2026-05-GELO",
     businessProcess: "platform_fee",
     createdBy: "system",
     createdAt: "2026-05-01T00:00:00.000Z",
     valueDate: "2026-05-01",
     currency: "AED",
-    status: "posted",
+
     description: "May 2026 platform support fee — Gelo Huspy",
   },
-  // Jan 2026 platform support fee — agent-felicia (deduction on invoice)
+
+  // ── Standalone — Jan 2026 platform fee, agent-felicia (REBU, EUR) ─────────
+
   {
     id: "posting-014",
+    businessUnit: "rebu",
     externalRef: "FEE-2026-01-FELICIA",
     businessProcess: "platform_fee",
     createdBy: "system",
     createdAt: "2026-01-01T00:00:00.000Z",
     valueDate: "2026-01-01",
     currency: "EUR",
-    status: "posted",
+
     description: "Jan 2026 platform support fee — Felicia Canovas",
   },
 
-  // ── deal-018 — agent-felicia, UNALLOCATED (no agentInvoiceId on lines) ──────
+  // ── deal-018 — agent-felicia, UNALLOCATED (REBU, EUR) ────────────────────
 
-  // Agent invoice — deal-018 commission crystallised for agent-felicia (EUR 15 000)
   {
     id: "posting-015",
     dealId: "deal-018",
+    businessUnit: "rebu",
     externalRef: "AGINV-018",
     businessProcess: "agent_invoice",
     createdBy: "user-ops-finance",
     createdAt: "2026-04-15T11:00:00.000Z",
     valueDate: "2026-04-15",
     currency: "EUR",
-    status: "posted",
+
     description: "Agent invoice — Felicia Canovas, deal-018",
   },
-  // Apr 2026 platform support fee — agent-felicia (EUR 150 deduction)
+
+  // ── Standalone — Apr 2026 platform fee, agent-felicia (REBU, EUR) ─────────
+
   {
     id: "posting-016",
+    businessUnit: "rebu",
     externalRef: "FEE-2026-04-FELICIA",
     businessProcess: "platform_fee",
     createdBy: "system",
     createdAt: "2026-04-01T00:00:00.000Z",
     valueDate: "2026-04-01",
     currency: "EUR",
-    status: "posted",
+
     description: "Apr 2026 platform support fee — Felicia Canovas",
   },
 ];

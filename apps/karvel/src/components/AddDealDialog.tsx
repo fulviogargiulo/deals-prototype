@@ -82,6 +82,7 @@ type FormData = {
   dealPrice: string;
   takeRate: string;
   // Conveyance
+  conveyanceFee: string;
   conveyanceAgentName: string;
   conveyanceAgentRate: string;
   // Agent
@@ -118,7 +119,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     buildingName: "", unitNumber: "", community: "", subCommunity: "", propertyType: "", projectName: "", fullAddress: "",
     buyerName: "", buyerPhone: "", buyerEmail: "", sellerName: "", sellerEmail: "", sellerTaxId: "", paymentMode: "cash",
     dealPrice: "", takeRate: String(COMMISSION_RATES.takeRate),
-    conveyanceAgentName: "", conveyanceAgentRate: "25",
+    conveyanceFee: "0", conveyanceAgentName: "", conveyanceAgentRate: "25",
     agentName: "", agentShare: "50", agentCommissionRate: "40",
     teamLeadName: "", teamLeadRate: "10", managerName: "", managerOverrideRate: "5",
     externalPartnerName: "", externalPartnerShare: "0",
@@ -187,12 +188,11 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     const dealPrice = parseFloat(form.dealPrice) || 0;
     const takeRate = parseFloat(form.takeRate) || COMMISSION_RATES.takeRate;
     const huspyRevenue = dealPrice * (takeRate / 100);
+    const conveyanceFee = parseFloat(form.conveyanceFee) || 0;
     const convRate = parseFloat(form.conveyanceAgentRate) || 0;
-    const conveyanceRevenue = huspyRevenue * (COMMISSION_RATES.conveyanceSplit / 100);
-    const netHuspyRevenue = huspyRevenue - conveyanceRevenue;
     const agentShare = parseFloat(form.agentShare) || 50;
     const agentCommRate = parseFloat(form.agentCommissionRate) || 40;
-    const agentPayout = netHuspyRevenue * (agentShare / 100) * (agentCommRate / 100);
+    const agentPayout = huspyRevenue * (agentShare / 100) * (agentCommRate / 100);
     const tlRate = parseFloat(form.teamLeadRate) || 0;
     const mgrRate = parseFloat(form.managerOverrideRate) || 0;
 
@@ -229,8 +229,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       dealPrice,
       takeRate,
       huspyRevenue,
-      netHuspyRevenue,
-      conveyanceRevenue,
+      conveyanceRevenue: conveyanceFee,
       agentShare,
       agentCommissionRate: agentCommRate,
       agentCommissionPayout: agentPayout,
@@ -242,8 +241,8 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       managerOverride: agentPayout * (mgrRate / 100),
       conveyanceAgentName: form.conveyanceAgentName || undefined,
       conveyanceAgentRate: convRate,
-      conveyanceAgentPayout: conveyanceRevenue * (convRate / 100),
-      huspyConveyanceShare: conveyanceRevenue * (1 - convRate / 100),
+      conveyanceAgentPayout: conveyanceFee * (convRate / 100),
+      huspyConveyanceShare: conveyanceFee * (1 - convRate / 100),
       clientKickback: 0,
       referralPercentage: 0,
       referralAmount: 0,
@@ -301,7 +300,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       buildingName: "", unitNumber: "", community: "", subCommunity: "", propertyType: "", projectName: "", fullAddress: "",
       buyerName: "", buyerPhone: "", buyerEmail: "", sellerName: "", sellerEmail: "", sellerTaxId: "", paymentMode: "cash",
       dealPrice: "", takeRate: String(COMMISSION_RATES.takeRate),
-      conveyanceAgentName: "", conveyanceAgentRate: "25",
+      conveyanceFee: "0", conveyanceAgentName: "", conveyanceAgentRate: "25",
       agentName: "", agentShare: "50", agentCommissionRate: "40",
       teamLeadName: "", teamLeadRate: "10", managerName: "", managerOverrideRate: "5",
       externalPartnerName: "", externalPartnerShare: "0",
@@ -458,9 +457,10 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
 
               {/* Conveyance */}
               <CollapsibleSection title="Conveyance Details" sectionKey="conveyance" open={openSections.conveyance} onToggle={toggleSection}>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <Field label="Conveyance Fee (Form F)" labelClass={labelClass}><Input type="number" value={form.conveyanceFee} onChange={e => updateForm("conveyanceFee", e.target.value)} className={inputClass} /></Field>
                   <Field label="Conveyance Agent" labelClass={labelClass}><Input value={form.conveyanceAgentName} onChange={e => updateForm("conveyanceAgentName", e.target.value)} className={inputClass} /></Field>
-                  <Field label="Conveyance Rate (%)" labelClass={labelClass}><Input type="number" value={form.conveyanceAgentRate} onChange={e => updateForm("conveyanceAgentRate", e.target.value)} className={inputClass} /></Field>
+                  <Field label="Agent Rate (%)" labelClass={labelClass}><Input type="number" value={form.conveyanceAgentRate} onChange={e => updateForm("conveyanceAgentRate", e.target.value)} className={inputClass} /></Field>
                 </div>
               </CollapsibleSection>
 

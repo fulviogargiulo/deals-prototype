@@ -1,4 +1,4 @@
-import type { Deal, AgentEntry, ReceivableEntry, ReceivableEntityType } from "../entities";
+import type { Deal, ReceivableEntry, ReceivableEntityType } from "../entities";
 import { sharedClients } from "./clients";
 import { sharedParties } from "./parties";
 import { sharedOpportunities } from "./opportunities";
@@ -50,6 +50,7 @@ interface BaseInput {
   commissionPercentage: number;
   paymentDate?: string;
   channel?: string;
+  conveyanceFee?: number;
   rebatePercentage?: number;
   subsidyAmount?: number;
   disputeNote?: string;
@@ -58,46 +59,17 @@ interface BaseInput {
 
 function expand(b: BaseInput): Deal {
   const opp = findOpp(b.opportunityId);
-  const f = computeDealFinancials(b.dealAmount);
+  const f = computeDealFinancials(b.dealAmount, b.conveyanceFee ?? 0);
 
-  // Derive agents from DealStakeholders — supports multi-agent splits.
-  const agentStakes = sharedDealStakeholders.filter((s) => s.dealId === b.id && s.role === "agent");
-  const agentEntries: AgentEntry[] = agentStakes.map((stake) => {
-    const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
-    const name = agent ? (agentDisplayName[agent.id] ?? agent.id) : stake.partyId;
-    const split = (stake.splitPercentage ?? 100) / 100;
-    return {
-      agentName: name,
-      agentShare: stake.splitPercentage ?? 100,
-      agentCommissionRate: COMMISSION_RATES.agentGrossRate,
-      agentCommissionPayout: Math.round(f.agentCommissionPayout * split),
-      agentIncentive: 0,
-      agentDeductions: 0,
-      agentTotalAmount: Math.round(f.agentCommissionPayout * split),
-      teamLeadName: agent?.teamLeadName,
-      teamLeadRate: COMMISSION_RATES.teamLeadRate,
-      teamLeadShare: Math.round(f.teamLeadShare * split),
-      managerName: agent?.managerName,
-      managerOverrideRate: COMMISSION_RATES.managerOverrideRate,
-      managerOverride: Math.round(f.managerOverride * split),
-      referralPercentage: 0,
-      referralAmount: 0,
-      clientKickback: 0,
-    };
-  });
-  const primaryAgentStake = agentStakes[0];
+  // Primary agent display name (display cache only — full AgentEntry[] lives in Karvel enricher).
+  const primaryAgentStake = sharedDealStakeholders.find((s) => s.dealId === b.id && s.role === "agent");
   const primaryAgent = primaryAgentStake ? sharedAgents.find((a) => a.partyId === primaryAgentStake.partyId) : undefined;
   const agentName = primaryAgent ? (agentDisplayName[primaryAgent.id] ?? primaryAgent.id) : "Unknown";
-  const primaryEntry = agentEntries[0];
 
   // Derive client from DealStakeholders, then resolve Party for canonical contact info.
   const clientStake = sharedDealStakeholders.find((s) => s.dealId === b.id && CLIENT_ROLES.has(s.role));
   const client = clientStake ? sharedClients.find((c) => c.partyId === clientStake.partyId) : undefined;
   const clientParty = client ? sharedParties.find((p) => p.id === client.partyId) : undefined;
-
-  // Derive conveyance agent name from DealStakeholders.
-  const conveyanceStake = sharedDealStakeholders.find((s) => s.dealId === b.id && s.role === "conveyance");
-  const conveyanceParty = conveyanceStake ? sharedParties.find((p) => p.id === conveyanceStake.partyId) : undefined;
 
   // Derive receivables from outbound invoices linked to this deal.
   const dealInvoices = sharedInvoices.filter((i) => i.dealId === b.id && i.direction === "outbound");
@@ -114,11 +86,6 @@ function expand(b: BaseInput): Deal {
       paymentReceivedAmount: inv.paidDate ? inv.amount : undefined,
     };
   });
-
-  // Rebate (primary market) and subsidy (secondary market).
-  const rebatePercentage = b.rebatePercentage ?? 0;
-  const rebateAmount = b.market === "primary" ? Math.round((rebatePercentage / 100) * b.dealAmount) : 0;
-  const subsidyAmount = b.market === "secondary" ? (b.subsidyAmount ?? 0) : 0;
 
   return {
     // Canonical core
@@ -141,7 +108,7 @@ function expand(b: BaseInput): Deal {
     opportunityName: opp?.title ?? "Unknown",
     title: opp?.title ?? b.id,
 
-    // Karvel — operational P&L
+    // Karvel — operational
     channel: b.channel,
     ofCaseNumber: `OF-${b.id.toUpperCase()}`,
     buildingName: opp?.title,
@@ -156,34 +123,10 @@ function expand(b: BaseInput): Deal {
     dealPrice: b.dealAmount,
     takeRate: COMMISSION_RATES.takeRate,
     huspyRevenue: f.huspyRevenue,
-    netHuspyRevenue: f.netHuspyRevenue,
-    conveyanceRevenue: f.conveyanceRevenue,
-    agents: agentEntries,
-    // Top-level agent fields reflect the full pool (sum of all agent stakes = 100%).
-    agentShare: 100,
-    agentCommissionRate: COMMISSION_RATES.agentGrossRate,
-    agentCommissionPayout: f.agentCommissionPayout,
-    teamLeadName: primaryEntry?.teamLeadName,
-    teamLeadRate: COMMISSION_RATES.teamLeadRate,
-    teamLeadShare: primaryEntry?.teamLeadShare ?? f.teamLeadShare,
-    managerName: primaryEntry?.managerName,
-    managerOverrideRate: COMMISSION_RATES.managerOverrideRate,
-    managerOverride: primaryEntry?.managerOverride ?? f.managerOverride,
-    conveyanceAgentName: conveyanceParty?.displayName,
-    conveyanceAgentRate: COMMISSION_RATES.conveyanceAgentRate,
-    conveyanceAgentPayout: f.conveyanceAgentPayout,
-    huspyConveyanceShare: f.huspyConveyanceShare,
-    clientKickback: 0,
-    referralPercentage: 0,
-    referralAmount: 0,
-    rebatePercentage,
-    rebateAmount,
-    subsidyAmount,
-    cogsInternal: f.cogsInternal,
-    cogsExternal: rebateAmount + subsidyAmount,
-    cogsReferrals: 0,
-    cogsRebates: rebateAmount,
-    cogsSubsidy: subsidyAmount,
+    conveyanceRevenue: b.conveyanceFee ?? 0,
+    receivables,
+    rebatePercentage: b.rebatePercentage ?? 0,
+    subsidyAmount: b.market === "secondary" ? (b.subsidyAmount ?? 0) : 0,
     numberOfTranches: 0,
     disbursedAmount: 0,
     bankSlab: 0,
@@ -197,15 +140,11 @@ function expand(b: BaseInput): Deal {
     dsPayout: 0,
     externalCommissionRate: 0,
     externalPayout: 0,
-    externalPartners: [],
-    externalPartnerShare: 0,
-    receivables,
-    payables: [],
     isDisputed: b.isDisputed ?? false,
     disputeNote: b.disputeNote,
     latestNote: b.latestNote,
 
-    // Agent-app — agent-facing.
+    // Agent-app — agent-facing
     marketType: b.market,
     commissionPercentage: b.commissionPercentage,
     commissionAmount: f.agentCommissionPayout,

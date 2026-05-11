@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { sharedPostings, sharedAgents } from '@huspy/shared-domain';
+import { sharedPostings, sharedAgents, sharedLedgers } from '@huspy/shared-domain';
 import type { PostingLine } from '@huspy/shared-domain';
 import { Button } from '@/components/ui/button';
 import { FileText, TrendingUp, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
@@ -10,7 +10,8 @@ import type { StatementOfAccount } from '@/types';
 // Prototype: hardcoded to the current agent. In production this comes from auth context.
 const AGENT_ID = 'agent-felicia';
 const AGENT_PARTY_ID = sharedAgents.find((a) => a.id === AGENT_ID)?.partyId ?? AGENT_ID;
-const AGENT_LEDGER = `AgentLiability_${AGENT_ID}`;
+const AGENT_LEDGER_NAME = `AgentLiability_${AGENT_ID}`;
+const AGENT_LEDGER_ID = sharedLedgers.find((l) => l.name === AGENT_LEDGER_NAME)?.id;
 
 
 const PERIODS = [
@@ -65,7 +66,7 @@ export function AgentEarningsView() {
   // Settlement entries are excluded — they are internal bookkeeping (payout cash movement)
   // and have no meaning for the agent's earnings view.
   const agentLines = getPostingLines()
-    .filter(l => l.ledgerId === AGENT_LEDGER)
+    .filter(l => l.ledgerId === AGENT_LEDGER_ID)
     .map(l => ({ ...l, posting: sharedPostings.find(p => p.id === l.postingId)! }))
     .filter(l => !!l.posting)
     .sort((a, b) => a.posting.valueDate.localeCompare(b.posting.valueDate));

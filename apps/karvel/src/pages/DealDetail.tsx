@@ -163,6 +163,10 @@ const DealDetail = () => {
   const [draft, setDraft] = useState<Deal | null>(null);
   const [baseline, setBaseline] = useState<Deal | null>(null);
   const [uploadedDocs, setUploadedDocs] = useState<Set<number>>(new Set());
+  const [showRequestInfo, setShowRequestInfo] = useState(false);
+  const [requestInfoText, setRequestInfoText] = useState("");
+  const [showResolveDispute, setShowResolveDispute] = useState(false);
+  const [resolveNoteText, setResolveNoteText] = useState("");
 
   useEffect(() => {
     if (!originalDeal) return;

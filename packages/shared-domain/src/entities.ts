@@ -10,9 +10,7 @@ import type {
   Market,
   OpportunityStatus,
   OpportunityType,
-  PayableStatus,
   PostingSide,
-  PostingStatus,
   StakeholderRole,
 } from "./enums";
 
@@ -129,56 +127,6 @@ export interface ReceivableEntry {
   invoiceDate?: string;
   paymentReceivedDate?: string;
   paymentReceivedAmount?: number;
-}
-
-export interface PayableEntry {
-  entityType: "external_partner" | "agent" | "team_lead" | "manager" | "referrer" | "conveyance" | "broker" | "rm" | "tl" | "ds";
-  entityLabel: string;
-  expectedAmount: number;
-  refNumber?: string;
-  status: PayableStatus;
-  paidAmount?: number;
-  paidDate?: string;
-  entityUploadedInvoice?: string;
-}
-
-export interface AgentEntry {
-  agentName: string;
-  agentId?: string;
-  agentEmail?: string;
-  agentPhone?: string;
-  agentShare: number;
-  agentCommissionRate: number;
-  agentCommissionPayout: number;
-  agentIncentive: number;
-  agentDeductions: number;
-  agentTotalAmount: number;
-  teamLeadName?: string;
-  teamLeadRate: number;
-  teamLeadShare: number;
-  managerName?: string;
-  managerOverrideRate: number;
-  managerOverride: number;
-  referralType?: string;
-  referrerName?: string;
-  referralPercentage: number;
-  referralAmount: number;
-  clientKickback: number;
-}
-
-export interface ExternalPartnerEntry {
-  partnerName: string;
-  partnerShare: number;
-  partnerAmount: number;
-  partnerBank?: string;
-  partnerBankAccount?: string;
-}
-
-export interface StatusHistoryEntry {
-  from: DealStatus;
-  to: DealStatus;
-  timestamp: string;
-  note?: string;
 }
 
 // Agent-app dispute model
@@ -376,41 +324,9 @@ export interface Deal {
   netHuspyRevenue?: number;
   conveyanceRevenue?: number;
 
-  // Multi-agent + legacy single-agent display fields
-  agents?: AgentEntry[];
-  agentShare?: number;
-  agentCommissionRate?: number;
-  agentCommissionPayout?: number;
-  teamLeadName?: string;
-  teamLeadRate?: number;
-  teamLeadShare?: number;
-  managerName?: string;
-  managerOverrideRate?: number;
-  managerOverride?: number;
-
-  // Conveyance
-  conveyanceAgentName?: string;
-  conveyanceAgentRate?: number;
-  conveyanceAgentPayout?: number;
-  huspyConveyanceShare?: number;
-
-  // Kickbacks / Referrals
-  clientKickback?: number;
-  referralType?: string;
-  referralPercentage?: number;
-  referralAmount?: number;
-
-  // Rebates / Subsidy
+  // Rebates / Subsidy (inputs — kept as deal config)
   rebatePercentage?: number;
-  rebateAmount?: number;
   subsidyAmount?: number;
-
-  // COGS
-  cogsInternal?: number;
-  cogsExternal?: number;
-  cogsReferrals?: number;
-  cogsRebates?: number;
-  cogsSubsidy?: number;
 
   // MBU-specific
   bankName?: string;
@@ -432,26 +348,15 @@ export interface Deal {
   externalCommissionRate?: number;
   externalPayout?: number;
 
-  // External partners
-  externalPartners?: ExternalPartnerEntry[];
-  externalPartnerName?: string;
-  externalPartnerShare?: number;
-  externalPartnerBank?: string;
-  externalPartnerBankAccount?: string;
-
-  // Receivables / Payables
+  // Receivables (derived from outbound Invoices)
   receivables?: ReceivableEntry[];
   paymentReceivedDate?: string;
   paymentReceivedAmount?: number;
-  payables?: PayableEntry[];
-  payableRefNumber?: string;
-  payableStatus?: PayableStatus;
 
-  // Notes / Dispute / History
+  // Notes / Dispute
   latestNote?: string;
   isDisputed?: boolean;
   disputeNote?: string;
-  statusHistory?: StatusHistoryEntry[];
 
   // ==========================================================
   // Agent-app — agent-facing commission / invoice fields
@@ -481,11 +386,11 @@ export interface DealStakeholder {
 // ============================================================
 
 export interface Ledger {
-  id: string;
-  code: string;
+  id: number;
   name: string;
+  description?: string;
   type: LedgerType;
-  glId?: string;
+  glId?: number;
   partyId?: string;
   currency?: Currency;
 }
@@ -493,13 +398,13 @@ export interface Ledger {
 export interface Posting {
   id: string;
   dealId?: string;
+  businessUnit?: BusinessUnit | null;
   externalRef?: string;
   businessProcess: BusinessProcess;
   createdBy: string;
   createdAt: string;
   valueDate: string;
   currency: Currency;
-  status: PostingStatus;
   reversedByPostingId?: string;
   description?: string;
   metadata?: Record<string, unknown>;
@@ -508,7 +413,7 @@ export interface Posting {
 export interface PostingLine {
   id: string;
   postingId: string;
-  ledgerId: string;
+  ledgerId: number;
   side: PostingSide;
   amount: number;
   invoiceId?: string;

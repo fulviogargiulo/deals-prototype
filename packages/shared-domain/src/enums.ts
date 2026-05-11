@@ -46,8 +46,6 @@ export type LedgerType = "asset" | "liability" | "revenue" | "expense";
 
 export type PostingSide = "DEBIT" | "CREDIT";
 
-export type PostingStatus = "draft" | "posted" | "reversed";
-
 export type BusinessProcess =
   | "deal_close"
   | "agent_invoice"

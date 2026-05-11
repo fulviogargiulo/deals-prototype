@@ -29,7 +29,7 @@ function csvToDeal(row: Record<string, string>, index: number): Deal {
   const dealPrice = parseFloat(row.dealPrice) || 0;
   const takeRate = parseFloat(row.takeRate) || COMMISSION_RATES.takeRate;
   const huspyRevenue = dealPrice * (takeRate / 100);
-  const conveyanceRevenue = huspyRevenue * (COMMISSION_RATES.conveyanceSplit / 100);
+  const conveyanceFee = parseFloat(row.conveyanceFee) || 0;
 
   return {
     id,
@@ -46,8 +46,7 @@ function csvToDeal(row: Record<string, string>, index: number): Deal {
     dealPrice,
     takeRate,
     huspyRevenue,
-    netHuspyRevenue: huspyRevenue - conveyanceRevenue,
-    conveyanceRevenue,
+    conveyanceRevenue: conveyanceFee,
     agentShare: parseFloat(row.agentShare || "50"),
     agentCommissionRate: parseFloat(row.agentCommissionRate) || COMMISSION_RATES.agentGrossRate,
     agentCommissionPayout: 0,

@@ -82,15 +82,14 @@ const PROCESS_LABELS: Record<string, string> = {
   reversal: "Reversal",
 };
 
-function getBaseGLCode(ledgerId: string): string {
-  return ledgerId.replace(/_(?:EUR|AED|SAR)$/, "");
-}
-
-function getLedgerDisplay(ledgerId: string): { gl: string; sub: string | null } {
+function getLedgerDisplay(ledgerId: number): { gl: string; sub: string | null } {
   const ledger = sharedLedgers.find((l) => l.id === ledgerId);
-  if (!ledger) return { gl: ledgerId, sub: null };
-  if (ledger.glId) return { gl: ledger.glId, sub: ledgerId };
-  return { gl: ledgerId, sub: null };
+  if (!ledger) return { gl: String(ledgerId), sub: null };
+  if (ledger.glId) {
+    const gl = sharedLedgers.find((l) => l.id === ledger.glId);
+    return { gl: gl?.name ?? String(ledger.glId), sub: ledger.name };
+  }
+  return { gl: ledger.name, sub: null };
 }
 
 // ─── Financials per-agent state (prototype in-memory store) ──────────────────
@@ -152,19 +151,16 @@ function newLine(side: "DEBIT" | "CREDIT" = "CREDIT", glLedgerId = "", subledger
   return { _id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, glLedgerId, subledgerId, side, amount: "", invoiceId: "" };
 }
 
-function emptyDraft(defaultSubledgerId = ""): PostingDraft {
-  const sub = defaultSubledgerId ? sharedLedgers.find((l) => l.id === defaultSubledgerId) : null;
-  const glBase = sub?.glId ?? "";
-  const defaultGLId = sub?.currency && glBase
-    ? (sharedLedgers.find((l) => l.id === `${glBase}_${sub.currency}`)?.id ?? glBase)
-    : "";
+function emptyDraft(defaultSubledgerName = ""): PostingDraft {
+  const sub = defaultSubledgerName ? sharedLedgers.find((l) => l.name === defaultSubledgerName) : null;
+  const defaultGLId = sub?.glId != null ? String(sub.glId) : "";
   return {
     businessProcess: "manual_adjustment",
     externalRef: "",
     dealId: "",
     valueDate: new Date().toISOString().slice(0, 10),
     description: "",
-    lines: [newLine("CREDIT", defaultGLId, defaultSubledgerId), newLine("DEBIT")],
+    lines: [newLine("CREDIT", defaultGLId, defaultSubledgerName), newLine("DEBIT")],
   };
 }
 
@@ -196,12 +192,14 @@ export default function AgentDetail() {
   // Financials local state
   const [fin, setFin] = useState<AgentFinancials>(() => getAgentFinancials(agentId ?? ""));
   const [previewAmount, setPreviewAmount] = useState(300_000);
+  const [previewConveyanceFee, setPreviewConveyanceFee] = useState(0);
   const [finEditing, setFinEditing] = useState(false);
   const [finDraft, setFinDraft] = useState<AgentFinancials>(fin);
 
   // Ledger local state
   const [manualPostings, setManualPostings] = useState<Posting[]>([]);
   const [manualPostingLines, setManualPostingLines] = useState<PostingLine[]>([]);
+  const [postingOverrides, setPostingOverrides] = useState<Record<string, Partial<Posting>>>({});
   const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
   const [createPostingOpen, setCreatePostingOpen] = useState(false);
   const [draft, setDraft] = useState<PostingDraft>(emptyDraft);
@@ -220,12 +218,15 @@ export default function AgentDetail() {
   );
 
   // Ledger — all posting lines on this agent's subledger (shared + manual)
-  const subledgerId = `AgentLiability_${agent.id}`;
-  const allPostings = [...sharedPostings, ...manualPostings];
+  const subledgerName = `AgentLiability_${agent.id}`;
+  const subledgerNumId = sharedLedgers.find((l) => l.name === subledgerName)?.id;
+  const allPostings = [...sharedPostings, ...manualPostings].map((p) =>
+    postingOverrides[p.id] ? { ...p, ...postingOverrides[p.id] } : p
+  );
   const allPostingLines = [...sharedPostingLines, ...manualPostingLines];
 
   const ledgerLines = allPostingLines
-    .filter((l) => l.ledgerId === subledgerId)
+    .filter((l) => l.ledgerId === subledgerNumId)
     .map((l) => {
       const posting = allPostings.find((p) => p.id === l.postingId);
       return { ...l, posting };
@@ -244,7 +245,7 @@ export default function AgentDetail() {
     : [];
 
   // Financials preview
-  const preview = computeDealFinancials(previewAmount, {
+  const preview = computeDealFinancials(previewAmount, previewConveyanceFee, {
     agentGrossRate: fin.agentGrossRate,
     takeRate: fin.takeRate,
     teamLeadRate: fin.teamLeadRate,
@@ -265,8 +266,8 @@ export default function AgentDetail() {
   // ── Currency detection (derived from lines) ─────────────────────────────────
   const detectedCurrency = (() => {
     for (const line of draft.lines) {
-      const effectiveId = line.subledgerId || line.glLedgerId;
-      const ledger = sharedLedgers.find((l) => l.id === effectiveId);
+      const effectiveName = line.subledgerId || line.glLedgerId;
+      const ledger = sharedLedgers.find((l) => String(l.id) === effectiveName);
       if (ledger?.currency) return ledger.currency;
     }
     return null;
@@ -282,10 +283,7 @@ export default function AgentDetail() {
     .filter((g) => g.ledgers.length > 0);
 
   function getSubledgersForGLId(glLedgerId: string) {
-    const gl = sharedLedgers.find((l) => l.id === glLedgerId);
-    if (!gl) return [];
-    const base = getBaseGLCode(glLedgerId);
-    return sharedLedgers.filter((l) => l.glId === base && l.currency === gl.currency);
+    return sharedLedgers.filter((l) => l.glId != null && String(l.glId) === glLedgerId);
   }
 
   // Balance summary
@@ -298,8 +296,8 @@ export default function AgentDetail() {
   function handleCreatePosting() {
     const currency = (() => {
       for (const l of draft.lines) {
-        const effectiveId = l.subledgerId || l.glLedgerId;
-        const led = sharedLedgers.find((x) => x.id === effectiveId);
+        const effectiveName = l.subledgerId || l.glLedgerId;
+        const led = sharedLedgers.find((x) => String(x.id) === effectiveName);
         if (led?.currency) return led.currency;
       }
       return "EUR";
@@ -321,7 +319,7 @@ export default function AgentDetail() {
     const newLines: PostingLine[] = draft.lines.map((line, idx) => ({
       id: `${postingId}-L${idx + 1}`,
       postingId,
-      ledgerId: line.subledgerId || line.glLedgerId,
+      ledgerId: parseInt(line.subledgerId || line.glLedgerId),
       side: line.side,
       amount: parseFloat(line.amount),
       invoiceId: line.invoiceId || undefined,
@@ -330,6 +328,34 @@ export default function AgentDetail() {
     setManualPostingLines((prev) => [...prev, ...newLines]);
     setCreatePostingOpen(false);
     setDraft(emptyDraft());
+  }
+
+  function handleReversePosting(posting: Posting, lines: PostingLine[]) {
+    const reversalId = `reversal-${posting.id}-${Date.now()}`;
+    const now = new Date().toISOString();
+    const reversalPosting: Posting = {
+      id: reversalId,
+      dealId: posting.dealId,
+      businessUnit: posting.businessUnit,
+      externalRef: posting.externalRef,
+      businessProcess: posting.businessProcess,
+      createdBy: "user-ops",
+      createdAt: now,
+      valueDate: now.slice(0, 10),
+      currency: posting.currency,
+      description: `Reversal of ${posting.id}`,
+    };
+    const reversalLines: PostingLine[] = lines.map((l, idx) => ({
+      id: `${reversalId}-L${idx + 1}`,
+      postingId: reversalId,
+      ledgerId: l.ledgerId,
+      side: l.side === "DEBIT" ? "CREDIT" : "DEBIT",
+      amount: l.amount,
+    }));
+    setPostingOverrides((prev) => ({ ...prev, [posting.id]: { reversedByPostingId: reversalId } }));
+    setManualPostings((prev) => [...prev, reversalPosting]);
+    setManualPostingLines((prev) => [...prev, ...reversalLines]);
+    setSelectedPostingId(reversalId);
   }
 
   const thClass = "text-left px-4 py-3 text-[13px] font-medium text-muted-foreground whitespace-nowrap";
@@ -503,8 +529,8 @@ export default function AgentDetail() {
         {activeTab === "ledger" && (
           <>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[15px] font-semibold text-foreground">{subledgerId}</h2>
-              <Button className="gap-1.5" onClick={() => { setDraft(emptyDraft(subledgerId)); setCreatePostingOpen(true); }}>
+              <h2 className="text-[15px] font-semibold text-foreground">{subledgerName}</h2>
+              <Button className="gap-1.5" onClick={() => { setDraft(emptyDraft(subledgerName)); setCreatePostingOpen(true); }}>
                 <Plus className="h-4 w-4" /> New posting
               </Button>
             </div>
@@ -691,32 +717,47 @@ export default function AgentDetail() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  <div className="flex items-center gap-3 mb-5">
-                    <label className="text-[13px] font-medium text-foreground">Deal amount</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">€</span>
-                      <input
-                        type="number"
-                        value={previewAmount}
-                        onChange={(e) => setPreviewAmount(Number(e.target.value) || 0)}
-                        className="pl-7 pr-4 py-2 border border-border rounded-md text-[13px] bg-card w-[160px] focus:outline-none focus:ring-1 focus:ring-ring"
-                      />
+                  <div className="flex items-center gap-6 mb-5">
+                    <div className="flex items-center gap-3">
+                      <label className="text-[13px] font-medium text-foreground">Deal amount</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">€</span>
+                        <input
+                          type="number"
+                          value={previewAmount}
+                          onChange={(e) => setPreviewAmount(Number(e.target.value) || 0)}
+                          className="pl-7 pr-4 py-2 border border-border rounded-md text-[13px] bg-card w-[160px] focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="text-[13px] font-medium text-foreground">Conveyance fee</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">€</span>
+                        <input
+                          type="number"
+                          value={previewConveyanceFee}
+                          onChange={(e) => setPreviewConveyanceFee(Number(e.target.value) || 0)}
+                          className="pl-7 pr-4 py-2 border border-border rounded-md text-[13px] bg-card w-[160px] focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <PnLCard label="Huspy Revenue" sublabel={`${fin.takeRate}% of deal`} amount={preview.huspyRevenue} />
-                    <PnLCard label="Agent Payout" sublabel={`${fin.agentGrossRate}% of revenue`} amount={preview.agentCommissionPayout} highlight />
+                    <PnLCard label="Deal Income" sublabel={`${fin.takeRate}% of deal`} amount={preview.huspyRevenue} />
+                    <PnLCard label="Conveyance Fee" sublabel="Form F — separate" amount={preview.conveyanceFee} />
+                    <PnLCard label="Total Revenue" sublabel="Deal income + conveyance" amount={preview.totalRevenue} highlight />
+                    <PnLCard label="Agent Payout" sublabel={`${fin.agentGrossRate}% of deal income`} amount={preview.agentCommissionPayout} highlight />
                     <PnLCard label="Team Lead" sublabel={`${fin.teamLeadRate}% of agent payout`} amount={preview.teamLeadShare} muted />
                     <PnLCard label="Manager" sublabel={`${fin.managerRate}% of agent payout`} amount={preview.managerOverride} muted />
-                    <PnLCard label="Conveyance" sublabel="12.5% of revenue" amount={preview.conveyanceRevenue} muted />
-                    <PnLCard label="Conv. Agent" sublabel="25% of conveyance" amount={preview.conveyanceAgentPayout} muted />
+                    <PnLCard label="Conv. Agent" sublabel="25% of conveyance fee" amount={preview.conveyanceAgentPayout} muted />
                     <PnLCard label="Huspy Net" sublabel="After all payouts" amount={preview.huspyNet} positive />
                     <div className="bg-muted/40 rounded-lg p-4 border border-border">
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Huspy Margin</p>
                       <p className="text-[20px] font-bold text-foreground">
-                        {((preview.huspyNet / preview.huspyRevenue) * 100).toFixed(1)}%
+                        {(preview.totalRevenue > 0 ? (preview.huspyNet / preview.totalRevenue) * 100 : 0).toFixed(1)}%
                       </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">of Huspy revenue</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">of total revenue</p>
                     </div>
                   </div>
                 </CardContent>
@@ -735,17 +776,29 @@ export default function AgentDetail() {
       <Dialog open={!!selectedPostingId} onOpenChange={(open) => !open && setSelectedPostingId(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-mono text-[14px]">{selectedPosting?.id}</DialogTitle>
-            <DialogDescription>
-              {selectedPosting?.businessProcess} · {selectedPosting?.valueDate} · {selectedPosting?.currency}
-            </DialogDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <DialogTitle className="font-mono text-[14px]">{selectedPosting?.id}</DialogTitle>
+                <DialogDescription>
+                  {selectedPosting?.businessProcess} · {selectedPosting?.valueDate} · {selectedPosting?.currency}
+                </DialogDescription>
+              </div>
+              {selectedPosting && !selectedPosting.reversedByPostingId && (
+                <button
+                  onClick={() => handleReversePosting(selectedPosting, selectedPostingAllLines)}
+                  className="shrink-0 text-[12px] font-medium text-destructive hover:opacity-80 px-2.5 py-1 rounded border border-destructive/40 hover:bg-destructive/5 transition-colors mr-8"
+                >
+                  Reverse posting
+                </button>
+              )}
+            </div>
           </DialogHeader>
           {selectedPosting && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px]">
                 <div>
-                  <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Status</p>
-                  <p className="font-medium capitalize">{selectedPosting.status}</p>
+                  <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Reversed by</p>
+                  <p className="font-medium font-mono">{selectedPosting.reversedByPostingId ?? "—"}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">External Ref</p>
@@ -761,6 +814,16 @@ export default function AgentDetail() {
                       {selectedPosting.dealId}
                     </button>
                   ) : <p className="font-medium">—</p>}
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Business Unit</p>
+                  <p className="font-medium">
+                    {selectedPosting.businessUnit === "rebu"
+                      ? "REBU"
+                      : selectedPosting.businessUnit === "mortgage"
+                        ? "MBU (Mortgage)"
+                        : "—"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Created by</p>
@@ -833,7 +896,7 @@ export default function AgentDetail() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Posting</DialogTitle>
-            <DialogDescription>{subledgerId}</DialogDescription>
+            <DialogDescription>{subledgerName}</DialogDescription>
           </DialogHeader>
 
           {/* ── Header fields ── */}
@@ -924,7 +987,7 @@ export default function AgentDetail() {
                           {glLedgerGroups.map((g) => (
                             <optgroup key={g.currency} label={`── ${g.currency} ──`}>
                               {g.ledgers.map((l) => (
-                                <option key={l.id} value={l.id}>{l.id}</option>
+                                <option key={l.id} value={String(l.id)}>{l.name}</option>
                               ))}
                             </optgroup>
                           ))}
@@ -939,7 +1002,7 @@ export default function AgentDetail() {
                           >
                             <option value="">— none —</option>
                             {subledgerOptions.map((l) => (
-                              <option key={l.id} value={l.id}>{l.id}</option>
+                              <option key={l.id} value={String(l.id)}>{l.name}</option>
                             ))}
                           </select>
                         ) : (
