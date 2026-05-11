@@ -238,9 +238,11 @@ export interface Document {
 export interface Agent {
   id: string;
   partyId: string;
+  uid?: number;
   employmentStatus?: string;
   teamLeadName?: string;
   managerName?: string;
+  workingZones?: string[];
   // UI-only display fields (not in ERD; prototype convenience)
   photo?: string;
   specialties?: string[];
@@ -485,6 +487,7 @@ export interface Ledger {
   type: LedgerType;
   glId?: string;
   partyId?: string;
+  currency?: Currency;
 }
 
 export interface Posting {
@@ -508,9 +511,7 @@ export interface PostingLine {
   ledgerId: string;
   side: PostingSide;
   amount: number;
-  lineType?: string;        // e.g. "commission" | "incentive" | "platform_support_fee" | "payout" | "bonus"
-  invoiceId?: string;       // Invoice this line is claimed by
-  metadata?: Record<string, unknown>;
+  invoiceId?: string;
 }
 
 // ============================================================

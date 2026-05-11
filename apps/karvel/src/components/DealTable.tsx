@@ -37,7 +37,8 @@ export function DealTable({ deals, onRowClick, selectedId, currency = "EUR" }: P
                 <th className={thClass}>Agent Name</th>
                 <th className={thClass}>Opportunity Name</th>
                 <th className={thClass}>Amount</th>
-                <th className={thClass}>Report Date</th>
+                <th className={thClass}>Created At</th>
+                <th className={thClass}>Value Date</th>
               </tr>
             </thead>
             <tbody>
@@ -61,6 +62,7 @@ export function DealTable({ deals, onRowClick, selectedId, currency = "EUR" }: P
                     <button onClick={(e) => { e.stopPropagation(); navigate(`/?selected=${encodeURIComponent(deal.opportunityName)}`); }} className="text-primary underline underline-offset-2 hover:opacity-80">{deal.opportunityName}</button>
                   </td>
                   <td className={tdClass}>{formatAmount(deal.dealAmount, currency)}</td>
+                  <td className={tdClass}>{deal.createdAt ? formatDate(deal.createdAt) : '—'}</td>
                   <td className={tdClass}>{formatDate(deal.reportDate)}</td>
                 </tr>
               ))}

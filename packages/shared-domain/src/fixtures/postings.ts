@@ -20,7 +20,6 @@ export const sharedPostings: Posting[] = [
     currency: "EUR",
     status: "posted",
     description: "Commission earned — deal-001 (Mariana Dañobeitia, Buy, €385k)",
-    metadata: { invoice_id: "inv-001", market: "primary", bu: "rebu" },
   },
   // Payment received from buyer — INV-2026-001
   {
@@ -34,7 +33,6 @@ export const sharedPostings: Posting[] = [
     currency: "EUR",
     status: "posted",
     description: "Payment received — INV-2026-001 (Mariana Dañobeitia)",
-    metadata: { invoice_id: "inv-001", bank_ref: "WIRE-20260112-001" },
   },
   // Agent invoice — commission crystallised for agent-felicia (40% of 11 550 = 4 620)
   {
@@ -48,7 +46,6 @@ export const sharedPostings: Posting[] = [
     currency: "EUR",
     status: "posted",
     description: "Agent invoice — Felicia Canovas, deal-001",
-    metadata: { agent_party_id: "party-agent-felicia" },
   },
   // Payout instructed — cash leaves bank
   {
@@ -62,7 +59,6 @@ export const sharedPostings: Posting[] = [
     currency: "EUR",
     status: "posted",
     description: "Agent payout — Felicia Canovas, deal-001",
-    metadata: { agent_party_id: "party-agent-felicia", payout_ref: "PAY-001" },
   },
 
   // ── deal-016 — AED, split receivable, fully paid ───────────────────────────
@@ -79,7 +75,6 @@ export const sharedPostings: Posting[] = [
     currency: "AED",
     status: "posted",
     description: "Commission earned — deal-016 (Fatima Al Mansouri, Sell, AED 2.1M, split receivable)",
-    metadata: { market: "secondary", bu: "rebu" },
   },
   // Payment received — seller (Fatima Al Mansouri)
   {
@@ -93,7 +88,6 @@ export const sharedPostings: Posting[] = [
     currency: "AED",
     status: "posted",
     description: "Payment received — INV-2026-016A (Fatima Al Mansouri, seller)",
-    metadata: { invoice_id: "inv-016-a", bank_ref: "WIRE-20260504-AED-001" },
   },
   // Payment received — developer (Emaar Properties)
   {
@@ -107,7 +101,6 @@ export const sharedPostings: Posting[] = [
     currency: "AED",
     status: "posted",
     description: "Payment received — INV-2026-016B (Emaar Properties, developer)",
-    metadata: { invoice_id: "inv-016-b", bank_ref: "WIRE-20260505-AED-001" },
   },
 
   // ── Standalone — no dealId ─────────────────────────────────────────────────
@@ -116,14 +109,13 @@ export const sharedPostings: Posting[] = [
   {
     id: "posting-010",
     externalRef: "ADJ-2026-Q1-001",
-    businessProcess: "manual_adjustment",
+    businessProcess: "bonus",
     createdBy: "user-ops-finance",
     createdAt: "2026-04-01T09:00:00.000Z",
     valueDate: "2026-04-01",
     currency: "EUR",
     status: "posted",
     description: "Q1 2026 performance bonus — Felicia Canovas",
-    metadata: { agent_party_id: "party-agent-felicia", period: "Q1-2026" },
   },
 
   // ── deal-016 — agent invoice, agent-gelo ────────────────────────────────────
@@ -140,7 +132,6 @@ export const sharedPostings: Posting[] = [
     currency: "AED",
     status: "posted",
     description: "Agent invoice — Gelo Huspy, deal-016",
-    metadata: { agent_party_id: "party-agent-gelo" },
   },
 
   // ── Standalone — no dealId (agent-gelo) ───────────────────────────────────
@@ -149,40 +140,37 @@ export const sharedPostings: Posting[] = [
   {
     id: "posting-012",
     externalRef: "ADJ-2026-Q2-GELO-INC",
-    businessProcess: "manual_adjustment",
+    businessProcess: "incentive",
     createdBy: "user-ops-finance",
     createdAt: "2026-05-10T11:30:00.000Z",
     valueDate: "2026-05-10",
     currency: "AED",
     status: "posted",
     description: "Q2 2026 incentive — Gelo Huspy",
-    metadata: { agent_party_id: "party-agent-gelo", line_type: "incentive", period: "Q2-2026" },
   },
   // May 2026 platform support fee — agent-gelo (deduction)
   {
     id: "posting-013",
     externalRef: "FEE-2026-05-GELO",
-    businessProcess: "manual_adjustment",
+    businessProcess: "platform_fee",
     createdBy: "system",
     createdAt: "2026-05-01T00:00:00.000Z",
     valueDate: "2026-05-01",
     currency: "AED",
     status: "posted",
     description: "May 2026 platform support fee — Gelo Huspy",
-    metadata: { agent_party_id: "party-agent-gelo", line_type: "platform_support_fee", period: "2026-05" },
   },
   // Jan 2026 platform support fee — agent-felicia (deduction on invoice)
   {
     id: "posting-014",
     externalRef: "FEE-2026-01-FELICIA",
-    businessProcess: "manual_adjustment",
+    businessProcess: "platform_fee",
     createdBy: "system",
     createdAt: "2026-01-01T00:00:00.000Z",
     valueDate: "2026-01-01",
     currency: "EUR",
     status: "posted",
     description: "Jan 2026 platform support fee — Felicia Canovas",
-    metadata: { agent_party_id: "party-agent-felicia", line_type: "platform_support_fee", period: "2026-01" },
   },
 
   // ── deal-018 — agent-felicia, UNALLOCATED (no agentInvoiceId on lines) ──────
@@ -199,19 +187,17 @@ export const sharedPostings: Posting[] = [
     currency: "EUR",
     status: "posted",
     description: "Agent invoice — Felicia Canovas, deal-018",
-    metadata: { agent_party_id: "party-agent-felicia" },
   },
   // Apr 2026 platform support fee — agent-felicia (EUR 150 deduction)
   {
     id: "posting-016",
     externalRef: "FEE-2026-04-FELICIA",
-    businessProcess: "manual_adjustment",
+    businessProcess: "platform_fee",
     createdBy: "system",
     createdAt: "2026-04-01T00:00:00.000Z",
     valueDate: "2026-04-01",
     currency: "EUR",
     status: "posted",
     description: "Apr 2026 platform support fee — Felicia Canovas",
-    metadata: { agent_party_id: "party-agent-felicia", line_type: "platform_support_fee", period: "2026-04" },
   },
 ];

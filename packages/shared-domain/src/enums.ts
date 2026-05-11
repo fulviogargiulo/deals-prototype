@@ -54,6 +54,9 @@ export type BusinessProcess =
   | "bank_statement_inbound_matched"
   | "bank_statement_outbound_matched"
   | "payout_instructed"
+  | "bonus"
+  | "incentive"
+  | "platform_fee"
   | "manual_adjustment"
   | "reversal";
 

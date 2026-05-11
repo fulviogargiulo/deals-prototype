@@ -236,7 +236,8 @@ export function DealListingTable({ deals, currency, onDealClick }: Props) {
           <table className="w-full">
             <thead>
               <tr>
-                <ColumnHeader label="Report Date" sortDir={getSortDir("reportDate")} onSort={() => handleSort("reportDate")} sortable={false} />
+                <ColumnHeader label="Created At" sortDir={getSortDir("reportDate")} onSort={() => handleSort("reportDate")} sortable={false} />
+                <ColumnHeader label="Value Date" sortDir={getSortDir("reportDate")} onSort={() => handleSort("reportDate")} sortable={false} />
                 <ColumnHeader label="Deal ID" sortDir={getSortDir("id")} onSort={() => handleSort("id")} sortable={false} />
                 <th className={`${thBase} text-left relative`}>
                   <div className="flex items-center gap-1">
@@ -307,6 +308,7 @@ export function DealListingTable({ deals, currency, onDealClick }: Props) {
                   onClick={() => onDealClick?.(deal)}
                   className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
                 >
+                  <td className={tdClass}>{deal.createdAt ? formatDate(deal.createdAt) : '—'}</td>
                   <td className={tdClass}>{formatDate(deal.reportDate)}</td>
                   <td className={`${tdClass} font-semibold`}>{deal.id}</td>
                   <td className={tdClass}><BUBadge bu={deal.businessUnit} /></td>

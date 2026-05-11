@@ -12,9 +12,6 @@ const AGENT_ID = 'agent-felicia';
 const AGENT_PARTY_ID = sharedAgents.find((a) => a.id === AGENT_ID)?.partyId ?? AGENT_ID;
 const AGENT_LEDGER = `AgentLiability_${AGENT_ID}`;
 
-// Settlement entries (cash movement bookkeeping) — hidden from the agent-facing ledger.
-// They are internal accounting entries that zero out the liability once a payout is sent.
-const SETTLEMENT_PROCESSES = new Set(['payout_instructed', 'bank_statement_outbound_matched']);
 
 const PERIODS = [
   { value: '2026-01', label: 'Jan 2026' },
@@ -31,9 +28,16 @@ function formatAmount(amount: number, side: PostingLine['side'], currency: strin
   return { text: `${sign}${symbol}${amount.toLocaleString()}`, color };
 }
 
-function lineTypeLabel(lineType: string | undefined): string {
-  if (!lineType) return 'other';
-  return lineType.replace(/_/g, ' ');
+const PROCESS_LABELS: Record<string, string> = {
+  agent_invoice: 'commission',
+  bonus:         'bonus',
+  incentive:     'incentive',
+  platform_fee:  'platform fee',
+  manual_adjustment: 'adjustment',
+};
+
+function processLabel(businessProcess: string): string {
+  return PROCESS_LABELS[businessProcess] ?? businessProcess.replace(/_/g, ' ');
 }
 
 function invoiceStatusStyle(status: string) {
@@ -63,7 +67,8 @@ export function AgentEarningsView() {
   const agentLines = getPostingLines()
     .filter(l => l.ledgerId === AGENT_LEDGER)
     .map(l => ({ ...l, posting: sharedPostings.find(p => p.id === l.postingId)! }))
-    .filter(l => !!l.posting && !SETTLEMENT_PROCESSES.has(l.posting.businessProcess));
+    .filter(l => !!l.posting)
+    .sort((a, b) => a.posting.valueDate.localeCompare(b.posting.valueDate));
 
   const filteredLines = selectedPeriod
     ? agentLines.filter(l => l.posting.valueDate.startsWith(selectedPeriod))
@@ -89,11 +94,11 @@ export function AgentEarningsView() {
       id: l.id,
       description: l.posting.description ?? 'Posting',
       type: l.side === 'CREDIT' ? 'credit' : 'debit',
-      category: l.lineType === 'platform_support_fee' ? 'support-fee'
-              : l.lineType === 'commission'            ? 'deal-commission'
+      category: l.posting.businessProcess === 'platform_fee'  ? 'support-fee'
+              : l.posting.businessProcess === 'agent_invoice' ? 'deal-commission'
               : 'other',
       amount: l.amount,
-      dealId: l.metadata?.deal_id as string | undefined,
+      dealId: l.posting.dealId,
     })),
     totalCredit: statementEligibleLines.filter(l => l.side === 'CREDIT').reduce((s, l) => s + l.amount, 0),
     totalDebit:  statementEligibleLines.filter(l => l.side === 'DEBIT').reduce((s, l)  => s + l.amount, 0),
@@ -173,7 +178,7 @@ export function AgentEarningsView() {
           <div className="divide-y divide-border-ds-primary">
             {filteredLines.map(line => {
               const { text, color } = formatAmount(line.amount, line.side, line.posting.currency);
-              const dealId = line.metadata?.deal_id as string | undefined;
+              const dealId = line.posting.dealId;
               const invoiceNumber = line.invoiceId
                 ? (invoiceNumberMap.get(line.invoiceId) ?? line.invoiceId)
                 : null;
@@ -198,7 +203,7 @@ export function AgentEarningsView() {
                       ? <ArrowDownLeft className="w-3 h-3 shrink-0" style={{ color: 'hsl(var(--ds-green))' }} />
                       : <ArrowUpRight  className="w-3 h-3 shrink-0" style={{ color: 'hsl(var(--ds-red))' }} />
                     }
-                    <span className="text-xs text-fg-secondary capitalize">{lineTypeLabel(line.lineType)}</span>
+                    <span className="text-xs text-fg-secondary capitalize">{processLabel(line.posting.businessProcess)}</span>
                   </div>
                   <span className="text-xs font-mono truncate" style={{ color: invoiceNumber ? 'hsl(var(--accent-indigo))' : 'hsl(var(--fg-secondary) / 0.4)' }}>
                     {invoiceNumber ?? '—'}
