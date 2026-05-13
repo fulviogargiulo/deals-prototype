@@ -20,7 +20,7 @@ import type {
   PostingLine,
 } from "@huspy/shared-domain";
 import { getDeals } from "@/data/dealStore";
-import { DealTypeBadge, DealStatusBadge } from "@/components/DealBadges";
+import { DealStatusBadge } from "@/components/DealBadges";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -758,7 +758,7 @@ export default function AgentDetail() {
                           <tr key={deal.id} onClick={() => navigate(`/deals/${deal.id}`)}
                             className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer">
                             <td className={`${tdClass} text-muted-foreground font-mono text-[12px]`}>{deal.id}</td>
-                            <td className="px-4 py-3"><DealTypeBadge type={deal.type} /></td>
+
                             <td className="px-4 py-3 text-center"><DealStatusBadge status={deal.status} isDisputed={deal.isDisputed} /></td>
                             <td className={tdClass}>{deal.market ?? "—"}</td>
                             <td className={tdClass}>{deal.clientName ?? "—"}</td>

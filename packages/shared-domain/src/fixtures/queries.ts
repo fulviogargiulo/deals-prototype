@@ -64,13 +64,13 @@ export const getInvoicesForAgent = (agentId: string) => {
   return sharedInvoices.filter((i) => i.direction === "inbound" && i.partyId === agent.partyId);
 };
 
-export const getLedgerById = (id: string) => sharedLedgers.find((l) => l.id === id);
-export const getSubledgersForGL = (glId: string) => sharedLedgers.filter((l) => l.glId === glId);
+export const getLedgerById = (id: number) => sharedLedgers.find((l) => l.id === id);
+export const getSubledgersForGL = (glId: number) => sharedLedgers.filter((l) => l.glId === glId);
 
 // Posting → Deal uses the direct dealId FK.
 export const getPostingsForDeal = (dealId: string) => sharedPostings.filter((p) => p.dealId === dealId);
 export const getPostingLinesForPosting = (postingId: string) => sharedPostingLines.filter((l) => l.postingId === postingId);
-export const getPostingLinesForLedger = (ledgerId: string) => sharedPostingLines.filter((l) => l.ledgerId === ledgerId);
+export const getPostingLinesForLedger = (ledgerId: number) => sharedPostingLines.filter((l) => l.ledgerId === ledgerId);
 export const getPostingLinesForInvoice = (invoiceId: string) => sharedPostingLines.filter((l) => l.invoiceId === invoiceId);
 
 // DealStakeholder helpers.

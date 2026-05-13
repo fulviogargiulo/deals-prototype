@@ -5,7 +5,7 @@ import type {
   Country,
   Currency,
   DealStatus,
-  DealType,
+
   DocumentRequirementStatus,
   InvoiceStatus,
   LedgerType,
@@ -277,7 +277,6 @@ export interface ClientWithOpportunities extends Client {
 export interface Deal {
   // Required core
   id: string;
-  type: DealType;
   status: DealStatus;
   dealAmount: number;
   reportDate: string;
@@ -435,8 +434,7 @@ export interface Blueprint {
   id: string;
   country: Country;
   businessUnit: BusinessUnit;
-  /** Optional further specialisation: if set, only applies to this dealType. */
-  dealType?: DealType;
+
   /** Statutory tax rate applied to gross commission (e.g. 5 = VAT 5%, 21 = IVA 21%). */
   taxRate: number;
   /** Human-readable tax label for ledger descriptions (e.g. "VAT", "IVA"). */

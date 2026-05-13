@@ -3,7 +3,6 @@
 import type {
   OpportunityType,
   OpportunityStatus,
-  DealType,
   DealStatus,
   Market,
   BusinessUnit,
@@ -30,15 +29,6 @@ export const opportunityStatusLabel: Record<OpportunityStatus, string> = {
   inactive: "Inactive",
 };
 
-export const dealTypeLabel: Record<DealType, string> = {
-  buy: "Buy",
-  sell: "Sell",
-  rent: "Rent",
-  lease: "Lease",
-  mortgage: "Mortgage",
-  "buy-sell": "Buy+Sell",
-  "rent-lease": "Rent+Lease",
-};
 
 export const dealStatusLabel: Record<DealStatus, string> = {
   reported: "Reported",

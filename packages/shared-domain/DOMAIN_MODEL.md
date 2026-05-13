@@ -19,6 +19,22 @@ erDiagram
         string partyId FK
         string employmentStatus
     }
+    AgentFinancials {
+        string id
+        string agentId FK
+        AgentStrategy strategy
+        number teamLeadRate
+        number managerRate
+        string effectiveFrom
+    }
+    AgentDocument {
+        string id
+        string agentId FK
+        AgentDocumentType documentType
+        string kind "file | text"
+        DocumentRequirementStatus status
+        string expiresAt
+    }
     Client {
         string id
         string partyId FK
@@ -42,18 +58,44 @@ erDiagram
         number dealAmount
         Currency currency
         BusinessUnit businessUnit
+        string blueprintId FK
+    }
+    Blueprint {
+        string id
+        Country country
+        BusinessUnit businessUnit
+        DealType dealType
+        number taxRate
+        string taxLabel
     }
     DealStakeholder {
         string id
         string dealId FK
         string partyId FK
-        StakeholderRole role
+        StakeholderType role
         number splitPercentage
         number fixedAmount
+        number financialAmount "signed: + = revenue, - = cost"
+    }
+    DealDocumentRequirement {
+        string id
+        string dealId FK
+        string label
+        boolean required
+        DocumentRequirementStatus status
+        string documentId FK
+    }
+    DocumentRequirementTemplate {
+        string id
+        Market market
+        BusinessUnit businessUnit
+        Country country
+        string label
+        boolean required
     }
     Invoice {
         string id
-        string direction
+        string direction "outbound | inbound"
         string partyId FK
         string dealId FK
         string invoiceNumber
@@ -110,26 +152,31 @@ erDiagram
         number amount
     }
 
-    Party       ||--o| Agent            : "acts as"
-    Party       ||--o| Client           : "acts as"
-    Client      ||--o{ Opportunity      : "has"
-    Opportunity ||--o{ Deal             : "produces"
-    Deal        ||--|{ DealStakeholder  : "involves"
-    Party       ||--o{ DealStakeholder  : "participates as"
-    Party       |o--o{ Ledger           : "owns (optional)"
-    Party       ||--o{ Invoice          : "billed to/from"
-    Deal        |o--|{ Invoice          : "creates"
-    Deal        |o--o{ Posting          : "generates"
-    Posting     ||--|{ PostingLine      : "has"
-    Ledger      ||--o{ PostingLine      : "receives"
-    Invoice     |o--o{ PostingLine      : "claimed by"
-    Deal        ||--o| DealDispute      : "may have"
-    Client      ||--o{ Task             : "has"
-    Opportunity ||--o{ Task             : "has"
-    Client      ||--o{ Document         : "has"
-    Opportunity ||--o{ Document         : "has"
-    Ledger      ||--o{ Ledger           : "subledger of"
-    Agent       ||--o{ Opportunity      : "assigned"
+    Party           ||--o| Agent                       : "acts as"
+    Party           ||--o| Client                      : "acts as"
+    Agent           ||--o{ AgentFinancials              : "has strategy"
+    Agent           ||--o{ AgentDocument                : "has compliance docs"
+    Client          ||--o{ Opportunity                  : "has"
+    Opportunity     ||--o{ Deal                         : "produces"
+    Deal            ||--|{ DealStakeholder               : "involves"
+    Deal            ||--o{ DealDocumentRequirement       : "requires"
+    Deal            ||--o| DealDispute                   : "may have"
+    Deal            |o--o{ Posting                       : "generates"
+    Deal            |o--|{ Invoice                       : "creates"
+    Blueprint       |o--o{ Deal                          : "governs tax for"
+    DocumentRequirementTemplate ||--o{ DealDocumentRequirement : "instantiates"
+    Party           ||--o{ DealStakeholder               : "participates as"
+    Party           |o--o{ Ledger                        : "owns (optional)"
+    Party           ||--o{ Invoice                       : "billed to/from"
+    Posting         ||--|{ PostingLine                   : "has"
+    Ledger          ||--o{ PostingLine                   : "receives"
+    Invoice         |o--o{ PostingLine                   : "claimed by"
+    Client          ||--o{ Task                          : "has"
+    Opportunity     ||--o{ Task                          : "has"
+    Client          ||--o{ Document                      : "has"
+    Opportunity     ||--o{ Document                      : "has"
+    Ledger          ||--o{ Ledger                        : "subledger of"
+    Agent           ||--o{ Opportunity                   : "assigned"
 ```
 
 ## Key architectural decisions
@@ -149,7 +196,9 @@ Steps at deal creation or during ops review:
 4. The deal may not advance to `pending-receivables` until all required stakeholders are present.
 
 ### DealStakeholder
-Replaces the `agentId`/`clientId` FKs that used to be embedded on `Deal`. Each deal now has one or more stakeholder records, each linking a Party to a role (`agent`, `buyer`, `seller`, `tenant`, `borrower`, …). This naturally supports multi-agent commission splits.
+Replaces the `agentId`/`clientId` FKs that used to be embedded on `Deal`. Each deal now has one or more stakeholder records, each linking a Party to a **financial role** (`StakeholderType`). This naturally supports multi-agent commission splits and mixed revenue/cost structures.
+
+> **Note:** Agent split percentages live on `DealStakeholder.splitPercentage` as the interim source of truth. These will migrate to a dedicated `Offer` entity linked from the deal. `[TO BE DETERMINED]`
 
 ### Posting.dealId (direct FK)
 `Posting` carries a direct `dealId` FK. Standalone postings (bonuses, adjustments, platform fees not tied to a deal) leave `dealId` undefined — they remain first-class.
@@ -174,22 +223,87 @@ Today only agent subledgers (e.g. `AgentLiability_agent-felicia`) set it, becaus
 
 ## Deal status state machine
 
+Implemented in `src/dealWorkflow.ts` — `DEAL_WORKFLOW_TRANSITIONS` is authoritative. Use `canTransitionDealStatus(from, to)` to validate any transition before applying it.
+
 ```
-reported → pending-details → under-review → pending-receivables → finalized
-                                                                 ↘
-                                           (any state) → canceled
+pending-details ⇄ under-review → pending-agent-approval → pending-receivables → finalized
+                                          ↑          ↘
+                                   under-review    (back if agent input needed)
+                                
+(any state) → canceled
 ```
+
+Allowed transitions (from `dealWorkflow.ts`):
+
+| From | Allowed next states |
+|---|---|
+| `pending-details` | `under-review`, `canceled` |
+| `under-review` | `pending-details`, `pending-agent-approval`, `canceled` |
+| `pending-agent-approval` | `under-review`, `pending-receivables`, `canceled` |
+| `pending-receivables` | `finalized`, `canceled` |
+| `finalized` | _(terminal)_ |
+| `canceled` | _(terminal)_ |
 
 | Status | Meaning |
 |---|---|
-| `reported` | Deal logged; awaiting ops review |
-| `pending-details` | Ops requests more info from agent |
-| `under-review` | Ops verifying details |
-| `pending-receivables` | Invoice sent to client; waiting for payment to arrive |
-| `finalized` | Client payment received and deal accounting closed |
-| `canceled` | Deal voided (cross-cutting; can be reached from any state) |
+| `pending-details` | Deal logged; ops awaiting required info from agent |
+| `under-review` | Ops verifying deal details |
+| `pending-agent-approval` | Ops has finalised commission terms; agent must confirm before invoicing begins |
+| `pending-receivables` | Invoice sent to client; waiting for payment |
+| `finalized` | Client payment confirmed; `deal_close` posting created, agent liability subledger credited |
+| `canceled` | Deal voided — reachable from any state |
 
-> **`isDisputed`** (`boolean`) is a cross-cutting flag, NOT a state. A deal can be disputed at any lifecycle state.
+> **`isDisputed`** (`boolean`) is a cross-cutting flag, NOT a state. A dispute reverts the deal to `under-review` + sets `isDisputed = true`. Ops resolves in Karvel, then moves to `pending-details` (if more agent input needed) or back to `pending-agent-approval`.
+
+> **Backward transitions are intentional.** `under-review → pending-details` is a normal ops workflow step (requesting more info from the agent), not an error.
+
+## StakeholderType — financial role taxonomy
+
+`StakeholderType` classifies a party's financial relationship to the deal. It drives the P&L waterfall engine — each type maps to a cost bucket (see below).
+
+| Value | Bucket | Used when |
+|---|---|---|
+| `REVENUE_SOURCE` | — | Party paying Huspy. `financialAmount > 0` contributes to commissionable gross. |
+| `INTERNAL_PAYOUT` | B | Huspy agent. Commission calculated via `AgentFinancials.strategy`; not manually entered. |
+| `ACQUISITION_DEDUCTION` | C | External commercial partner (co-broker, referral agency). Huspy pays them. |
+| `OPERATIONAL_DEDUCTION` | D | Fixed service provider (notary, conveyance, legal). Huspy pays a fixed fee. |
+
+## P&L waterfall — cost bucket taxonomy
+
+The lean P&L engine applies deductions to gross revenue in bucket order:
+
+| Bucket | Label | Source |
+|---|---|---|
+| A | Statutory tax / top-line reductions | Derived by engine from `Blueprint.taxRate` — not user-declared |
+| B | Internal payouts (agents, team leads, managers) | Derived by engine from `AgentFinancials.strategy` |
+| C | External commercial deductions (co-brokers, rebates) | User-declared via `DealStakeholder` with `ACQUISITION_DEDUCTION` |
+| D | Operational service costs (notary, conveyance) | User-declared via `DealStakeholder` with `OPERATIONAL_DEDUCTION` |
+
+Gross profit = Gross revenue − A − B − C − D.
+
+## Blueprint — tax configuration
+
+One `Blueprint` per `(country, businessUnit)` pair (optionally further scoped to a `dealType`). The engine reads the matching Blueprint at `deal_close` and emits `PostingLine` entries against `LIAB_STATUTORY_TAX_{CUR}`.
+
+The P&L waterfall always operates on **tax-exclusive** amounts. Tax is handled entirely by the Blueprint service, not by stakeholder declarations.
+
+## AgentFinancials — commission strategy
+
+Per-agent policy for computing payouts against deal net revenue. Three strategy shapes:
+
+| Kind | Behaviour |
+|---|---|
+| `flat` | Constant `pct` % of agent's share of net revenue |
+| `slab` | Progressive tiers — each `pct` applies to the slice between slab thresholds |
+| `max` | Flat `pct` capped at `capAmount`; payout = min(pct × net, capAmount) |
+
+`teamLeadRate` and `managerRate` are additive overhead percentages paid by Huspy on top of agent payout. Multiple records per agent are supported; `effectiveFrom` selects the active policy.
+
+## Deal document requirements
+
+`DocumentRequirementTemplate` records are configured by Ops per `(market, businessUnit, country)`. When a deal is created, the engine instantiates matching templates into `DealDocumentRequirement` rows on the deal. The primary agent submits documents; Ops approves or waives in Karvel.
+
+Agent-level compliance documents (KYC, passport, license, IBAN) are managed on the Agent profile via `AgentDocument` — they are not deal-scoped.
 
 ## Accounting model
 
@@ -226,12 +340,68 @@ Supported currencies: `EUR`, `AED`, `SAR`.
 | `manual_adjustment` | Flexible — use for standalone corrections |
 | `reversal` | Mirror of reversed posting with sides flipped; set `reversedByPostingId` |
 
-### Tax withholding convention
+### Tax conventions — two distinct mechanisms
 
-- **EUR (Spain):** 19% IRPF withheld from gross agent commission → `LIAB_STATUTORY_TAX_EUR`
-- **AED (UAE):** 5% VAT withheld → `LIAB_STATUTORY_TAX_AED`
+**1. Blueprint tax (deal_close posting — charged to client)**
+
+Applied by `draftPostings` at deal close. Rate comes from `blueprints.ts`. Lines: DEBIT `REV_{CUR}`, CREDIT `LIAB_STATUTORY_TAX_{CUR}`.
+
+| Country | Blueprint tax | Rate |
+|---|---|---|
+| Spain (`es`) | IVA | 21% |
+| UAE (`ae`) | VAT | 5% |
+| Saudi Arabia (`sa`) | VAT | 15% |
+
+**2. Withholding tax on agent invoices (`agent_invoice` posting — withheld from agent)**
+
+When Finance processes an agent invoice, tax is withheld at source before crediting the agent subledger.
+
+| Country | Withholding tax | Rate |
+|---|---|---|
+| Spain (`es`) | IRPF | 19% of gross agent commission |
+| UAE (`ae`) | VAT | 5% of gross agent commission |
+
+Lines: DEBIT `EXP_COMMISSION_{CUR}` (gross), CREDIT `AgentLiability_agent-{slug}` (net), CREDIT `LIAB_STATUTORY_TAX_{CUR}` (withheld).
 
 Agent subledger is credited the **net** amount (gross − withheld). `EXP_COMMISSION` is always the **gross** amount.
+
+## Waterfall engine (`src/waterfall.ts`)
+
+`calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL` — pure functional engine. Operates on tax-exclusive amounts only; tax is handled by `draftPostings` using `Blueprint.taxRate`, not inside the engine.
+
+**Waterfall steps:**
+
+1. **Gross revenue** — sum of `REVENUE_SOURCE` stakes where `financialAmount > 0`; falls back to `input.grossRevenue` if no explicit payer amounts
+2. **Bucket C** — subtract all `ACQUISITION_DEDUCTION` stakes (`|financialAmount|`)
+3. **Bucket D** — subtract all `OPERATIONAL_DEDUCTION` stakes (`|financialAmount|`)
+4. **Net revenue** = Gross − C − D
+5. **Bucket B** — per `INTERNAL_PAYOUT` agent, apply `AgentFinancials.strategy` to `netRevenue × splitPercentage`; team lead and manager overrides are **additive** on top (Huspy-borne)
+6. **Huspy margin** = Net revenue − B
+
+`totalBucketA` is always `0` in the engine output — tax is intentionally excluded.
+
+Key output types:
+- `ProjectedPnL` — full breakdown including `splits[]` per agent and a `ledger[]` of line items with bucket labels
+- `ProjectedAgentSplit` — per-agent: `allocatedNet`, `agentPayout`, `teamLeadPayout`, `managerPayout`
+- `LedgerEntry` — each waterfall line with `bucket`, `side`, `amount`, `partyId`
+
+> **`[TO BE DETERMINED]`** Agent split percentages (`DealStakeholder.splitPercentage`) will migrate to an `Offer` entity. The engine will read from `Offer` once it exists.
+
+> **`@deprecated`** `ProjectedPnLInput.reductions` — pass rebates/subsidies as `ACQUISITION_DEDUCTION` stakeholders instead. Kept for deal creation wizard backward compatibility.
+
+## Commission defaults (`src/commissionCalc.ts`)
+
+`COMMISSION_RATES` — default rates used by fixtures and as fallback:
+
+| Constant | Value | Applied to |
+|---|---|---|
+| `takeRate` | 3% | Deal amount — Huspy's commission to client |
+| `agentGrossRate` | 40% | Huspy revenue — agent's guaranteed payout |
+| `teamLeadRate` | 10% | Agent payout — TL overhead (Huspy-borne) |
+| `managerOverrideRate` | 5% | Agent payout — manager overhead (Huspy-borne) |
+| `conveyanceAgentRate` | 25% | Conveyance fee — external conveyance agent cut |
+
+`computeDealFinancials(dealAmount, conveyanceFee?, overrides?)` — returns `DealFinancials` with all split amounts for a simple single-agent deal. Use `calculateProjectedPnL` for multi-agent or multi-stakeholder deals.
 
 ## PnL service (`src/services/pnl.ts`)
 
@@ -242,29 +412,68 @@ Agent subledger is credited the **net** amount (gross − withheld). `EXP_COMMIS
 
 Revenue = sum of CREDIT lines on `REV_*` ledgers. Commission expense = sum of DEBIT lines on `EXP_COMMISSION_*` ledgers. Gross profit = revenue − commission expense.
 
-## StakeholderRole values
-
-| Role | Used when |
-|---|---|
-| `agent` | The Huspy agent handling the transaction |
-| `buyer` | Client purchasing property (buy deal) |
-| `seller` | Client selling property (sell deal) |
-| `tenant` | Client renting (rent deal) |
-| `landlord` | Property owner in a rental (lease deal) |
-| `borrower` | Client taking a mortgage (mortgage deal) |
-| `developer` | Property developer counterparty |
-| `bank` | Mortgage bank counterparty |
-
 ## Query helpers (`src/fixtures/queries.ts`)
+
+Stand-ins for what a real backend query layer would do. All return from in-memory fixture arrays.
+
+**Client / Opportunity**
 
 | Helper | Description |
 |---|---|
-| `getPostingsForDeal(dealId)` | Postings with `dealId === dealId` |
+| `getClientById(id)` | Client by ID |
+| `getOpportunityById(id)` | Opportunity by ID |
+| `getClientWithOpportunities(clientId)` | Client + all their opportunities joined |
+| `getAllClientsWithOpportunities()` | All clients with opportunities |
+| `getPartyById(id)` | Party record by ID |
+| `getPartyForAgent(agentId)` | Party for an agent |
+| `getPartyForClient(clientId)` | Party for a client |
+| `getAgentById(id)` | Agent by ID |
+
+**Task / Document**
+
+| Helper | Description |
+|---|---|
+| `getTaskById(id)` | Task by ID |
+| `getTasksForClient(clientId)` | All tasks for a client |
+| `getTasksForOpportunity(opportunityId)` | All tasks for an opportunity |
+| `getDocumentById(id)` | Document by ID |
+| `getDocumentsForClient(clientId)` | All documents for a client |
+| `getDocumentsForOpportunity(opportunityId)` | All documents for an opportunity |
+
+**Invoices**
+
+| Helper | Description |
+|---|---|
+| `getInvoiceById(id)` | Invoice by ID |
 | `getInvoicesForDeal(dealId)` | Traverses Posting → PostingLine → Invoice |
 | `getInvoicesForAgent(agentId)` | Inbound invoices where `partyId === agent.partyId` |
+
+**Postings / Ledger**
+
+| Helper | Description |
+|---|---|
+| `getPostingsForDeal(dealId)` | Postings with `dealId` FK |
+| `getPostingLinesForPosting(postingId)` | Lines for a posting |
+| `getPostingLinesForLedger(ledgerId: number)` | Lines touching a ledger |
+| `getPostingLinesForInvoice(invoiceId)` | Lines claiming an invoice |
+| `getLedgerById(id: number)` | Ledger account by numeric ID |
+| `getSubledgersForGL(glId: number)` | Agent subledgers under a GL parent |
+
+**DealStakeholders**
+
+| Helper | Description |
+|---|---|
 | `getDealStakeholdersForDeal(dealId)` | All stakeholders on a deal |
 | `getDealStakeholdersForParty(partyId)` | All deals a party participates in |
-| `getClientForDeal(dealId)` | Primary client record for a deal (via DealStakeholder) |
-| `getPartyById(id)` | Party record by ID |
-| `getPartyForAgent(agentId)` | Party record for an agent |
-| `getPartyForClient(clientId)` | Party record for a client |
+| `getAgentStakeForDeal(dealId, agentPartyId)` | The `INTERNAL_PAYOUT` stake for a specific agent on a deal |
+| `computeAgentCommission(totalAgentCommission, stake)` | Agent's share of total commission — uses `fixedAmount` if set, otherwise `splitPercentage` |
+| `getClientForDeal(dealId)` | Primary `REVENUE_SOURCE` client record for a deal |
+
+## Deprecated fields (kept for fixture compatibility — remove before real API)
+
+| Field | On | Replacement |
+|---|---|---|
+| `Deal.conveyanceRevenue` | `Deal` | `DealStakeholder` with `OPERATIONAL_DEDUCTION` role and negative `financialAmount` |
+| `Client.fullName` / `.phone` / `.email` | `Client` | `Party.displayName` / `.phone` / `.email` via `partyId` |
+| `Agent.name` / `.email` / `.phone` | `Agent` | `Party.displayName` / `.email` / `.phone` via `partyId` |
+| `Deal.marketType` | `Deal` | `Deal.market` (same field, alias used by agent-app UI) |

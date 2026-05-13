@@ -1,5 +1,5 @@
 import type { Blueprint } from "./entities";
-import type { BusinessUnit, Country, DealType } from "./enums";
+import type { BusinessUnit, Country } from "./enums";
 
 /**
  * DEFAULT_BLUEPRINTS — statutory tax configuration per (country, businessUnit).
@@ -71,7 +71,6 @@ export const DEFAULT_BLUEPRINTS: Record<Country, Partial<Record<BusinessUnit, Bl
 export function getBlueprint(
   country: Country | undefined,
   businessUnit: BusinessUnit | undefined,
-  _dealType?: DealType,
 ): Blueprint {
   const c = country ?? "ae";
   const bu = businessUnit ?? "rebu";

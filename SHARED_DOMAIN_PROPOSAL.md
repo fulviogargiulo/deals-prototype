@@ -29,9 +29,13 @@ This is the type-level equivalent of "shared tables" — the schema both apps sp
 
 These are app-local until proven shared:
 
-- **Karvel-only:** `AgentEntry`, `PayableEntry`, `ReceivableEntry`, `ExternalPartnerEntry`, COGS fields, `StatusHistoryEntry`, dispute model
-- **Agent-app-only:** `Task`, `Document`, `ScheduleActivity`, `StatementOfAccount`, `VisitFeedback`, notes, verification status
-- **Both have, but diverge significantly:** rich `Opportunity` property attributes (priceRange, bedrooms, neighborhoods, images) — agent-app-only for now
+- **Karvel-only (inline on Deal):** `AgentEntry`, `PayableEntry`, `ExternalPartnerEntry`, COGS fields — legacy flat fields on `Deal` that predate `DealStakeholder`. Candidates for deprecation once the waterfall engine fully replaces them.
+- **Agent-app-only:** `StatementOfAccount`, notes
+
+**Now in shared-domain** (previously app-local — promoted when both apps needed them):
+- `Task`, `Document`, `ScheduleActivity`, `VisitFeedback` — in `entities.ts`
+- `DealDispute` — in `entities.ts`
+- `DealStakeholder`, `Blueprint`, `AgentFinancials`, `DealDocumentRequirement`, `DocumentRequirementTemplate`, `AgentDocument` — all in `entities.ts`
 
 When we identify a type that genuinely belongs to both, we promote it to `shared-domain` then.
 

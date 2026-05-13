@@ -73,13 +73,12 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     const businessUnit = selectedOpp.type === "mortgage" ? "mortgage" : "rebu";
     const country = selectedOpp.country ?? "ae";
     const currency = COUNTRY_TO_CURRENCY[country];
-    const dealType = selectedOpp.type;
-    const blueprint = getBlueprint(country, businessUnit, dealType);
+    const blueprint = getBlueprint(country, businessUnit);
     const agent = sharedAgents.find((a) => a.id === selectedOpp.agentId);
     const agentParty = agent ? sharedParties.find((p) => p.id === agent.partyId) : undefined;
     const agentFinancials: AgentFinancials | undefined =
       agent ? sharedAgentFinancials.find((af) => af.agentId === agent.id) : undefined;
-    return { businessUnit, country, currency, dealType, blueprint, agent, agentParty, agentFinancials };
+    return { businessUnit, country, currency, blueprint, agent, agentParty, agentFinancials };
   }, [selectedOpp]);
 
   // Gross revenue derivation, REBU vs MBU.
@@ -132,7 +131,6 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     return calculateProjectedPnL({
       country: derived.country,
       businessUnit: derived.businessUnit,
-      dealType: derived.dealType,
       currency: derived.currency,
       grossRevenue,
       stakeholders,
@@ -151,9 +149,8 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     if (!derived || !selectedOpp || !projection) return;
     const id = `DEAL-${String(Date.now()).slice(-6)}`;
 
-    // Minimal legacy AgentEntry so recalculateDeal / DealPnLDetailPanel keep working.
-    // Strategy-derived agent payout from the engine is the source of truth; we
-    // surface a comparable flat rate for the legacy P&L view.
+    // Minimal legacy AgentEntry for recalculateDeal; strategy-derived agent payout
+    // from the engine is the source of truth.
     const split = projection.splits[0];
     const legacyAgent: AgentEntry = {
       agentName: derived.agentParty?.displayName ?? selectedOpp.agentName ?? "Unknown Agent",
@@ -180,7 +177,6 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
 
     const deal: Deal = {
       id,
-      type: derived.dealType,
       status: "under-review",
       market: selectedOpp.type === "rent" || selectedOpp.type === "lease" ? "leasing" : "primary",
       businessUnit: derived.businessUnit,
@@ -339,7 +335,6 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                 <div className="grid grid-cols-3 gap-y-1.5 gap-x-4 text-[13px]">
                   <ReadOnlyField label="Country" value={derived.country.toUpperCase()} />
                   <ReadOnlyField label="Business Unit" value={derived.businessUnit.toUpperCase()} />
-                  <ReadOnlyField label="Deal Type" value={derived.dealType} />
                   <ReadOnlyField label="Currency" value={derived.currency} />
                   <ReadOnlyField label="Property" value={selectedOpp.title} />
                   <ReadOnlyField label="Client" value={selectedOpp.clientName ?? "—"} />

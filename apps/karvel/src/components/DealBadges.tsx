@@ -1,17 +1,7 @@
-import { DealType, DealStatus } from "@/data/types";
-import { dealTypeLabel, dealStatusLabel } from "@/lib/labels";
+import { DealStatus } from "@/data/types";
+import { dealStatusLabel } from "@/lib/labels";
 import { AlertTriangle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
-const typeColorMap: Record<DealType, { border: string; text: string }> = {
-  buy: { border: "border-type-buy", text: "text-type-buy" },
-  sell: { border: "border-type-sell", text: "text-type-sell" },
-  rent: { border: "border-type-rent", text: "text-type-rent" },
-  lease: { border: "border-type-lease", text: "text-type-lease" },
-  "buy-sell": { border: "border-type-buy", text: "text-type-buy" },
-  mortgage: { border: "border-deal-mortgage", text: "text-deal-mortgage" },
-  "rent-lease": { border: "border-type-rent", text: "text-type-rent" },
-};
 
 const statusColorMap: Record<DealStatus, string> = {
   reported: "bg-[hsl(var(--deal-reported)/0.1)] text-[hsl(var(--deal-reported))]",
@@ -23,14 +13,6 @@ const statusColorMap: Record<DealStatus, string> = {
   canceled: "bg-muted text-muted-foreground",
 };
 
-export function DealTypeBadge({ type }: { type: DealType }) {
-  const colors = typeColorMap[type];
-  return (
-    <span className={`inline-flex items-center justify-center min-w-[48px] px-2 py-0.5 rounded-full text-[11px] font-medium border ${colors.border} ${colors.text}`}>
-      {dealTypeLabel[type]}
-    </span>
-  );
-}
 
 export function DealStatusBadge({ status, isDisputed }: { status: DealStatus; isDisputed?: boolean }) {
   return (

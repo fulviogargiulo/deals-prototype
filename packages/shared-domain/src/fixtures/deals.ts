@@ -23,21 +23,17 @@ function findOpp(id: string) {
   return sharedOpportunities.find((o) => o.id === id);
 }
 
-function deriveReceivableEntityType(partyId: string, dealType: Deal["type"]): ReceivableEntityType {
+function deriveReceivableEntityType(partyId: string, market: Deal["market"]): ReceivableEntityType {
   const party = sharedParties.find((p) => p.id === partyId);
   if (party?.legalType === "financial_institution") return "bank";
   if (party?.legalType === "company") return "developer";
-  // Sub-type (seller/tenant/landlord) is no longer modelled on DealStakeholder —
-  // all client parties are REVENUE_SOURCE. Infer display label from deal type.
-  if (dealType === "sell") return "seller";
-  if (dealType === "rent" || dealType === "lease" || dealType === "rent-lease") return "tenant";
+  if (market === "leasing") return "tenant";
   return "buyer";
 }
 
 interface BaseInput {
   id: string;
   opportunityId: string;
-  type: Deal["type"];
   status: Deal["status"];
   market: Deal["market"];
   country: Deal["country"];
@@ -62,7 +58,7 @@ function expand(b: BaseInput): Deal {
   const opp = findOpp(b.opportunityId);
   const f = computeDealFinancials(b.dealAmount, b.conveyanceFee ?? 0);
   const businessUnit = b.businessUnit ?? "rebu";
-  const blueprint = getBlueprint(b.country, businessUnit, b.type);
+  const blueprint = getBlueprint(b.country, businessUnit);
 
   // Primary agent display name (display cache only — full AgentEntry[] lives in Karvel enricher).
   const primaryAgentStake = sharedDealStakeholders.find((s) => s.dealId === b.id && s.role === "INTERNAL_PAYOUT" && s.isPrimary);
@@ -80,7 +76,7 @@ function expand(b: BaseInput): Deal {
     const party = sharedParties.find((p) => p.id === inv.partyId);
     return {
       entityName: party?.displayName ?? "Unknown",
-      entityType: deriveReceivableEntityType(inv.partyId, b.type),
+      entityType: deriveReceivableEntityType(inv.partyId, b.market),
       amount: inv.amount,
       invoiceNumber: inv.invoiceNumber,
       invoiceStatus: inv.status,
@@ -94,7 +90,6 @@ function expand(b: BaseInput): Deal {
     // Canonical core
     id: b.id,
     opportunityId: b.opportunityId,
-    type: b.type,
     status: b.status,
     market: b.market,
     businessUnit,
@@ -121,11 +116,9 @@ function expand(b: BaseInput): Deal {
     buildingName: opp?.title,
     community: opp?.neighborhoods[0],
     propertyType: opp?.propertyTypes?.[0],
-    buyerName: b.type === "buy" || b.type === "buy-sell" ? clientParty?.displayName : undefined,
-    buyerEmail: b.type === "buy" || b.type === "buy-sell" ? clientParty?.email : undefined,
-    buyerPhone: b.type === "buy" || b.type === "buy-sell" ? clientParty?.phone : undefined,
-    sellerName: b.type === "sell" || b.type === "buy-sell" ? clientParty?.displayName : undefined,
-    sellerEmail: b.type === "sell" || b.type === "buy-sell" ? clientParty?.email : undefined,
+    buyerName: b.market !== "leasing" ? clientParty?.displayName : undefined,
+    buyerEmail: b.market !== "leasing" ? clientParty?.email : undefined,
+    buyerPhone: b.market !== "leasing" ? clientParty?.phone : undefined,
     paymentMode: "cash",
     dealPrice: b.dealAmount,
     takeRate: COMMISSION_RATES.takeRate,
@@ -162,7 +155,7 @@ function expand(b: BaseInput): Deal {
 export const sharedDeals: Deal[] = [
   expand({
     id: "deal-001", opportunityId: "opp-001",
-    type: "buy", status: "finalized", market: "primary", country: "es", currency: "EUR",
+    status: "finalized", market: "primary", country: "es", currency: "EUR",
     dealAmount: 385000, reportDate: "2026-01-15",
     createdAt: "2026-01-15T00:00:00.000Z", updatedAt: "2026-01-12T00:00:00.000Z",
     commissionPercentage: 3, paymentDate: "2026-01-12",
@@ -170,7 +163,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-002", opportunityId: "opp-002",
-    type: "sell", status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
+    status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 720000, reportDate: "2026-02-08",
     createdAt: "2026-02-08T00:00:00.000Z", updatedAt: "2026-02-08T00:00:00.000Z",
     commissionPercentage: 2.5,
@@ -178,7 +171,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-003", opportunityId: "opp-003",
-    type: "rent", status: "pending-details", market: "leasing", country: "es", currency: "EUR",
+    status: "pending-details", market: "leasing", country: "es", currency: "EUR",
     dealAmount: 14400, reportDate: "2026-02-22",
     createdAt: "2026-02-22T00:00:00.000Z", updatedAt: "2026-02-22T00:00:00.000Z",
     commissionPercentage: 8,
@@ -186,7 +179,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-004", opportunityId: "opp-004",
-    type: "buy", status: "pending-details", market: "secondary", country: "es", currency: "EUR",
+    status: "pending-details", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 1250000, reportDate: "2026-03-03",
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-03T00:00:00.000Z",
     commissionPercentage: 2,
@@ -195,7 +188,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-005", opportunityId: "opp-005",
-    type: "buy", status: "under-review", market: "primary", country: "sa", currency: "SAR",
+    status: "under-review", market: "primary", country: "sa", currency: "SAR",
     dealAmount: 540000, reportDate: "2026-02-15",
     createdAt: "2026-02-15T00:00:00.000Z", updatedAt: "2026-02-15T00:00:00.000Z",
     commissionPercentage: 2.5,
@@ -203,7 +196,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-006", opportunityId: "opp-006",
-    type: "sell", status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
+    status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 320000, reportDate: "2026-02-20",
     createdAt: "2026-02-20T00:00:00.000Z", updatedAt: "2026-02-20T00:00:00.000Z",
     commissionPercentage: 3,
@@ -211,7 +204,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-007", opportunityId: "opp-001",
-    type: "buy", status: "under-review", market: "secondary", country: "es", currency: "EUR",
+    status: "under-review", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 475000, reportDate: "2026-03-05",
     createdAt: "2026-03-05T00:00:00.000Z", updatedAt: "2026-03-05T00:00:00.000Z",
     commissionPercentage: 2.5,
@@ -222,7 +215,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-008", opportunityId: "opp-002",
-    type: "sell", status: "pending-receivables", market: "secondary", country: "es", currency: "EUR",
+    status: "pending-receivables", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 580000, reportDate: "2026-03-03",
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-03T00:00:00.000Z",
     commissionPercentage: 2.5,
@@ -230,7 +223,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-009", opportunityId: "opp-007",
-    type: "buy", status: "under-review", market: "primary", country: "ae", currency: "AED",
+    status: "under-review", market: "primary", country: "ae", currency: "AED",
     dealAmount: 1850000, reportDate: "2026-05-01",
     createdAt: "2026-05-01T00:00:00.000Z", updatedAt: "2026-05-01T00:00:00.000Z",
     commissionPercentage: 2,
@@ -240,7 +233,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-010", opportunityId: "opp-008",
-    type: "buy", status: "canceled", market: "secondary", country: "ae", currency: "AED",
+    status: "canceled", market: "secondary", country: "ae", currency: "AED",
     dealAmount: 4200000, reportDate: "2026-03-18",
     createdAt: "2026-03-18T00:00:00.000Z", updatedAt: "2026-03-18T00:00:00.000Z",
     commissionPercentage: 2,
@@ -248,7 +241,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-011", opportunityId: "opp-009",
-    type: "mortgage", status: "pending-details", market: "primary", country: "ae", currency: "AED",
+    status: "pending-details", market: "primary", country: "ae", currency: "AED",
     businessUnit: "mortgage",
     dealAmount: 1400000, reportDate: "2026-04-20",
     createdAt: "2026-04-20T00:00:00.000Z", updatedAt: "2026-04-20T00:00:00.000Z",
@@ -257,7 +250,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-012", opportunityId: "opp-010",
-    type: "mortgage", status: "under-review", market: "secondary", country: "ae", currency: "AED",
+    status: "under-review", market: "secondary", country: "ae", currency: "AED",
     businessUnit: "mortgage",
     dealAmount: 3200000, reportDate: "2026-04-28",
     createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-04-28T00:00:00.000Z",
@@ -266,7 +259,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-013", opportunityId: "opp-011",
-    type: "buy", status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
+    status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 620000, reportDate: "2026-04-10",
     createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-10T00:00:00.000Z",
     commissionPercentage: 3,
@@ -274,7 +267,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-014", opportunityId: "opp-011",
-    type: "mortgage", status: "pending-receivables", market: "secondary", country: "es", currency: "EUR",
+    status: "pending-receivables", market: "secondary", country: "es", currency: "EUR",
     businessUnit: "mortgage",
     dealAmount: 496000, reportDate: "2026-04-15",
     createdAt: "2026-04-15T00:00:00.000Z", updatedAt: "2026-04-15T00:00:00.000Z",
@@ -282,7 +275,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-015", opportunityId: "opp-012",
-    type: "mortgage", status: "pending-receivables", market: "primary", country: "sa", currency: "SAR",
+    status: "pending-receivables", market: "primary", country: "sa", currency: "SAR",
     businessUnit: "mortgage",
     dealAmount: 920000, reportDate: "2026-05-02",
     createdAt: "2026-05-02T00:00:00.000Z", updatedAt: "2026-05-02T00:00:00.000Z",
@@ -290,7 +283,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-016", opportunityId: "opp-007",
-    type: "sell", status: "finalized", market: "primary", country: "ae", currency: "AED",
+    status: "finalized", market: "primary", country: "ae", currency: "AED",
     dealAmount: 2100000, reportDate: "2026-05-04",
     createdAt: "2026-05-04T00:00:00.000Z", updatedAt: "2026-05-04T00:00:00.000Z",
     commissionPercentage: 2, paymentDate: "2026-05-04",
@@ -299,7 +292,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-017", opportunityId: "opp-013",
-    type: "buy", status: "under-review", market: "primary", country: "es", currency: "EUR",
+    status: "under-review", market: "primary", country: "es", currency: "EUR",
     dealAmount: 530000, reportDate: "2026-04-28",
     createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-04-28T00:00:00.000Z",
     commissionPercentage: 3,
@@ -307,7 +300,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-018", opportunityId: "opp-004",
-    type: "buy", status: "finalized", market: "secondary", country: "es", currency: "EUR",
+    status: "finalized", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 1250000, reportDate: "2026-04-15",
     createdAt: "2026-04-15T00:00:00.000Z", updatedAt: "2026-04-15T00:00:00.000Z",
     commissionPercentage: 2.5,
@@ -315,7 +308,7 @@ export const sharedDeals: Deal[] = [
   }),
   expand({
     id: "deal-019", opportunityId: "opp-003",
-    type: "buy", status: "canceled", market: "secondary", country: "es", currency: "EUR",
+    status: "canceled", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 260000, reportDate: "2026-03-20",
     createdAt: "2026-03-20T00:00:00.000Z", updatedAt: "2026-04-05T00:00:00.000Z",
     commissionPercentage: 2,

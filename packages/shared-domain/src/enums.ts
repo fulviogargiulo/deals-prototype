@@ -16,10 +16,6 @@ export type OpportunityType =
   | "lease"
   | "mortgage";
 
-export type DealType =
-  | OpportunityType
-  | "buy-sell"
-  | "rent-lease";
 
 export type OpportunityStatus =
   | "new"

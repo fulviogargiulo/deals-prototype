@@ -11,10 +11,9 @@ interface Props {
   deals: Deal[];
   currency?: string;
   dateRange: DateRange;
-  onDealClick?: (deal: Deal) => void;
 }
 
-export function DealListingView({ deals, currency = "EUR", dateRange, onDealClick }: Props) {
+export function DealListingView({ deals, currency = "EUR", dateRange }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const dateFiltered = deals.filter((deal) => {
@@ -64,7 +63,7 @@ export function DealListingView({ deals, currency = "EUR", dateRange, onDealClic
       </div>
 
       {/* Deal Listing Table */}
-      <DealListingTable deals={filtered} currency={currency} onDealClick={onDealClick} />
+      <DealListingTable deals={filtered} currency={currency} />
     </div>
   );
 }

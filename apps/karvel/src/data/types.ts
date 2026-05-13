@@ -122,7 +122,7 @@ export type {
   ReceivableEntry,
   ReceivableEntityType,
   PaymentMode,
-  DealType,
+
   InvoiceStatus,
   BusinessUnit,
   Country,

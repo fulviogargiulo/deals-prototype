@@ -31,10 +31,10 @@ function sumLines(postingIds: Set<string>): { revenue: number; commissionExpense
     const ledger = sharedLedgers.find((l) => l.id === line.ledgerId);
     if (!ledger) continue;
 
-    if (ledger.type === "revenue" && REV_PATTERN.test(ledger.id)) {
+    if (ledger.type === "revenue" && REV_PATTERN.test(ledger.name)) {
       revenue += line.side === "CREDIT" ? line.amount : -line.amount;
     }
-    if (ledger.type === "expense" && EXP_PATTERN.test(ledger.id)) {
+    if (ledger.type === "expense" && EXP_PATTERN.test(ledger.name)) {
       commissionExpense += line.side === "DEBIT" ? line.amount : -line.amount;
     }
   }

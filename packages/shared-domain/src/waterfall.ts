@@ -10,7 +10,7 @@ import type {
   CostBucket,
   Country,
   Currency,
-  DealType,
+
 } from "./enums";
 import { getBlueprint } from "./blueprints";
 
@@ -79,7 +79,7 @@ export interface ProjectedPnLInput {
   opportunity?: Pick<Opportunity, "id" | "country">;
   country: Country;
   businessUnit: BusinessUnit;
-  dealType: DealType;
+
   currency: Currency;
   grossRevenue: number;
   stakeholders: DealStakeholder[];
@@ -126,7 +126,7 @@ function applyAgentStrategy(strategy: AgentStrategy, allocatedNet: number): numb
 // ─── Engine ──────────────────────────────────────────────────────────────────
 
 export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
-  const blueprint = input.blueprint ?? getBlueprint(input.country, input.businessUnit, input.dealType);
+  const blueprint = input.blueprint ?? getBlueprint(input.country, input.businessUnit);
   const ledger: LedgerEntry[] = [];
 
   // ── Step 1: Commissionable Gross ─────────────────────────────────────────

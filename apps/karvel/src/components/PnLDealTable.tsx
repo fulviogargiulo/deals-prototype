@@ -1,4 +1,4 @@
-import { Deal, DealStatus, DealType, DealMarket, BusinessUnit, Country } from "@/data/types";
+import { Deal, DealStatus, DealMarket, BusinessUnit, Country } from "@/data/types";
 import { DealStatusBadge } from "./DealBadges";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown, Filter, X, MessageSquare, AlertTriangle } from "lucide-react";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
@@ -8,7 +8,6 @@ const ALL_STATUSES: DealStatus[] = ["pending-details", "under-review", "pending-
 const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
 const ALL_MARKETS: DealMarket[] = ["primary", "secondary", "leasing"];
 const ALL_COUNTRIES: Country[] = ["ae", "es", "sa"];
-const ALL_TYPES: DealType[] = ["buy", "sell", "rent", "lease", "buy-sell", "mortgage", "rent-lease"];
 
 interface Props {
   deals: Deal[];
@@ -17,7 +16,7 @@ interface Props {
 }
 
 type SortDir = "asc" | "desc" | null;
-type SortKey = "reportDate" | "status" | "businessUnit" | "country" | "type" | "market" | "grossRevenue" | "reductions" | "extSplits" | "svcFees" | "netRevenue" | "agentCost" | "margin";
+type SortKey = "reportDate" | "status" | "businessUnit" | "country" | "market" | "grossRevenue" | "reductions" | "extSplits" | "svcFees" | "netRevenue" | "agentCost" | "margin";
 
 const thBase = "px-3 py-2.5 font-semibold text-[11px] whitespace-nowrap border-b border-border text-center";
 const tdClass = "px-3 py-2 text-[12px] text-foreground font-medium whitespace-nowrap";
@@ -75,15 +74,6 @@ function BUBadge({ bu }: { bu: string }) {
   return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${cls}`}>{bu}</span>;
 }
 
-function TypeBadge({ type }: { type: string }) {
-  const colors: Record<string, string> = {
-    buy: "bg-blue-500/15 text-blue-700", sell: "bg-emerald-500/15 text-emerald-700",
-    rent: "bg-violet-500/15 text-violet-700", lease: "bg-amber-500/15 text-amber-700",
-    "buy-sell": "bg-cyan-500/15 text-cyan-700", mortgage: "bg-rose-500/15 text-rose-700",
-    "rent-lease": "bg-orange-500/15 text-orange-700",
-  };
-  return <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${colors[type] || "bg-muted text-muted-foreground"}`}>{type}</span>;
-}
 
 function FilterableHeader({ label, options, filter, onFilter, onSort, sortDir, filterKey, open, onOpen }: {
   label: string;
@@ -124,7 +114,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
   const [buFilter, setBuFilter] = useState<Set<string>>(new Set());
   const [countryFilter, setCountryFilter] = useState<Set<string>>(new Set());
-  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
+
   const [marketFilter, setMarketFilter] = useState<Set<string>>(new Set());
 
   const pnlByDealId = useMemo(() => {
@@ -150,10 +140,10 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
     if (statusFilter.size > 0 && !statusFilter.has(d.status)) return false;
     if (buFilter.size > 0 && !buFilter.has(d.businessUnit)) return false;
     if (countryFilter.size > 0 && !countryFilter.has(d.country)) return false;
-    if (typeFilter.size > 0 && !typeFilter.has(d.type)) return false;
+
     if (marketFilter.size > 0 && !marketFilter.has(d.market)) return false;
     return true;
-  }), [deals, statusFilter, buFilter, countryFilter, typeFilter, marketFilter]);
+  }), [deals, statusFilter, buFilter, countryFilter, marketFilter]);
 
   const sorted = useMemo(() => {
     if (!sortKey || !sortDir) return filtered;
@@ -171,7 +161,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
         case "status": return a.status.localeCompare(b.status) * dir;
         case "businessUnit": return a.businessUnit.localeCompare(b.businessUnit) * dir;
         case "country": return (a.country ?? "").localeCompare(b.country ?? "") * dir;
-        case "type": return a.type.localeCompare(b.type) * dir;
+
         case "market": return (a.market ?? "").localeCompare(b.market ?? "") * dir;
         case "grossRevenue": return num(p => p.grossRevenue);
         case "reductions": return num(p => p.totalBucketA);
@@ -191,14 +181,14 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
 
   const dash = "—";
   const sd = (key: SortKey): SortDir => sortKey === key ? sortDir : null;
-  const activeFilterCount = [statusFilter, buFilter, countryFilter, typeFilter, marketFilter].filter(f => f.size > 0).length;
+  const activeFilterCount = [statusFilter, buFilter, countryFilter, marketFilter].filter(f => f.size > 0).length;
 
   return (
     <div>
       {activeFilterCount > 0 && (
         <div className="flex items-center gap-2 mb-3">
           <span className="text-[12px] text-muted-foreground">{activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active · {sorted.length} deal{sorted.length !== 1 ? "s" : ""}</span>
-          <button onClick={() => { setStatusFilter(new Set()); setBuFilter(new Set()); setCountryFilter(new Set()); setTypeFilter(new Set()); setMarketFilter(new Set()); setPage(1); }} className="text-[12px] text-primary hover:underline">Clear all</button>
+          <button onClick={() => { setStatusFilter(new Set()); setBuFilter(new Set()); setCountryFilter(new Set()); setMarketFilter(new Set()); setPage(1); }} className="text-[12px] text-primary hover:underline">Clear all</button>
         </div>
       )}
 
@@ -207,7 +197,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
           <table className="w-full border-collapse text-[12px]">
             <thead>
               <tr className="border-b border-border">
-                <th colSpan={7} className={`${groupHeaderClass} text-foreground/80 bg-muted sticky left-0 z-[7]`}>Deal Info</th>
+                <th colSpan={6} className={`${groupHeaderClass} text-foreground/80 bg-muted sticky left-0 z-[7]`}>Deal Info</th>
                 <th colSpan={7} className={`${groupHeaderClass} text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r-0`}>P&L Waterfall</th>
                 <th colSpan={2} className={`${groupHeaderClass} text-slate-600 bg-slate-50/50 border-r-0`}>Notes</th>
               </tr>
@@ -222,7 +212,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
                 <FilterableHeader label="Status" options={ALL_STATUSES} filter={statusFilter} onFilter={s => { setStatusFilter(s); setPage(1); }} filterKey="status" open={openFilter} onOpen={setOpenFilter} />
                 <FilterableHeader label="BU" options={ALL_BUS} filter={buFilter} onFilter={s => { setBuFilter(s); setPage(1); }} filterKey="bu" open={openFilter} onOpen={setOpenFilter} />
                 <FilterableHeader label="Country" options={ALL_COUNTRIES} filter={countryFilter} onFilter={s => { setCountryFilter(s); setPage(1); }} filterKey="country" open={openFilter} onOpen={setOpenFilter} />
-                <FilterableHeader label="Type" options={ALL_TYPES} filter={typeFilter} onFilter={s => { setTypeFilter(s); setPage(1); }} filterKey="type" open={openFilter} onOpen={setOpenFilter} />
+
                 <FilterableHeader label="Market" options={ALL_MARKETS} filter={marketFilter} onFilter={s => { setMarketFilter(s); setPage(1); }} filterKey="market" open={openFilter} onOpen={setOpenFilter} />
 
                 {/* P&L Waterfall */}
@@ -270,7 +260,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
                     <td className={`${tdClass}`}><DealStatusBadge status={deal.status} isDisputed={deal.isDisputed} /></td>
                     <td className={`${tdClass}`}><BUBadge bu={deal.businessUnit} /></td>
                     <td className={`${tdClass} text-[11px] uppercase`}>{deal.country ?? dash}</td>
-                    <td className={`${tdClass}`}><TypeBadge type={deal.type} /></td>
+
                     <td className={`${tdClass} text-[11px] text-muted-foreground`}>{deal.market ?? dash}</td>
 
                     {/* P&L Waterfall */}

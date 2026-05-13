@@ -19,15 +19,6 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
 }
 
-const typeColors: Record<string, string> = {
-  Buy: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  Rent: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-  Lease: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  "buy-sell": "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
-  Mortgage: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-  "rent-lease": "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-};
 
 /* ═══ Inline multi-select filter dropdown ═══ */
 function HeaderFilter({ options, selected, onChange }: { options: string[]; selected: Set<string>; onChange: (s: Set<string>) => void }) {
@@ -92,7 +83,6 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
 
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
   const [marketFilter, setMarketFilter] = useState<Set<string>>(new Set());
-  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
 
   const fmt = (n: number) => formatAmount(n, currency);
   const dash = "—";
@@ -105,16 +95,14 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
 
   const statusOptions = useMemo(() => [...new Set(deals.map(d => d.status))].sort(), [deals]);
   const marketOptions = useMemo(() => [...new Set(deals.map(d => d.market))].sort(), [deals]);
-  const typeOptions = useMemo(() => [...new Set(deals.map(d => d.type))].sort(), [deals]);
 
   const filtered = useMemo(() => {
     return deals.filter(d => {
       if (statusFilter.size > 0 && !statusFilter.has(d.status)) return false;
       if (marketFilter.size > 0 && !marketFilter.has(d.market)) return false;
-      if (typeFilter.size > 0 && !typeFilter.has(d.type)) return false;
       return true;
     });
-  }, [deals, statusFilter, marketFilter, typeFilter]);
+  }, [deals, statusFilter, marketFilter]);
 
   const sortGetters: Record<string, (d: Deal) => any> = {
     grossRevenue: (d) => pnlByDealId.get(d.id)?.grossRevenue ?? d.grossRevenue ?? 0,
@@ -145,7 +133,7 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
   const paginated = sorted.slice((page - 1) * perPage, page * perPage);
 
   // Reset page when filters change
-  useEffect(() => setPage(1), [statusFilter, marketFilter, typeFilter]);
+  useEffect(() => setPage(1), [statusFilter, marketFilter]);
 
   const toggleSort = (key: string) => {
     if (sortKey === key) {
@@ -174,7 +162,7 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
           <table className="w-full border-collapse text-[12px]">
             <thead>
               <tr className="border-b border-border">
-                <th colSpan={5} className={`${groupHeaderClass} text-foreground/80 bg-muted sticky left-0 z-[7]`} style={{ minWidth: 510 }}>Deal Info</th>
+                <th colSpan={4} className={`${groupHeaderClass} text-foreground/80 bg-muted sticky left-0 z-[7]`} style={{ minWidth: 430 }}>Deal Info</th>
                 <th colSpan={7} className={`${groupHeaderClass} text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r-0`}>P&L Waterfall</th>
               </tr>
               <tr className="border-b border-border bg-muted/30">
@@ -188,10 +176,6 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
                 <th className={`${thClass} min-w-[80px] sticky left-[350px] z-[6] bg-muted`}>
                   <div className="flex items-center gap-1">Market <HeaderFilter options={marketOptions} selected={marketFilter} onChange={setMarketFilter} /></div>
                 </th>
-                <th className={`${thClass} min-w-[80px] border-r-2 border-r-border sticky left-[430px] z-[6] bg-muted`}>
-                  <div className="flex items-center gap-1">Type <HeaderFilter options={typeOptions} selected={typeFilter} onChange={setTypeFilter} /></div>
-                </th>
-
                 <th className={`${thClass} min-w-[110px] text-right`}>
                   <button onClick={() => toggleSort("grossRevenue")} className="flex items-center gap-1 ml-auto">Gross Rev <SortIcon col="grossRevenue" /></button>
                 </th>
@@ -227,12 +211,7 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
                   <td className={`${tdClass} sticky left-[250px] z-[3] bg-card`} style={{ minWidth: 100, width: 100, maxWidth: 100 }}>
                     {formatDate(deal.reportDate)}
                   </td>
-                  <td className={`${tdClass} sticky left-[350px] z-[3] bg-card`} style={{ minWidth: 80, width: 80, maxWidth: 80 }}>{deal.market}</td>
-                  <td className={`${tdClass} border-r-2 border-r-border sticky left-[430px] z-[3] bg-card`} style={{ minWidth: 80, width: 80, maxWidth: 80 }}>
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${typeColors[deal.type] || "bg-muted text-muted-foreground"}`}>
-                      {deal.type}
-                    </span>
-                  </td>
+                  <td className={`${tdClass} border-r-2 border-r-border sticky left-[350px] z-[3] bg-card`} style={{ minWidth: 80, width: 80, maxWidth: 80 }}>{deal.market}</td>
 
                   {(() => {
                     const pnl = pnlByDealId.get(deal.id);

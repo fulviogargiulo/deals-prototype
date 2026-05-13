@@ -33,7 +33,7 @@ function csvToDeal(row: Record<string, string>, index: number): Deal {
 
   return {
     id,
-    type: (row.type as Deal["type"]) || "buy",
+
     status: "under-review",
     market: (row.market as Deal["market"]) || "primary",
     businessUnit: (row.businessUnit as Deal["businessUnit"]) || "rebu",

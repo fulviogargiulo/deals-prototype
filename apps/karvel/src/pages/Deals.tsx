@@ -4,8 +4,6 @@ import { getDeals, setDeals as setStoreDeals, addDeals as addStoreDeals } from "
 import { DealPnLView } from "@/components/DealPnLView";
 import { DealListingView } from "@/components/DealListingView";
 import { DealFinanceView } from "@/components/DealFinanceView";
-import { DealPnLDetailPanel } from "@/components/DealPnLDetailPanel";
-import { DealListingDetailPanel } from "@/components/DealListingDetailPanel";
 import { Deal, DealMarket, DealStatus, BusinessUnit, Country } from "@/data/types";
 import { MultiSelectFilter } from "@/components/MultiSelectFilter";
 import { DateRangePicker, DateRange, TimePeriod, getPresetRange } from "@/components/DateRangePicker";
@@ -42,7 +40,6 @@ const Deals = () => {
       return next;
     });
   };
-  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [addDealOpen, setAddDealOpen] = useState(false);
 
@@ -52,12 +49,10 @@ const Deals = () => {
 
   const handleDealUpdate = (updated: Deal) => {
     setAllDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
-    if (selectedDeal?.id === updated.id) setSelectedDeal(updated);
   };
 
   const handleBulkDealsUpdate = (updatedDeals: Deal[]) => {
     setAllDeals(updatedDeals);
-    setSelectedDeal(null);
   };
 
   const currency = selectedCountries.length > 0
@@ -99,37 +94,35 @@ const Deals = () => {
         </div>
       </header>
 
-      {/* Content + Panel */}
-      <div className="flex-1 relative overflow-hidden flex">
-        <div className="flex-1 min-w-0 px-6 py-6 bg-background overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 min-w-0 px-6 py-6 bg-background overflow-y-auto overflow-x-hidden">
           {/* Title row */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <h1 className="text-[22px] font-semibold text-foreground">Deal Management</h1>
               <div className="flex rounded-lg overflow-hidden bg-accent p-1 gap-1">
                 <button
-                  onClick={() => { setViewMode("listing"); setSelectedDeal(null); }}
+                  onClick={() => setViewMode("listing")}
                   className={`p-2 rounded-md transition-colors ${viewMode === "listing" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                   title="Deal Listing"
                 >
                   <List className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => { setViewMode("pnl"); setSelectedDeal(null); }}
+                  onClick={() => setViewMode("pnl")}
                   className={`p-2 rounded-md transition-colors ${viewMode === "pnl" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                   title="P&L View"
                 >
                   <DollarSign className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => { setViewMode("finance"); setSelectedDeal(null); }}
+                  onClick={() => setViewMode("finance")}
                   className={`p-2 rounded-md transition-colors ${viewMode === "finance" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                   title="Finance View"
                 >
                   <Landmark className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => { setViewMode("doc-requirements"); setSelectedDeal(null); }}
+                  onClick={() => setViewMode("doc-requirements")}
                   className={`p-2 rounded-md transition-colors ${viewMode === "doc-requirements" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                   title="Document Requirements"
                 >
@@ -192,7 +185,7 @@ const Deals = () => {
 
           {/* View */}
           {viewMode === "listing" ? (
-            <DealListingView deals={filtered} currency={currency} dateRange={dateRange} onDealClick={setSelectedDeal} />
+            <DealListingView deals={filtered} currency={currency} dateRange={dateRange} />
           ) : viewMode === "pnl" ? (
             <DealPnLView deals={filtered} currency={currency} dateRange={dateRange} onDealsUpdate={handleBulkDealsUpdate} />
           ) : viewMode === "finance" ? (
@@ -200,29 +193,6 @@ const Deals = () => {
           ) : (
             <DocRequirementsView />
           )}
-        </div>
-
-        {/* Detail Panel */}
-        {selectedDeal && (
-          <div className="absolute top-0 right-0 h-full z-10 shadow-xl animate-slide-in-right">
-            {viewMode === "listing" ? (
-              <DealListingDetailPanel
-                deal={selectedDeal}
-                currency={currency}
-                onClose={() => setSelectedDeal(null)}
-                onSave={handleDealUpdate}
-                onSwitchToPnL={(d) => { setViewMode("pnl"); setSelectedDeal(d); }}
-              />
-            ) : (
-              <DealPnLDetailPanel
-                deal={selectedDeal}
-                currency={currency}
-                onClose={() => setSelectedDeal(null)}
-                onSave={handleDealUpdate}
-              />
-            )}
-          </div>
-        )}
       </div>
 
       {/* Dialogs */}

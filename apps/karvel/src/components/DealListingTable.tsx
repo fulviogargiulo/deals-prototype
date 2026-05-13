@@ -8,11 +8,10 @@ import { computeDealPnL } from "@/lib/dealCalculations";
 interface Props {
   deals: Deal[];
   currency: string;
-  onDealClick?: (deal: Deal) => void;
 }
 
 type SortDir = "asc" | "desc" | null;
-type SortKey = "reportDate" | "id" | "businessUnit" | "status" | "country" | "type" | "market" | "grossRevenue" | "netRevenue" | "huspyMargin";
+type SortKey = "reportDate" | "id" | "businessUnit" | "status" | "country" | "market" | "grossRevenue" | "netRevenue" | "huspyMargin";
 
 const ALL_STATUSES: DealStatus[] = ["pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"];
 const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
@@ -77,7 +76,7 @@ function SortIcon({ dir }: { dir: SortDir }) {
   return dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
 }
 
-export function DealListingTable({ deals, currency, onDealClick }: Props) {
+export function DealListingTable({ deals, currency }: Props) {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -124,7 +123,7 @@ export function DealListingTable({ deals, currency, onDealClick }: Props) {
         case "businessUnit": va = a.businessUnit; vb = b.businessUnit; break;
         case "status": va = a.status; vb = b.status; break;
         case "country": va = a.country ?? ""; vb = b.country ?? ""; break;
-        case "type": va = a.type; vb = b.type; break;
+
         case "market": va = a.market ?? ""; vb = b.market ?? ""; break;
         case "grossRevenue": va = pnlByDealId.get(a.id)?.grossRevenue ?? a.grossRevenue ?? 0; vb = pnlByDealId.get(b.id)?.grossRevenue ?? b.grossRevenue ?? 0; break;
         case "netRevenue": va = pnlByDealId.get(a.id)?.netRevenue ?? 0; vb = pnlByDealId.get(b.id)?.netRevenue ?? 0; break;
@@ -193,9 +192,7 @@ export function DealListingTable({ deals, currency, onDealClick }: Props) {
                   {openFilter === "country" && <FilterDropdown options={[...ALL_COUNTRIES]} selected={countryFilter} onChange={(s) => { setCountryFilter(s); setPage(1); }} onClose={() => setOpenFilter(null)} />}
                 </th>
 
-                <th className={`${thBase} text-left`}>
-                  <button onClick={() => handleSort("type")} className="flex items-center gap-1 hover:text-primary transition-colors">Type <SortIcon dir={getSortDir("type")} /></button>
-                </th>
+
                 <th className={`${thBase} text-left`}>
                   <button onClick={() => handleSort("market")} className="flex items-center gap-1 hover:text-primary transition-colors">Market <SortIcon dir={getSortDir("market")} /></button>
                 </th>
@@ -217,19 +214,14 @@ export function DealListingTable({ deals, currency, onDealClick }: Props) {
               {paginated.map((deal) => {
                 const pnl = pnlByDealId.get(deal.id);
                 return (
-                  <tr key={deal.id} onClick={() => onDealClick?.(deal)} className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer">
+                  <tr key={deal.id} onClick={() => navigate(`/deals/${deal.id}`)} className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer">
                     <td className={`${tdClass} font-mono text-[11px] text-muted-foreground`}>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/deals/${deal.id}`); }}
-                        className="text-primary underline underline-offset-2 hover:opacity-80 font-mono text-[11px]"
-                      >
-                        {deal.id}
-                      </button>
+                      {deal.id}
                     </td>
                     <td className="px-4 py-3"><DealStatusBadge status={deal.status} isDisputed={deal.isDisputed} /></td>
                     <td className={tdClass}><BUBadge bu={deal.businessUnit} /></td>
                     <td className={`${tdClass} uppercase text-[12px]`}>{deal.country ?? dash}</td>
-                    <td className={tdClass}>{deal.type ?? dash}</td>
+
                     <td className={tdClass}>{deal.market ?? dash}</td>
                     <td className={`${tdClass} text-right tabular-nums`}>
                       {pnl ? formatAmount(pnl.grossRevenue, deal.currency ?? currency) : deal.grossRevenue != null ? formatAmount(deal.grossRevenue, deal.currency ?? currency) : dash}
@@ -246,7 +238,7 @@ export function DealListingTable({ deals, currency, onDealClick }: Props) {
               })}
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-muted-foreground text-[13px]">No deals match the selected filters</td>
+                  <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground text-[13px]">No deals match the selected filters</td>
                 </tr>
               )}
             </tbody>

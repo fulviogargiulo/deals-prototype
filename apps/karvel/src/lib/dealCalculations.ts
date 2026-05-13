@@ -35,8 +35,7 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
 
   const country = deal.country ?? "ae";
   const currency = deal.currency ?? "AED";
-  const dealType = deal.type;
-  const blueprint = getBlueprint(country, "rebu", dealType);
+  const blueprint = getBlueprint(country, "rebu");
 
   const agentFinancialsByAgentId: Record<string, AgentFinancials> = {};
   const partyIdToAgentId: Record<string, string> = {};
@@ -115,7 +114,6 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
   return {
     country,
     businessUnit: "rebu",
-    dealType,
     currency,
     grossRevenue: deal.grossRevenue,
     stakeholders,
