@@ -102,15 +102,6 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
       );
     }
   }
-  const reductions: { label: string; amount: number }[] = [];
-  const dealPrice = deal.dealPrice ?? deal.dealAmount ?? 0;
-  if (deal.rebatePercentage && deal.rebatePercentage > 0 && dealPrice > 0) {
-    reductions.push({ label: "Client Rebate", amount: (deal.rebatePercentage / 100) * dealPrice });
-  }
-  if (deal.subsidyAmount && deal.subsidyAmount > 0) {
-    reductions.push({ label: "Client Subsidy", amount: deal.subsidyAmount });
-  }
-
   return {
     country,
     businessUnit: "rebu",
@@ -121,7 +112,6 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
     partyIdToAgentId,
     blueprint,
     partyDisplayNames,
-    reductions: reductions.length > 0 ? reductions : undefined,
   };
 }
 
@@ -260,15 +250,24 @@ export function recalculateREBU(deal: Deal): Deal {
   const totalTeamLeadShare = agents.reduce((sum, a) => sum + a.teamLeadShare, 0);
   const totalManagerOverride = agents.reduce((sum, a) => sum + a.managerOverride, 0);
 
-  const conveyanceAgentPayout = (deal.conveyanceAgentRate / 100) * deal.conveyanceRevenue;
-  const huspyConveyanceShare = deal.conveyanceRevenue - conveyanceAgentPayout;
+  // OPERATIONAL_DEDUCTION stakeholders replace the deprecated deal.conveyanceRevenue / conveyanceAgentRate fields.
+  const opDeductionStakes = sharedDealStakeholders.filter(
+    (s) => s.dealId === deal.id && s.role === "OPERATIONAL_DEDUCTION"
+  );
+  const conveyanceFeeTotal = opDeductionStakes.length > 0
+    ? opDeductionStakes.reduce((sum, s) => sum + Math.abs(s.financialAmount ?? 0), 0)
+    : (deal.conveyanceRevenue ?? 0);
+  const conveyanceAgentPayout = opDeductionStakes.length > 0
+    ? conveyanceFeeTotal
+    : (deal.conveyanceAgentRate / 100) * conveyanceFeeTotal;
+  const huspyConveyanceShare = conveyanceFeeTotal - conveyanceAgentPayout;
 
   // Referrals are now per-agent
   const totalReferralAmount = agents.reduce((sum, a) => sum + a.referralAmount, 0);
   const totalClientKickback = agents.reduce((sum, a) => sum + (a.clientKickback || 0), 0);
 
   // Rebates & Subsidy
-  const rebateAmount = deal.market === "primary" ? (deal.rebatePercentage / 100) * deal.dealPrice : 0;
+  const rebateAmount = deal.market === "primary" ? (deal.rebatePercentage / 100) * huspyRevenue : 0;
   const subsidyAmount = deal.market === "secondary" ? (deal.subsidyAmount || 0) : 0;
 
   const cogsInternal = totalAgentPayout + totalTeamLeadShare + totalManagerOverride + conveyanceAgentPayout;
@@ -277,8 +276,10 @@ export function recalculateREBU(deal: Deal): Deal {
   const cogsRebates = Math.max(0, rebateAmount);
   const cogsSubsidy = Math.max(0, subsidyAmount);
   const totalCOGS = cogsInternal + cogsExternal + cogsReferrals;
-  const netHuspyRevenue = huspyRevenue + deal.conveyanceRevenue - totalCOGS;
-  const amount = huspyRevenue + deal.conveyanceRevenue;
+  // Conveyance fee is Huspy additional revenue only in legacy (non-stakeholder) model.
+  const conveyanceAsRevenue = opDeductionStakes.length > 0 ? 0 : conveyanceFeeTotal;
+  const netHuspyRevenue = huspyRevenue + conveyanceAsRevenue - totalCOGS;
+  const amount = huspyRevenue + conveyanceAsRevenue;
 
   // Build payable entries from all COGS entities
   const payableEntries: { entityType: PayableEntry["entityType"]; entityLabel: string; expectedAmount: number }[] = [];
@@ -303,8 +304,13 @@ export function recalculateREBU(deal: Deal): Deal {
     }
   });
 
-  // Conveyance agent
-  if (deal.conveyanceAgentName || conveyanceAgentPayout > 0) {
+  // Conveyance — one entry per OPERATIONAL_DEDUCTION stakeholder; fall back to legacy deal field.
+  if (opDeductionStakes.length > 0) {
+    opDeductionStakes.forEach((s) => {
+      const party = sharedParties.find((p) => p.id === s.partyId);
+      payableEntries.push({ entityType: "conveyance", entityLabel: `Conveyance — ${party?.displayName ?? s.partyId}`, expectedAmount: Math.abs(s.financialAmount ?? 0) });
+    });
+  } else if (deal.conveyanceAgentName || conveyanceAgentPayout > 0) {
     payableEntries.push({ entityType: "conveyance", entityLabel: `Conveyance${deal.conveyanceAgentName ? ` — ${deal.conveyanceAgentName}` : ""}`, expectedAmount: conveyanceAgentPayout });
   }
 

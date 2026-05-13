@@ -95,7 +95,7 @@ erDiagram
     }
     Invoice {
         string id
-        string direction "outbound | inbound"
+        string direction "inbound | outbound"
         string partyId FK
         string dealId FK
         string invoiceNumber
@@ -104,6 +104,11 @@ erDiagram
         Currency currency
         string issueDate
         string dueDate
+        string proofFileName "required when paid"
+        string proofUploadedAt "required when paid"
+        string paymentReference "required when paid"
+        string cancelReason "required when cancelled"
+        string cancelledAt "set on cancel"
     }
     Task {
         string id
@@ -256,6 +261,56 @@ Allowed transitions (from `dealWorkflow.ts`):
 > **`isDisputed`** (`boolean`) is a cross-cutting flag, NOT a state. A dispute reverts the deal to `under-review` + sets `isDisputed = true`. Ops resolves in Karvel, then moves to `pending-details` (if more agent input needed) or back to `pending-agent-approval`.
 
 > **Backward transitions are intentional.** `under-review → pending-details` is a normal ops workflow step (requesting more info from the agent), not an error.
+
+## Invoice workflow
+
+### Direction semantics
+
+| Direction | Meaning | Typical party |
+|---|---|---|
+| `inbound` | Huspy receives money | Client (buyer, seller, tenant, bank) |
+| `outbound` | Huspy pays money | Agent, referral, third party, authority |
+
+Agent invoices (agents billing Huspy for commission) are always `outbound`. Client invoices (Huspy billing the client for the commission fee) are always `inbound`.
+
+### Status machine
+
+```
+draft → issued → paid
+issued → cancelled  (cancelReason required)
+paid   → cancelled  (cancelReason required)
+cancelled → issued  (restore — for op error recovery)
+```
+
+`issued → paid` requires both `proofFileName` and `paymentReference`. Neither alone is sufficient.
+
+### Invoice ↔ deal status invariants
+
+| Deal status | Inbound invoice constraint |
+|---|---|
+| `finalized` | ALL inbound invoices linked to the deal must be `paid` |
+| `pending-receivables` | At least 1 inbound invoice must be `issued` |
+| Any other status | No inbound invoice should be in `paid`, `issued`, or `draft` |
+
+`pending-receivables → finalized` is gated on all inbound invoices being `paid`. Outbound invoice payment is never a gating condition for deal status.
+
+### Invoice ↔ PostingLines accounting invariants
+
+| Invoice state | Required posting lines (tagged via `PostingLine.invoiceId`) |
+|---|---|
+| Inbound `issued` | DEBIT `ASSET_AR_{CUR}` (contra: CREDIT `REV_{CUR}`) |
+| Inbound `paid` | + CREDIT `ASSET_AR_{CUR}` (contra: DEBIT `ASSET_BANK_BankX_{CUR}`) |
+| Outbound `paid` to agent | DEBIT `AgentLiability_agent-{slug}` (contra: CREDIT `ASSET_BANK_BankX_{CUR}`) |
+
+Finalized deals must have a posting with DEBIT `EXP_COMMISSION_{CUR}` and CREDIT `AgentLiability_agent-{slug}`.
+
+### Rebate and subsidy — upstream model
+
+Rebate and subsidy are price concessions returned to the client. They are baked into the client's `DealStakeholder.financialAmount` (REVENUE_SOURCE) — the stored amount is already net of both. They are **not** `ACQUISITION_DEDUCTION` stakeholders and never appear as waterfall deduction entries.
+
+`deal.rebateAmount` = `rebatePercentage% × grossCommission` (sum of REVENUE_SOURCE `financialAmount`s). Never computed as `rebatePercentage × dealAmount`.
+
+Both fields survive on `Deal` as reference data and appear as greyed context lines in the P&L waterfall below "Deal Amount".
 
 ## StakeholderType — financial role taxonomy
 
@@ -446,7 +501,7 @@ Stand-ins for what a real backend query layer would do. All return from in-memor
 |---|---|
 | `getInvoiceById(id)` | Invoice by ID |
 | `getInvoicesForDeal(dealId)` | Traverses Posting → PostingLine → Invoice |
-| `getInvoicesForAgent(agentId)` | Inbound invoices where `partyId === agent.partyId` |
+| `getInvoicesForAgent(agentId)` | Outbound invoices where `partyId === agent.partyId` (agent invoices Huspy → direction is outbound) |
 
 **Postings / Ledger**
 
