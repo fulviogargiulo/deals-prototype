@@ -1,34 +1,10 @@
 import { useState } from 'react';
 import { Deal } from '@/types';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, CheckCircle2, ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { DocumentRow } from './document-row';
-import { sharedAgentDocuments } from '@huspy/shared-domain';
-import { CURRENT_AGENT_ID } from '@/data/mockDeals';
-
-interface MissingField {
-  id: string;
-  label: string;
-  placeholder?: string;
-}
-
-const PLACEHOLDER: Record<string, string> = {
-  'account-number': 'e.g. ES91 2100 0418 4502 0005 1332',
-  'bic':            'e.g. CAIXESBBXXX',
-  'id-number':      'e.g. X-1234567-B',
-  'other':          '',
-};
-
-const MISSING_FIELDS: MissingField[] = sharedAgentDocuments
-  .filter((d) => d.agentId === CURRENT_AGENT_ID && d.kind === 'text' && d.status === 'pending')
-  .map((d) => ({
-    id:          d.id,
-    label:       d.label,
-    placeholder: PLACEHOLDER[d.documentType] ?? '',
-  }));
 
 interface DocumentItem {
   name: string;
@@ -41,24 +17,24 @@ interface MissingInfoSectionProps {
   uploadedDocs: Set<number>;
   onUploadDoc: (index: number, fileName: string) => void;
   onInfoSubmitted?: () => void;
+  onAddComment?: (text: string) => void;
 }
 
-export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc, onInfoSubmitted }: MissingInfoSectionProps) {
-  const [values, setValues] = useState<Record<string, string>>({});
+export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc, onInfoSubmitted, onAddComment }: MissingInfoSectionProps) {
   const [submitted, setSubmitted] = useState(false);
+  const [submitNote, setSubmitNote] = useState('');
 
   if (deal.status !== 'pending-details') return null;
-
-  const filledCount = MISSING_FIELDS.filter(f => values[f.id]?.trim()).length;
-  const allFieldsFilled = filledCount === MISSING_FIELDS.length;
 
   const pendingDocs = documents.map((doc, i) => ({ doc, index: i })).filter(({ doc, index }) => !doc.uploaded && !uploadedDocs.has(index));
   const uploadedDocCount = documents.length - pendingDocs.length;
   const allDocsUploaded = pendingDocs.length === 0;
-  const allComplete = allFieldsFilled && allDocsUploaded;
+
+  const canSubmit = !!submitNote.trim();
 
   const handleSubmit = () => {
-    if (!allComplete) return;
+    if (!canSubmit) return;
+    onAddComment?.(submitNote.trim());
     setSubmitted(true);
     toast.success('Information submitted — deal moved to Under Review');
     onInfoSubmitted?.();
@@ -82,7 +58,6 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
     );
   }
 
-  // Sort documents: pending first, uploaded last
   const sortedDocs = [...documents]
     .map((doc, i) => ({ doc, originalIndex: i }))
     .sort((a, b) => {
@@ -91,8 +66,6 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
       if (aUp === bUp) return 0;
       return aUp ? 1 : -1;
     });
-
-  const pendingTotal = MISSING_FIELDS.length - filledCount + pendingDocs.length;
 
   return (
     <Collapsible>
@@ -103,21 +76,21 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
           </div>
           <div className="flex-1 text-left">
             <p className="text-[14px] font-semibold text-foreground leading-[120%]">
-              Action Required — Complete Missing Information
+              Action Required — Upload Documents & Submit
             </p>
             <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%] mt-0.5">
-              Fill in all required details and upload pending documents to proceed.
+              Upload any available documents and add a note for Ops to proceed.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {allComplete ? (
+            {allDocsUploaded ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[hsl(var(--ds-green)/0.1)] text-[hsl(var(--ds-green))]">
                 <CheckCircle2 className="w-3 h-3" />
-                Ready
+                All docs uploaded
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[hsl(var(--ds-orange)/0.1)] text-[hsl(var(--ds-orange))]">
-                {pendingTotal} pending
+                {pendingDocs.length} doc{pendingDocs.length !== 1 ? 's' : ''} pending
               </span>
             )}
             <ChevronDown className="w-4 h-4 text-[hsl(var(--fg-secondary))] transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -126,41 +99,12 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
 
         <CollapsibleContent>
           <div className="border-t border-[hsl(var(--border-ds-primary))] px-5 py-5 space-y-6">
-            {/* Section 1: Required Details */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-foreground" />
-                <h4 className="text-[12px] font-semibold text-[hsl(var(--fg-secondary))] leading-[140%] uppercase tracking-wide">
-                  Required Details
-                </h4>
-                <span className="text-[10px] font-semibold text-[hsl(var(--fg-secondary))] ml-auto">
-                  {filledCount} of {MISSING_FIELDS.length}
-                </span>
-              </div>
-              {MISSING_FIELDS.map((field) => (
-                <div key={field.id} className="space-y-1.5">
-                  <label className="text-[12px] font-semibold leading-[140%] text-[hsl(var(--fg-secondary))]">
-                    {field.label}
-                  </label>
-                  <Input
-                    placeholder={field.placeholder}
-                    value={values[field.id] || ''}
-                    onChange={(e) => setValues(prev => ({ ...prev, [field.id]: e.target.value }))}
-                    className="h-10 text-[14px]"
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Divider */}
-            <div className="h-px bg-[hsl(var(--border-ds-primary))]" />
-
-            {/* Section 2: Required Documents */}
+            {/* Documents */}
             <div className="space-y-1">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-foreground" />
                 <h4 className="text-[12px] font-semibold text-[hsl(var(--fg-secondary))] leading-[140%] uppercase tracking-wide">
-                  Required Documents
+                  Documents
                 </h4>
                 <span className="text-[10px] font-semibold text-[hsl(var(--fg-secondary))] ml-auto">
                   {uploadedDocCount} of {documents.length}
@@ -184,13 +128,27 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
               })}
             </div>
 
+            {/* Note for Ops */}
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-semibold leading-[140%] text-[hsl(var(--fg-secondary))]">
+                Add a note for Ops <span style={{ color: 'hsl(var(--ds-orange))' }}>*</span>
+              </label>
+              <textarea
+                value={submitNote}
+                onChange={(e) => setSubmitNote(e.target.value)}
+                placeholder="Describe what you've completed or any context Ops should know..."
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border-ds-primary))] bg-transparent text-[13px] leading-[140%] text-foreground placeholder:text-[hsl(var(--fg-secondary))] resize-none focus:outline-none focus:ring-2 focus:ring-[hsl(var(--fg-primary))]"
+              />
+            </div>
+
             {/* Submit */}
             <Button
               className="w-full h-10 rounded-xl text-[14px] font-semibold"
-              disabled={!allComplete}
+              disabled={!canSubmit}
               onClick={handleSubmit}
             >
-              Submit All Information
+              Submit for Review
             </Button>
           </div>
         </CollapsibleContent>

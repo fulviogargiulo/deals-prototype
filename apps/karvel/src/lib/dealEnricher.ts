@@ -51,10 +51,7 @@ export function enrichDeal(deal: BaseDeal): Deal {
   const conveyanceStake = sharedDealStakeholders.find((s) => s.dealId === deal.id && s.role === "OPERATIONAL_DEDUCTION");
   const conveyanceParty = conveyanceStake ? sharedParties.find((p) => p.id === conveyanceStake.partyId) : undefined;
 
-  const rebateAmount = deal.market === "primary"
-    ? Math.round(((deal.rebatePercentage ?? 0) / 100) * deal.dealAmount)
-    : 0;
-  const subsidyAmt = deal.subsidyAmount ?? 0;
+  const rebateAmount = deal.rebateAmount ?? 0;
 
   return {
     ...deal,
@@ -77,10 +74,10 @@ export function enrichDeal(deal: BaseDeal): Deal {
     referralAmount: 0,
     rebateAmount,
     cogsInternal: f.cogsInternal,
-    cogsExternal: rebateAmount + subsidyAmt,
+    cogsExternal: 0,
     cogsReferrals: 0,
-    cogsRebates: rebateAmount,
-    cogsSubsidy: subsidyAmt,
+    cogsRebates: 0,
+    cogsSubsidy: 0,
     externalPartners: [],
     externalPartnerShare: 0,
     payables: [],

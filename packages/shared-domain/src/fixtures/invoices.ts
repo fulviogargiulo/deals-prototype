@@ -157,14 +157,14 @@ export const sharedInvoices: Invoice[] = [
 
   // ── Outbound: Huspy pays agents ────────────────────────────────────────────
 
-  // Felicia Canovas — Jan 2026 (deal-001 commission 4 620 − IRPF 878 − platform fee 150 = net 3 592 EUR)
+  // Felicia Canovas — Jan 2026 (deal-001 commission 4 620 − platform fee 150 = net 4 470 EUR)
   {
     id: "agent-inv-felicia-2026-01",
     direction: "outbound",
     partyId: "party-agent-felicia",
     invoiceNumber: "AINV-2026-FC-001",
     status: "paid",
-    amount: 3592,
+    amount: 4470,
     currency: "EUR",
     issueDate: "2026-01-31",
     dueDate: "2026-02-15",
@@ -195,14 +195,31 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-04-05T09:00:00.000Z",
   },
 
-  // Gelo Huspy — May 2026 (deal-016 commission 16 800 − VAT 840 + incentive 1 200 − platform fee 300 = net 16 860 AED)
+  // Felicia Canovas — Apr 2026 (deal-018 commission 9 220 − platform fee 150 = net 9 070 EUR)
+  {
+    id: "agent-inv-felicia-2026-04",
+    direction: "outbound",
+    partyId: "party-agent-felicia",
+    invoiceNumber: "AINV-2026-FC-004",
+    status: "issued",
+    amount: 9070,
+    currency: "EUR",
+    issueDate: "2026-04-30",
+    dueDate: "2026-05-15",
+    period: "2026-04",
+    invoiceFileName: "AINV-2026-FC-004.pdf",
+    createdAt: "2026-04-30T09:00:00.000Z",
+    updatedAt: "2026-04-30T09:00:00.000Z",
+  },
+
+  // Gelo Huspy — May 2026 (deal-016 commission 16 800 + incentive 1 200 − platform fee 300 = net 17 700 AED)
   {
     id: "agent-inv-gelo-2026-05",
     direction: "outbound",
     partyId: "party-agent-gelo",
     invoiceNumber: "AINV-2026-GH-005",
     status: "issued",
-    amount: 16860,
+    amount: 17700,
     currency: "AED",
     issueDate: "2026-05-31",
     dueDate: "2026-06-15",

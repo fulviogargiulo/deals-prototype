@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { findDeal, updateDeal } from "@/data/dealStore";
 import { Deal, DealStatus } from "@/data/types";
 import { DealStatusBadge } from "@/components/DealBadges";
-import { ArrowLeft, CheckCircle2, Circle, AlertTriangle, ExternalLink } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, ExternalLink, Download } from "lucide-react";
 import { computeDealPnL } from "@/lib/dealCalculations";
 import { toast } from "sonner";
 import {
@@ -11,7 +11,13 @@ import {
   getAllowedDealTransitions,
   sharedParties,
   sharedAgents,
+  sharedInvoices,
+  sharedDealComments,
+  sharedDealDocumentRequirements,
   type LedgerEntry,
+  type InvoiceStatus,
+  type DocumentRequirementStatus,
+  type DealDocumentRequirement,
 } from "@huspy/shared-domain";
 import { StakeholdersPanel } from "@/components/StakeholdersPanel";
 
@@ -84,21 +90,23 @@ const DealDetail = () => {
 
   const [status, setStatus] = useState<DealStatus>(deal?.status ?? "pending-details");
   const [ofCaseNumber, setOfCaseNumber] = useState(deal?.ofCaseNumber ?? "");
-  const [latestNote, setLatestNote] = useState(deal?.latestNote ?? "");
   const [statusHistory, setStatusHistory] = useState(deal?.statusHistory ?? []);
+  const [docs, setDocs] = useState<DealDocumentRequirement[]>(() =>
+    sharedDealDocumentRequirements.filter((r) => r.dealId === (deal?.id ?? ""))
+  );
 
   useEffect(() => {
     if (!deal) return;
     setStatus(deal.status);
     setOfCaseNumber(deal.ofCaseNumber ?? "");
-    setLatestNote(deal.latestNote ?? "");
     setStatusHistory(deal.statusHistory ?? []);
+    setDocs(sharedDealDocumentRequirements.filter((r) => r.dealId === deal.id));
   }, [deal]);
 
   const hasChanges = useMemo(() => {
     if (!deal) return false;
-    return status !== deal.status || ofCaseNumber !== (deal.ofCaseNumber ?? "") || latestNote !== (deal.latestNote ?? "");
-  }, [deal, status, ofCaseNumber, latestNote]);
+    return status !== deal.status || ofCaseNumber !== (deal.ofCaseNumber ?? "");
+  }, [deal, status, ofCaseNumber]);
 
   if (!deal) {
     return (
@@ -120,6 +128,7 @@ const DealDetail = () => {
   const allowedTransitions = [status, ...getAllowedDealTransitions(status)];
   const stageDates = getStageDates({ ...deal, status, statusHistory });
   const currentIdx = getStageIndex(status);
+  const canEditOps = status === "pending-details" || status === "under-review";
 
   const handleStatusChange = (to: DealStatus) => {
     if (to === status) return;
@@ -127,19 +136,21 @@ const DealDetail = () => {
       toast.error(`Cannot transition ${status} → ${to}`);
       return;
     }
+    if (status === "under-review" && to === "pending-agent-approval") {
+      const docs = sharedDealDocumentRequirements.filter((r) => r.dealId === deal.id);
+      const allClear = docs.every((r) => r.status === "approved" || r.status === "waived");
+      if (!allClear) {
+        toast.error("Cannot move to Agent Approval: all documents must be approved or waived first.");
+        return;
+      }
+    }
     const entry = { from: status, to, timestamp: new Date().toISOString(), note: "Manual transition" };
     setStatus(to);
     setStatusHistory((prev) => [...prev, entry]);
   };
 
   const handleSave = () => {
-    const updated: Deal = {
-      ...deal,
-      status,
-      ofCaseNumber,
-      latestNote,
-      statusHistory,
-    };
+    const updated: Deal = { ...deal, status, ofCaseNumber, statusHistory };
     updateDeal(updated);
     toast.success("Deal saved");
   };
@@ -154,7 +165,7 @@ const DealDetail = () => {
           </button>
           <div className="flex items-center gap-3">
             <h1 className="text-base font-semibold text-foreground">{deal.id}</h1>
-            <DealStatusBadge status={status} isDisputed={deal.isDisputed} />
+            <DealStatusBadge status={status} />
             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${isREBU ? "bg-blue-500/15 text-blue-700 dark:text-blue-400" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"}`}>
               {deal.businessUnit?.toUpperCase()}
             </span>
@@ -189,7 +200,6 @@ const DealDetail = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
                 <div>
                   <ReadRow label="Deal ID" value={deal.id} />
-                  <ReadRow label="Type" value={deal.type} />
                   <ReadRow label="Market" value={deal.market} />
                   <ReadRow label="Country" value={deal.country?.toUpperCase()} />
                   <ReadRow label="Currency" value={deal.currency} />
@@ -230,58 +240,99 @@ const DealDetail = () => {
                 currency={currency}
                 pnl={pnl}
                 onChanged={() => setStakesVersion((v) => v + 1)}
+                canEdit={status === "under-review"}
               />
             </SectionCard>
+
+            {/* Receivables */}
+            <ReceivablesSection dealId={deal.id} navigate={navigate} />
 
             {/* P&L Waterfall */}
             <SectionCard title="P&L Waterfall">
               {pnl ? (
                 <div className="max-w-lg">
-                  {/* Deal Amount → commission derivation */}
-                  {(deal.dealPrice ?? deal.dealAmount) > 0 && deal.takeRate != null && (
-                    <div className="pb-1">
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-[13px] text-muted-foreground font-medium">Deal Amount</span>
-                        <span className="text-[13px] text-foreground font-semibold tabular-nums">{fmt(deal.dealPrice ?? deal.dealAmount, currency)}</span>
+
+                  {/* Deal context — above the line */}
+                  {(deal.dealPrice ?? deal.dealAmount) > 0 && (
+                    <div className="mb-3 border-b border-border/40 pb-2">
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-[12px] text-muted-foreground">
+                          Deal Amount
+                          {deal.commissionPercentage ? <span className="ml-1 text-muted-foreground/60">× {deal.commissionPercentage}%</span> : null}
+                        </span>
+                        <span className="text-[12px] text-muted-foreground tabular-nums font-mono">
+                          {fmt(deal.dealPrice ?? deal.dealAmount, currency)}
+                        </span>
                       </div>
-                      <div className="flex items-center justify-between py-1 pl-4">
-                        <span className="text-[12px] text-muted-foreground">× Commission rate</span>
-                        <span className="text-[12px] text-muted-foreground tabular-nums">{deal.takeRate}%</span>
-                      </div>
-                      <div className="border-t border-dashed border-border/60 my-2" />
+                      {(deal.rebateAmount ?? 0) > 0 && (
+                        <div className="flex items-center justify-between py-0.5 pl-3">
+                          <span className="text-[11px] text-muted-foreground/60">
+                            Client rebate{deal.rebatePercentage ? ` (${deal.rebatePercentage}%)` : ""}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground/60 tabular-nums font-mono">
+                            −{fmt(deal.rebateAmount!, currency)}
+                          </span>
+                        </div>
+                      )}
+                      {(deal.subsidyAmount ?? 0) > 0 && (
+                        <div className="flex items-center justify-between py-0.5 pl-3">
+                          <span className="text-[11px] text-muted-foreground/60">Client subsidy</span>
+                          <span className="text-[11px] text-muted-foreground/60 tabular-nums font-mono">
+                            −{fmt(deal.subsidyAmount!, currency)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
-                  {/* Gross Revenue anchor */}
+
+                  {/* ── Gross Revenue (net of rebate/subsidy — already in payer financialAmounts) */}
                   <LedgerAnchor label="Gross Revenue" amount={pnl.grossRevenue} currency={currency} />
-                  {/* Per-payer sub-lines (when stakeholders carry financialAmount > 0) */}
                   {pnl.ledger
                     .filter((e) => e.side === "CREDIT" && !e.id.includes("::net") && e.partyId)
                     .map((e) => <LedgerLine key={e.id} entry={e} currency={currency} indent />)}
-                  {/* Bucket A, C, D debits */}
-                  {pnl.ledger
-                    .filter((e) => e.side === "DEBIT" && e.bucket !== "B")
-                    .map((e) => <LedgerLine key={e.id} entry={e} currency={currency} />)}
-                  {/* Net Revenue anchor */}
-                  <div className="border-t border-border my-2" />
-                  <LedgerAnchor label="Net Revenue" amount={pnl.netRevenue} currency={currency} />
-                  {/* Bucket B: agent + TL + manager payouts */}
-                  {pnl.ledger
-                    .filter((e) => e.side === "DEBIT" && e.bucket === "B")
-                    .map((e) => <LedgerLine key={e.id} entry={e} currency={currency} />)}
-                  {/* Huspy Margin */}
-                  <div className="border-t border-border my-2" />
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-[13px] font-semibold text-foreground">Huspy Margin</span>
-                    <span className="text-[14px] font-bold text-emerald-600 tabular-nums">{fmt(pnl.huspyMargin, currency)}</span>
-                  </div>
-                  {pnl.grossRevenue > 0 && (
-                    <div className="flex items-center justify-between pl-4 pb-1">
-                      <span className="text-[12px] text-muted-foreground">Margin %</span>
-                      <span className="text-[12px] text-muted-foreground tabular-nums">
-                        {((pnl.huspyMargin / pnl.grossRevenue) * 100).toFixed(1)}%
-                      </span>
+
+                  {/* ── Bucket D — Operational deductions ──────────── */}
+                  {pnl.ledger.some((e) => e.bucket === "D") && (
+                    <div className="mt-3">
+                      <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-1 pl-1">
+                        Operational
+                      </p>
+                      {pnl.ledger
+                        .filter((e) => e.bucket === "D")
+                        .map((e) => <LedgerLine key={e.id} entry={e} currency={currency} />)}
                     </div>
                   )}
+
+                  {/* ── Net Revenue ─────────────────────────────────── */}
+                  <div className="border-t border-border mt-3 pt-2" />
+                  <LedgerAnchor label="Net Revenue" amount={pnl.netRevenue} currency={currency} />
+
+                  {/* ── Bucket B — Agent payouts ─────────────────────── */}
+                  {pnl.ledger.some((e) => e.bucket === "B") && (
+                    <div className="mt-3">
+                      <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-1 pl-1">
+                        Agent Payouts
+                      </p>
+                      {pnl.ledger
+                        .filter((e) => e.bucket === "B")
+                        .map((e) => <LedgerLine key={e.id} entry={e} currency={currency} />)}
+                    </div>
+                  )}
+
+                  {/* ── Huspy Margin ─────────────────────────────────── */}
+                  <div className="border-t border-border mt-3 pt-2" />
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-[13px] font-semibold text-foreground">Huspy Margin</span>
+                    <div className="flex items-center gap-2">
+                      {pnl.grossRevenue > 0 && (
+                        <span className="text-[11px] text-muted-foreground tabular-nums">
+                          ({((pnl.huspyMargin / pnl.grossRevenue) * 100).toFixed(1)}%)
+                        </span>
+                      )}
+                      <span className="text-[14px] font-bold text-emerald-600 tabular-nums">{fmt(pnl.huspyMargin, currency)}</span>
+                    </div>
+                  </div>
+
                 </div>
               ) : (
                 <p className="text-[13px] text-muted-foreground italic">
@@ -290,25 +341,20 @@ const DealDetail = () => {
               )}
             </SectionCard>
 
-            {/* Dispute */}
-            {deal.isDisputed && deal.disputeNote && (
-              <SectionCard title="Dispute">
-                <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                  <p className="text-[13px] text-foreground">{deal.disputeNote}</p>
-                </div>
-              </SectionCard>
-            )}
+            {/* Ops ↔ Agent thread */}
+            <CommentsSection dealId={deal.id} canAdd={canEditOps} />
 
-            {/* Comments */}
-            <SectionCard title="Notes">
-              <textarea
-                placeholder="Add a note..."
-                value={latestNote}
-                onChange={(e) => setLatestNote(e.target.value)}
-                className="w-full px-3 py-2.5 border border-border rounded-md text-[13px] bg-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring resize-none h-24"
-              />
-            </SectionCard>
+            {/* Document checklist */}
+            <DocumentsSection
+              docs={docs}
+              canEdit={canEditOps}
+              onUpdateStatus={(id, newStatus) =>
+                setDocs((prev) => prev.map((r) => r.id === id ? { ...r, status: newStatus } : r))
+              }
+              onAddDoc={(label) =>
+                setDocs((prev) => [...prev, { id: `ddr-local-${Date.now()}`, dealId: deal.id, label, required: false, status: "pending" }])
+              }
+            />
           </div>
 
           {/* Right sidebar: Deal Progress */}
@@ -405,5 +451,254 @@ function LedgerLine({ entry, currency, indent = false }: { entry: LedgerEntry; c
         {isCredit ? "+" : "−"}{fmt(entry.amount, currency)}
       </span>
     </div>
+  );
+}
+
+const STATUS_LABEL: Record<InvoiceStatus, string> = {
+  draft: "Draft",
+  issued: "Issued",
+  paid: "Paid",
+  cancelled: "Cancelled",
+};
+
+const STATUS_CLASSES: Record<InvoiceStatus, string> = {
+  draft: "bg-muted text-muted-foreground",
+  issued: "bg-amber-50 text-amber-700 border border-amber-200",
+  paid: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  cancelled: "bg-red-50 text-red-500 border border-red-200",
+};
+
+function ReceivablesSection({ dealId, navigate }: { dealId: string; navigate: ReturnType<typeof useNavigate> }) {
+  const receivables = useMemo(() => {
+    return sharedInvoices.filter((inv) => inv.dealId === dealId && inv.direction === "inbound");
+  }, [dealId]);
+
+  if (receivables.length === 0) {
+    return (
+      <SectionCard title="Receivables">
+        <p className="text-[13px] text-muted-foreground italic">No inbound invoices for this deal.</p>
+      </SectionCard>
+    );
+  }
+
+  return (
+    <SectionCard title="Receivables">
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
+                Invoice #
+              </th>
+              <th className="text-right px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
+                Amount
+              </th>
+              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
+                Status
+              </th>
+              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
+                Due Date
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {receivables.map((inv) => (
+              <tr
+                key={inv.id}
+                onClick={() => navigate(`/invoices/${inv.id}`)}
+                className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+              >
+                <td className="px-4 py-3 font-mono text-[12px] text-foreground">{inv.invoiceNumber}</td>
+                <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums">
+                  {fmt(inv.amount, inv.currency)}
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-medium inline-block ${STATUS_CLASSES[inv.status]}`}
+                  >
+                    {STATUS_LABEL[inv.status]}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{inv.dueDate ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </SectionCard>
+  );
+}
+
+function CommentsSection({ dealId, canAdd }: { dealId: string; canAdd: boolean }) {
+  const [comments, setComments] = useState(() =>
+    sharedDealComments.filter((c) => c.dealId === dealId).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  );
+  const [newText, setNewText] = useState("");
+
+  const handleSend = () => {
+    const trimmed = newText.trim();
+    if (!trimmed) return;
+    setComments((prev) => [
+      ...prev,
+      { id: `dc-local-${Date.now()}`, dealId, author: "ops" as const, authorName: "Ops Team", text: trimmed, createdAt: new Date().toISOString() },
+    ]);
+    setNewText("");
+  };
+
+  return (
+    <SectionCard title="Comments">
+      <div className="space-y-3">
+        {comments.length === 0 ? (
+          <p className="text-[13px] text-muted-foreground italic">No comments on this deal.</p>
+        ) : (
+          comments.map((c) => {
+            const isOps = c.author === "ops";
+            return (
+              <div key={c.id} className={`flex gap-3 ${isOps ? "" : "flex-row-reverse"}`}>
+                <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold ${isOps ? "bg-primary/10 text-primary" : "bg-emerald-500/10 text-emerald-700"}`}>
+                  {isOps ? "O" : "A"}
+                </div>
+                <div className={`flex-1 max-w-[85%] ${isOps ? "" : "items-end flex flex-col"}`}>
+                  <div className={`px-3 py-2 rounded-lg text-[13px] ${isOps ? "bg-muted text-foreground" : "bg-emerald-50 dark:bg-emerald-950/20 text-foreground"}`}>
+                    {c.text}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">{c.authorName} · {formatDateTime(c.createdAt)}</p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        {canAdd && (
+          <div className="flex gap-2 pt-2 border-t border-border/40">
+            <textarea
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              placeholder="Write a comment to the agent..."
+              className="flex-1 px-3 py-2 border border-border rounded-md text-[13px] bg-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring resize-none h-16"
+            />
+            <button
+              onClick={handleSend}
+              disabled={!newText.trim()}
+              className={`px-3 py-2 rounded-md text-[13px] font-semibold self-end transition-opacity ${newText.trim() ? "bg-primary text-primary-foreground hover:opacity-90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+            >
+              Send
+            </button>
+          </div>
+        )}
+      </div>
+    </SectionCard>
+  );
+}
+
+const DOC_STATUS_LABEL: Record<DocumentRequirementStatus, string> = {
+  pending: "Pending",
+  uploaded: "Uploaded",
+  approved: "Approved",
+  waived: "Waived",
+};
+
+const DOC_STATUS_CLASSES: Record<DocumentRequirementStatus, string> = {
+  pending:  "bg-muted text-muted-foreground",
+  uploaded: "bg-amber-50 text-amber-700 border border-amber-200",
+  approved: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  waived:   "bg-slate-50 text-slate-500 border border-slate-200",
+};
+
+function downloadDoc(label: string) {
+  const blob = new Blob([`Document: ${label}\n[Placeholder — no real file in prototype]`], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${label.replace(/[^a-z0-9]/gi, "_")}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function DocumentsSection({
+  docs,
+  canEdit,
+  onUpdateStatus,
+  onAddDoc,
+}: {
+  docs: DealDocumentRequirement[];
+  canEdit: boolean;
+  onUpdateStatus: (id: string, status: DocumentRequirementStatus) => void;
+  onAddDoc: (label: string) => void;
+}) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [addingLabel, setAddingLabel] = useState("");
+
+  return (
+    <SectionCard title="Documents">
+      {docs.length === 0 && !canEdit ? (
+        <p className="text-[13px] text-muted-foreground italic">No document requirements for this deal.</p>
+      ) : (
+        <div className="divide-y divide-border/40">
+          {docs.map((r) => (
+            <div key={r.id} className="flex items-center justify-between py-2.5 gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                {r.required && <span className="text-[10px] font-semibold text-destructive shrink-0">REQ</span>}
+                <span className="text-[13px] text-foreground truncate">{r.label}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {(r.status === "uploaded" || r.status === "approved") && (
+                  <button onClick={() => downloadDoc(r.label)} title="Download" className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                    <Download className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {canEdit && r.status === "uploaded" && (
+                  <button onClick={() => onUpdateStatus(r.id, "approved")} className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors">
+                    Approve
+                  </button>
+                )}
+                {canEdit && (r.status === "pending" || r.status === "uploaded") && (
+                  <button onClick={() => onUpdateStatus(r.id, "waived")} className="px-2 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground border border-border hover:bg-muted/80 transition-colors">
+                    Waive
+                  </button>
+                )}
+                {canEdit && r.status === "waived" && (
+                  <button onClick={() => onUpdateStatus(r.id, "pending")} className="px-2 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground border border-border hover:bg-muted/80 transition-colors">
+                    Un-waive
+                  </button>
+                )}
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${DOC_STATUS_CLASSES[r.status]}`}>
+                  {DOC_STATUS_LABEL[r.status]}
+                </span>
+              </div>
+            </div>
+          ))}
+          {canEdit && (
+            <div className="pt-3">
+              {isAdding ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={addingLabel}
+                    onChange={(e) => setAddingLabel(e.target.value)}
+                    placeholder="Document name..."
+                    autoFocus
+                    className="flex-1 px-3 py-1.5 border border-border rounded-md text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <button
+                    onClick={() => { if (addingLabel.trim()) { onAddDoc(addingLabel.trim()); setAddingLabel(""); setIsAdding(false); } }}
+                    disabled={!addingLabel.trim()}
+                    className={`px-3 py-1.5 rounded-md text-[13px] font-medium ${addingLabel.trim() ? "bg-primary text-primary-foreground hover:opacity-90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                  >
+                    Add
+                  </button>
+                  <button onClick={() => { setAddingLabel(""); setIsAdding(false); }} className="px-3 py-1.5 rounded-md text-[13px] font-medium text-muted-foreground hover:text-foreground">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setIsAdding(true)} className="text-[13px] text-primary hover:underline font-medium">
+                  + Request document
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </SectionCard>
   );
 }

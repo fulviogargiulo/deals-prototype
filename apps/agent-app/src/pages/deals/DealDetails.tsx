@@ -3,11 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { PageContainer } from '@/components/layout/page-container';
 import { TrackedTitle } from '@/components/ui/tracked-title';
 import { Button } from '@/components/ui/button';
-import { FileText, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { FileText, CheckCircle2, AlertTriangle, ChevronDown, RotateCcw } from 'lucide-react';
 import { DocumentRow } from '@/components/deals/document-row';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { mockDeals, agentStakeMap } from '@/data/mockDeals';
-import { computeDealFinancials, COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements } from '@huspy/shared-domain';
+import { computeDealFinancials, COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements, sharedDealComments } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -49,11 +49,24 @@ export function DealDetails() {
   const { id } = useParams<{ id: string }>();
   const initialDeal = mockDeals.find(d => d.id === id);
   const [uploadedDocs, setUploadedDocs] = useState<Set<number>>(new Set());
-  const [showDisputeForm, setShowDisputeForm] = useState(false);
-  const [disputeReason, setDisputeReason] = useState('');
-  const [disputeSubmitted, setDisputeSubmitted] = useState(false);
   const [dealState, setDealState] = useState(initialDeal);
   const [confirmedForInvoicing, setConfirmedForInvoicing] = useState(false);
+  const [reviewRequested, setReviewRequested] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewNote, setReviewNote] = useState('');
+  const [comments, setComments] = useState(() =>
+    sharedDealComments.filter((c) => c.dealId === (id ?? '')).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  );
+  const addComment = (text: string) => {
+    setComments(prev => [...prev, {
+      id: `dc-local-${Date.now()}`,
+      dealId: id ?? '',
+      author: 'agent' as const,
+      authorName: 'Agent',
+      text,
+      createdAt: new Date().toISOString(),
+    }]);
+  };
 
   if (!dealState) {
     return (
@@ -102,7 +115,7 @@ export function DealDetails() {
                 {viewDeal.title}
               </h1>
               <p className="text-[14px] text-[hsl(var(--fg-secondary))] leading-[140%] capitalize mt-0.5">
-                {viewDeal.type} · {viewDeal.marketType} · <Link to={`/opportunities/${viewDeal.opportunityId}`} className="hover:underline normal-case" style={{ color: 'hsl(var(--accent-indigo))' }}>{viewDeal.opportunityName}</Link>
+                {viewDeal.type} · {viewDeal.market} · <Link to={`/opportunities/${viewDeal.opportunityId}`} className="hover:underline normal-case" style={{ color: 'hsl(var(--accent-indigo))' }}>{viewDeal.opportunityName}</Link>
               </p>
             </div>
           </div>
@@ -177,7 +190,7 @@ export function DealDetails() {
 
         {/* Commission Breakdown — visible once deal is approved or further along */}
         {['pending-agent-approval', 'pending-receivables', 'finalized'].includes(viewDeal.status) && (() => {
-          const f = computeDealFinancials(viewDeal.dealAmount);
+          const f = computeDealFinancials(viewDeal.dealAmount, 0, viewDeal.commissionPercentage ? { takeRate: viewDeal.commissionPercentage } : undefined);
           const stake = agentStakeMap.get(viewDeal.id);
           const personalCommission = computeAgentCommission(f.agentCommissionPayout, stake);
           const splitPct = stake?.splitPercentage ?? 100;
@@ -188,7 +201,7 @@ export function DealDetails() {
               {/* Formula */}
               <div className="px-4 py-3 border-b border-border-ds-primary">
                 <p className="text-[12px] text-fg-secondary leading-[140%]">
-                  Your Payout = Deal Price × {COMMISSION_RATES.takeRate}% (Huspy rate) × {COMMISSION_RATES.agentGrossRate}% (your commission rate){splitPct < 100 ? ` × ${splitPct}% (your deal split)` : ''}
+                  Your Payout = Deal Price × {viewDeal.commissionPercentage ?? COMMISSION_RATES.takeRate}% (Huspy rate) × {COMMISSION_RATES.agentGrossRate}% (your commission rate){splitPct < 100 ? ` × ${splitPct}% (your deal split)` : ''}
                 </p>
               </div>
 
@@ -199,7 +212,7 @@ export function DealDetails() {
                   <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{viewDeal.currency}{viewDeal.dealAmount.toLocaleString()}</span>
                 </div>
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                  <span className="text-[12px] text-fg-secondary leading-[140%]">Huspy Revenue (×{COMMISSION_RATES.takeRate}%)</span>
+                  <span className="text-[12px] text-fg-secondary leading-[140%]">Huspy Revenue (×{viewDeal.commissionPercentage ?? COMMISSION_RATES.takeRate}%)</span>
                   <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>{viewDeal.currency}{f.huspyRevenue.toLocaleString()}</span>
                 </div>
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
@@ -220,26 +233,86 @@ export function DealDetails() {
                   <span className="text-sm font-semibold text-foreground">Your Commission Payout</span>
                   <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">{viewDeal.currency}{personalCommission.toLocaleString()}</span>
                 </div>
-                {viewDeal.status === 'pending-agent-approval' && !confirmedForInvoicing && !disputeSubmitted && (
-                  <Button
-                    size="sm"
-                    className="h-7 rounded-full text-xs"
-                    style={{ backgroundColor: 'hsl(var(--ds-green))', color: 'white' }}
-                    onClick={() => {
-                      if (!canTransitionDealStatus(viewDeal.status, 'pending-receivables')) {
-                        toast.error('This deal cannot move to Pending Receivables from the current status.');
-                        return;
-                      }
-                      setDealState(prev => prev ? { ...prev, status: 'pending-receivables' } : prev);
-                      setConfirmedForInvoicing(true);
-                      toast.success('Deal confirmed and moved to Pending Receivables');
-                    }}
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                    Confirm
-                  </Button>
+                {viewDeal.status === 'pending-agent-approval' && !confirmedForInvoicing && !reviewRequested && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-full text-xs"
+                      style={{ color: 'hsl(var(--ds-orange))' }}
+                      onClick={() => setShowReviewForm(true)}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                      Request Review
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-7 rounded-full text-xs"
+                      style={{ backgroundColor: 'hsl(var(--ds-green))', color: 'white' }}
+                      onClick={() => {
+                        if (!canTransitionDealStatus(viewDeal.status, 'pending-receivables')) {
+                          toast.error('This deal cannot move to Pending Receivables from the current status.');
+                          return;
+                        }
+                        setDealState(prev => prev ? { ...prev, status: 'pending-receivables' } : prev);
+                        setConfirmedForInvoicing(true);
+                        toast.success('Deal confirmed and moved to Pending Receivables');
+                      }}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                      Confirm
+                    </Button>
+                  </div>
                 )}
               </div>
+
+              {/* Review request form */}
+              {showReviewForm && viewDeal.status === 'pending-agent-approval' && !confirmedForInvoicing && !reviewRequested && (
+                <div className="border-t border-border-ds-primary px-4 py-3 space-y-2" style={{ backgroundColor: 'hsl(var(--ds-orange) / 0.04)' }}>
+                  <p className="text-[12px] font-semibold" style={{ color: 'hsl(var(--ds-orange))' }}>
+                    Explain why you're requesting a review <span style={{ color: 'hsl(var(--ds-orange))' }}>*</span>
+                  </p>
+                  <textarea
+                    value={reviewNote}
+                    onChange={(e) => setReviewNote(e.target.value)}
+                    placeholder="The commission amount doesn't match what we agreed..."
+                    rows={2}
+                    autoFocus
+                    className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border-ds-primary))] bg-transparent text-[13px] leading-[140%] text-foreground placeholder:text-[hsl(var(--fg-secondary))] resize-none focus:outline-none focus:ring-2 focus:ring-[hsl(var(--fg-primary))]"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-full text-xs"
+                      onClick={() => { setShowReviewForm(false); setReviewNote(''); }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-7 rounded-full text-xs"
+                      style={{ backgroundColor: 'hsl(var(--ds-orange))', color: 'white' }}
+                      disabled={!reviewNote.trim()}
+                      onClick={() => {
+                        if (!canTransitionDealStatus(viewDeal.status, 'under-review')) {
+                          toast.error('Cannot send back to Under Review from the current status.');
+                          return;
+                        }
+                        addComment(reviewNote.trim());
+                        setDealState(prev => prev ? { ...prev, status: 'under-review' } : prev);
+                        setReviewRequested(true);
+                        setShowReviewForm(false);
+                        setReviewNote('');
+                        toast.success('Review requested — Ops will be notified.');
+                      }}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                      Submit Request
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Confirmed message */}
               {viewDeal.status === 'pending-receivables' && confirmedForInvoicing && (
@@ -251,40 +324,13 @@ export function DealDetails() {
                 </div>
               )}
 
-              {/* Dispute form — only for finalised */}
-              {viewDeal.status === 'pending-agent-approval' && showDisputeForm && !disputeSubmitted && (
-                <div className="border-t border-border-ds-primary px-4 py-4 space-y-3">
-                  <p className="text-[14px] font-semibold text-foreground leading-[140%]">Raise a Dispute</p>
-                  <textarea
-                    className="w-full rounded-lg border border-[hsl(var(--border-ds-primary))] bg-transparent p-3 text-[14px] leading-[140%] text-foreground placeholder:text-[hsl(var(--fg-secondary))] resize-none focus:outline-none focus:ring-2 focus:ring-[hsl(var(--fg-primary))]"
-                    rows={3}
-                    placeholder="Describe what seems incorrect..."
-                    value={disputeReason}
-                    onChange={(e) => setDisputeReason(e.target.value)}
-                  />
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" size="sm" className="text-xs text-fg-secondary h-8 rounded-full" onClick={() => { setShowDisputeForm(false); setDisputeReason(''); }}>
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-8 rounded-full text-xs"
-                      style={{ backgroundColor: 'hsl(var(--ds-red))', color: 'white' }}
-                      disabled={!disputeReason.trim()}
-                      onClick={() => {
-                        if (!canTransitionDealStatus(viewDeal.status, 'under-review')) {
-                          toast.error('This deal cannot be moved back to Under Review from the current status.');
-                          return;
-                        }
-                        setDealState(prev => prev ? { ...prev, status: 'under-review' } : prev);
-                        setDisputeSubmitted(true);
-                        setShowDisputeForm(false);
-                        toast.success('Dispute raised and sent back to Under Review');
-                      }}
-                    >
-                      Submit Dispute
-                    </Button>
-                  </div>
+              {/* Review requested message */}
+              {reviewRequested && (
+                <div className="border-t border-border-ds-primary px-4 py-3 flex items-center gap-2" style={{ backgroundColor: 'hsl(var(--ds-orange) / 0.06)' }}>
+                  <RotateCcw className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--ds-orange))' }} />
+                  <p className="text-[12px] font-semibold leading-[140%]" style={{ color: 'hsl(var(--ds-orange))' }}>
+                    Sent back to Ops for review. Add a message below to explain.
+                  </p>
                 </div>
               )}
             </>
@@ -299,27 +345,9 @@ export function DealDetails() {
             </div>
           );
 
-          const disputeBadges = (
-            <div className="flex items-center gap-2">
-              {viewDeal.status === 'pending-agent-approval' && (
-                disputeSubmitted ? (
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-orange) / 0.1)', color: 'hsl(var(--ds-orange))' }}>Under Review</span>
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-red) / 0.1)', color: 'hsl(var(--ds-red))' }}>Disputed</span>
-                  </div>
-                ) : !showDisputeForm ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-fg-secondary h-8 rounded-full"
-                    onClick={(e) => { e.stopPropagation(); setShowDisputeForm(true); }}
-                  >
-                    Raise Dispute
-                  </Button>
-                ) : null
-              )}
-            </div>
-          );
+          const statusBadge = reviewRequested ? (
+            <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--ds-orange) / 0.1)', color: 'hsl(var(--ds-orange))' }}>Review Requested</span>
+          ) : null;
 
           if (isExpandable) {
             return (
@@ -346,7 +374,7 @@ export function DealDetails() {
             <div className="bg-card rounded-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-border-ds-primary flex items-center justify-between">
                 {header}
-                {disputeBadges}
+                {statusBadge}
               </div>
               {content}
             </div>
@@ -360,6 +388,8 @@ export function DealDetails() {
             documents={documents}
             uploadedDocs={uploadedDocs}
             onUploadDoc={handleUpload}
+            onInfoSubmitted={() => setDealState(prev => prev ? { ...prev, status: 'under-review' } : prev)}
+            onAddComment={addComment}
           />
         )}
 
@@ -430,7 +460,75 @@ export function DealDetails() {
             </Collapsible>
           );
         })()}
+        {/* Ops ↔ Agent messages */}
+        <CommentsSection comments={comments} canReply={viewDeal.status !== 'finalized' && viewDeal.status !== 'canceled'} onAddComment={addComment} />
+
       </div>
     </PageContainer>
+  );
+}
+
+function CommentsSection({ comments, canReply, onAddComment }: { comments: typeof sharedDealComments; canReply: boolean; onAddComment: (text: string) => void }) {
+  const [newText, setNewText] = useState('');
+
+  if (comments.length === 0 && !canReply) return null;
+
+  const handleSend = () => {
+    const trimmed = newText.trim();
+    if (!trimmed) return;
+    onAddComment(trimmed);
+    setNewText('');
+  };
+
+  return (
+    <div className="bg-card rounded-2xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-border-ds-primary">
+        <p className="text-[14px] font-semibold text-foreground leading-[120%]">Messages</p>
+      </div>
+      <div className="px-5 py-4 space-y-3">
+        {comments.length === 0 ? (
+          <p className="text-[13px] text-[hsl(var(--fg-secondary))]">No messages yet.</p>
+        ) : (
+          comments.map((c) => {
+            const isAgent = c.author === 'agent';
+            return (
+              <div key={c.id} className={`flex gap-3 ${isAgent ? 'flex-row-reverse' : ''}`}>
+                <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold ${isAgent ? 'bg-[hsl(var(--ds-green)/0.12)] text-[hsl(var(--ds-green))]' : 'bg-[hsl(var(--fg-secondary)/0.1)] text-[hsl(var(--fg-secondary))]'}`}>
+                  {isAgent ? 'A' : 'O'}
+                </div>
+                <div className={`flex-1 max-w-[85%] ${isAgent ? 'items-end flex flex-col' : ''}`}>
+                  <div className={`px-3 py-2 rounded-xl text-[13px] leading-[140%] ${isAgent ? 'bg-[hsl(var(--ds-green)/0.08)] text-foreground' : 'bg-[hsl(var(--surface-raised,var(--card)))] text-foreground border border-[hsl(var(--border-ds-primary))]'}`}>
+                    {c.text}
+                  </div>
+                  <p className="text-[11px] text-[hsl(var(--fg-secondary))] mt-1">
+                    {c.authorName} · {new Date(c.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        {canReply && (
+          <div className="flex gap-2 pt-2 border-t border-[hsl(var(--border-ds-primary))]">
+            <textarea
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              placeholder="Reply to Ops..."
+              rows={2}
+              className="flex-1 px-3 py-2 rounded-lg border border-[hsl(var(--border-ds-primary))] bg-transparent text-[13px] leading-[140%] text-foreground placeholder:text-[hsl(var(--fg-secondary))] resize-none focus:outline-none focus:ring-2 focus:ring-[hsl(var(--fg-primary))]"
+            />
+            <Button
+              size="sm"
+              className="h-auto self-end px-4 py-2 text-[13px] rounded-xl font-semibold"
+              style={{ backgroundColor: 'hsl(var(--ds-green))', color: 'white' }}
+              disabled={!newText.trim()}
+              onClick={handleSend}
+            >
+              Send
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

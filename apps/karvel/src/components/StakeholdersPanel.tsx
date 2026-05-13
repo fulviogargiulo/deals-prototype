@@ -49,9 +49,10 @@ interface Props {
   currency?: string;
   pnl?: ProjectedPnL | null;
   onChanged?: () => void;
+  canEdit?: boolean;
 }
 
-export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged }: Props) {
+export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, canEdit = false }: Props) {
   const navigate = useNavigate();
   const [stakes, setStakes] = useState<DealStakeholder[]>(() =>
     sharedDealStakeholders.filter((s) => s.dealId === dealId)
@@ -260,7 +261,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged }: 
                 <span className="text-[12px] text-muted-foreground/40">—</span>
               )}
             </div>
-            {!isPrimaryAgent ? (
+            {canEdit && !isPrimaryAgent ? (
               <button
                 onClick={() => handleRemove(s.id)}
                 className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-destructive transition-colors shrink-0"
@@ -449,7 +450,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged }: 
         </div>
       )}
 
-      {!isAdding && (
+      {!isAdding && canEdit && (
         <div className={stakes.length > 0 ? "pt-3 border-t border-border/40" : ""}>
           <button
             onClick={() => setIsAdding(true)}

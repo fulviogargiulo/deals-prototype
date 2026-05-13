@@ -1,88 +1,100 @@
 import type { DealStakeholder } from "../entities";
 
-// One or more INTERNAL_PAYOUT (agent) stakeholders + one REVENUE_SOURCE (client) per deal.
-// OPERATIONAL_DEDUCTION entries carry a negative financialAmount for fixed service costs.
-// splitPercentage on INTERNAL_PAYOUT records reflects each agent's share of the commission pool.
+// Canonical stakeholder relationships for each deal.
+//
+// ── REVENUE_SOURCE ────────────────────────────────────────
+// One or more per deal. Each MUST have explicit financialAmount (no implicit fallback).
+// financialAmount = the gross revenue that party pays to Huspy (positive).
+// For simple deals: one payer receives the full grossRevenue.
+// For split receivables: multiple payers split the grossRevenue per their invoice amounts.
+//
+// ── INTERNAL_PAYOUT ───────────────────────────────────────
+// One or more agents per deal. splitPercentage reflects each agent's share of the commission pool.
 // deal-006 and deal-017 have two-agent splits to exercise multi-agent commission logic.
 // isPrimary marks the agent who owns the deal workflow.
+//
+// ── OPERATIONAL_DEDUCTION ─────────────────────────────────
+// Fixed service costs (conveyances, notarial fees). financialAmount is negative (cost).
 export const sharedDealStakeholders: DealStakeholder[] = [
-  // deal-001 — buy, agent-felicia, client-001
+  // deal-001 — buy, agent-felicia, client-001 | rebate 1.5% × 11 550 = 173 → net 11 377
   { id: "ds-deal-001-agent",  dealId: "deal-001", partyId: "party-agent-felicia",   role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-001-client", dealId: "deal-001", partyId: "party-client-001",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-001-client", dealId: "deal-001", partyId: "party-client-001",      role: "REVENUE_SOURCE", financialAmount: 11377 },
 
-  // deal-002 — sell, agent-guilherme, client-002
+  // deal-002 — sell, agent-guilherme, client-002 | subsidy 4 000 → net 14 000
   { id: "ds-deal-002-agent",  dealId: "deal-002", partyId: "party-agent-guilherme", role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-002-client", dealId: "deal-002", partyId: "party-client-002",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-002-client", dealId: "deal-002", partyId: "party-client-002",      role: "REVENUE_SOURCE", financialAmount: 14000 },
 
   // deal-003 — rent, agent-felicia, client-003
   { id: "ds-deal-003-agent",  dealId: "deal-003", partyId: "party-agent-felicia",   role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-003-client", dealId: "deal-003", partyId: "party-client-003",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-003-client", dealId: "deal-003", partyId: "party-client-003",      role: "REVENUE_SOURCE", financialAmount: 1152 },
 
-  // deal-004 — buy, agent-guilherme, client-004
+  // deal-004 — buy, agent-guilherme, client-004 | subsidy 6 000 → net 19 000
   { id: "ds-deal-004-agent",  dealId: "deal-004", partyId: "party-agent-guilherme", role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-004-client", dealId: "deal-004", partyId: "party-client-004",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-004-client", dealId: "deal-004", partyId: "party-client-004",      role: "REVENUE_SOURCE", financialAmount: 19000 },
 
-  // deal-005 — buy, agent-omar, client-005
+  // deal-005 — buy, agent-omar, client-005 | rebate 2% × 13 500 = 270 → net 13 230
   { id: "ds-deal-005-agent",  dealId: "deal-005", partyId: "party-agent-omar",      role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-005-client", dealId: "deal-005", partyId: "party-client-005",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-005-client", dealId: "deal-005", partyId: "party-client-005",      role: "REVENUE_SOURCE", financialAmount: 13230 },
 
-  // deal-006 — sell, felicia 70% / guilherme 30% co-listing split
+  // deal-006 — sell, felicia 70% / guilherme 30% co-listing split | subsidy 2 500 → net 7 100
   { id: "ds-deal-006-agent",    dealId: "deal-006", partyId: "party-agent-felicia",   role: "INTERNAL_PAYOUT", isPrimary: true, splitPercentage: 70 },
   { id: "ds-deal-006-agent-co", dealId: "deal-006", partyId: "party-agent-guilherme", role: "INTERNAL_PAYOUT", splitPercentage: 30 },
-  { id: "ds-deal-006-client",   dealId: "deal-006", partyId: "party-client-006",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-006-client",   dealId: "deal-006", partyId: "party-client-006",      role: "REVENUE_SOURCE", financialAmount: 7100 },
 
-  // deal-007 — buy, agent-felicia, client-001
+  // deal-007 — buy, agent-felicia, client-001 | subsidy 3 000 → net 8 875
   { id: "ds-deal-007-agent",  dealId: "deal-007", partyId: "party-agent-felicia",   role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-007-client", dealId: "deal-007", partyId: "party-client-001",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-007-client", dealId: "deal-007", partyId: "party-client-001",      role: "REVENUE_SOURCE", financialAmount: 8875 },
 
-  // deal-008 — sell, agent-guilherme, client-002
-  { id: "ds-deal-008-agent",  dealId: "deal-008", partyId: "party-agent-guilherme", role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-008-client", dealId: "deal-008", partyId: "party-client-002",      role: "REVENUE_SOURCE" },
+  // deal-008 — sell, agent-guilherme, client-002 + developer split | subsidy 5 000 → client net 3 700
+  { id: "ds-deal-008-agent",    dealId: "deal-008", partyId: "party-agent-guilherme",              role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
+  { id: "ds-deal-008-client",   dealId: "deal-008", partyId: "party-client-002",                   role: "REVENUE_SOURCE", financialAmount: 3700 },
+  { id: "ds-deal-008-developer", dealId: "deal-008", partyId: "party-third-inmobiliaria-grupo-norte", role: "REVENUE_SOURCE", financialAmount: 5800 },
 
   // deal-009 — buy, agent-omar, client-007
   { id: "ds-deal-009-agent",  dealId: "deal-009", partyId: "party-agent-omar",      role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-009-client", dealId: "deal-009", partyId: "party-client-007",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-009-client", dealId: "deal-009", partyId: "party-client-007",      role: "REVENUE_SOURCE", financialAmount: 37000 },
 
   // deal-010 — buy (canceled), agent-ravi, client-008
   { id: "ds-deal-010-agent",  dealId: "deal-010", partyId: "party-agent-ravi",      role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-010-client", dealId: "deal-010", partyId: "party-client-008",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-010-client", dealId: "deal-010", partyId: "party-client-008",      role: "REVENUE_SOURCE", financialAmount: 84000 },
 
   // deal-011 — mortgage, agent-zainab, client-007
   { id: "ds-deal-011-agent",  dealId: "deal-011", partyId: "party-agent-zainab",    role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-011-client", dealId: "deal-011", partyId: "party-client-007",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-011-client", dealId: "deal-011", partyId: "party-client-007",      role: "REVENUE_SOURCE", financialAmount: 7000 },
 
   // deal-012 — mortgage, agent-ravi, client-008
   { id: "ds-deal-012-agent",  dealId: "deal-012", partyId: "party-agent-ravi",      role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-012-client", dealId: "deal-012", partyId: "party-client-008",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-012-client", dealId: "deal-012", partyId: "party-client-008",      role: "REVENUE_SOURCE", financialAmount: 16000 },
 
-  // deal-013 — buy, agent-gelo, client-009
+  // deal-013 — buy, agent-gelo, client-009 | subsidy 4 500 → net 14 100
   { id: "ds-deal-013-agent",  dealId: "deal-013", partyId: "party-agent-gelo",      role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-013-client", dealId: "deal-013", partyId: "party-client-009",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-013-client", dealId: "deal-013", partyId: "party-client-009",      role: "REVENUE_SOURCE", financialAmount: 14100 },
 
-  // deal-014 — mortgage, agent-felicia, client-009
+  // deal-014 — mortgage, agent-felicia, bank revenue source
   { id: "ds-deal-014-agent",  dealId: "deal-014", partyId: "party-agent-felicia",   role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-014-client", dealId: "deal-014", partyId: "party-client-009",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-014-bank",   dealId: "deal-014", partyId: "party-third-caixabank", role: "REVENUE_SOURCE", financialAmount: 2480 },
 
-  // deal-015 — mortgage, agent-omar, client-010
-  { id: "ds-deal-015-agent",  dealId: "deal-015", partyId: "party-agent-omar",      role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-015-client", dealId: "deal-015", partyId: "party-client-010",      role: "REVENUE_SOURCE" },
+  // deal-015 — mortgage, agent-omar, bank revenue source
+  { id: "ds-deal-015-agent",  dealId: "deal-015", partyId: "party-agent-omar",  role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
+  { id: "ds-deal-015-bank",   dealId: "deal-015", partyId: "party-third-snb",   role: "REVENUE_SOURCE", financialAmount: 4600 },
 
-  // deal-016 — sell, agent-ravi, client-007
-  { id: "ds-deal-016-agent",  dealId: "deal-016", partyId: "party-agent-ravi",      role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-016-client", dealId: "deal-016", partyId: "party-client-007",      role: "REVENUE_SOURCE" },
+  // deal-016 — sell, agent-ravi, client-007 + developer split | rebate 1.5% × 42 000 = 630 → client net 24 570
+  { id: "ds-deal-016-agent",     dealId: "deal-016", partyId: "party-agent-gelo",       role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
+  { id: "ds-deal-016-client",    dealId: "deal-016", partyId: "party-client-007",       role: "REVENUE_SOURCE", financialAmount: 24570 },
+  { id: "ds-deal-016-developer", dealId: "deal-016", partyId: "party-third-emaar",      role: "REVENUE_SOURCE", financialAmount: 16800 },
 
-  // deal-017 — buy, felicia 60% / omar 40% referral split
+  // deal-017 — buy, felicia 60% / omar 40% referral split | rebate 1.5% × 15 900 = 239 → net 15 661
   { id: "ds-deal-017-agent",    dealId: "deal-017", partyId: "party-agent-felicia", role: "INTERNAL_PAYOUT", isPrimary: true, splitPercentage: 60 },
   { id: "ds-deal-017-agent-co", dealId: "deal-017", partyId: "party-agent-omar",    role: "INTERNAL_PAYOUT", splitPercentage: 40 },
-  { id: "ds-deal-017-client",   dealId: "deal-017", partyId: "party-client-002",    role: "REVENUE_SOURCE" },
+  { id: "ds-deal-017-client",   dealId: "deal-017", partyId: "party-client-002",    role: "REVENUE_SOURCE", financialAmount: 15661 },
 
-  // deal-018 — buy, agent-felicia, client-004
+  // deal-018 — buy, agent-felicia, client-004 | subsidy 7 000 → net 24 250
   { id: "ds-deal-018-agent",  dealId: "deal-018", partyId: "party-agent-felicia",   role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-018-client", dealId: "deal-018", partyId: "party-client-004",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-018-client", dealId: "deal-018", partyId: "party-client-004",      role: "REVENUE_SOURCE", financialAmount: 24250 },
 
   // deal-019 — buy (canceled), agent-felicia, client-003
   { id: "ds-deal-019-agent",  dealId: "deal-019", partyId: "party-agent-felicia",   role: "INTERNAL_PAYOUT",  isPrimary: true, splitPercentage: 100 },
-  { id: "ds-deal-019-client", dealId: "deal-019", partyId: "party-client-003",      role: "REVENUE_SOURCE" },
+  { id: "ds-deal-019-client", dealId: "deal-019", partyId: "party-client-003",      role: "REVENUE_SOURCE", financialAmount: 5200 },
 
   // ── OPERATIONAL_DEDUCTION stakeholders (fixed service costs) ───────────────
   // Spain (ES) deals → Gestoría López & Asociados

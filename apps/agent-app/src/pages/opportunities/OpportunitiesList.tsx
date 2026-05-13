@@ -33,6 +33,7 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string; bgCo
   sell: { icon: SellBareIcon, color: '#D95D28', bgColor: 'rgba(217, 93, 40, 0.10)' },
   rent: { icon: RentBareIcon, color: '#5856D6', bgColor: 'rgba(88, 86, 214, 0.10)' },
   lease: { icon: LeaseBareIcon, color: '#CD52C3', bgColor: 'rgba(205, 82, 195, 0.10)' },
+  mortgage: { icon: LeaseBareIcon, color: '#2563EB', bgColor: 'rgba(37, 99, 235, 0.10)' },
 };
 
 type StatusFilter = OpportunityStatus | 'all' | 'inactive';
@@ -369,7 +370,7 @@ export function OpportunitiesList() {
             {/* Body */}
             <div className="divide-y divide-border-ds-primary">
               {paginatedOpportunities.length > 0 ? paginatedOpportunities.map((opp) => {
-                const config = typeConfig[opp.type];
+                const config = typeConfig[opp.type] ?? typeConfig['buy'];
                 const Icon = config.icon;
                 const client = getClientById(opp.clientId);
                 const oppImages = opp.images || [];

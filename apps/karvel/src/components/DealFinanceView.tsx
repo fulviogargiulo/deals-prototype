@@ -1,3 +1,9 @@
+/**
+ * @deprecated Removed from top-level tabs. Use InvoicesView instead for invoice/finance workflow.
+ * Deal-level payables and receivables are now managed through the Invoices page,
+ * and can be surfaced per-deal in DealDetail if needed.
+ */
+
 import { Deal, InvoiceStatus, PayableStatus, PayableEntry, ReceivableEntry } from "@/data/types";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { FileText, DollarSign, Send, Plus, X, Download, Upload, CheckCircle, CreditCard, Receipt, ArrowUp, ArrowDown, ArrowUpDown, Filter, AlertTriangle, Search } from "lucide-react";

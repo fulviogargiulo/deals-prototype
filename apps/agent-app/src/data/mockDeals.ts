@@ -1,14 +1,18 @@
 // Deals come from shared canonical fixtures (visible in both apps).
 // `mockStatement` is agent-app-only (StatementOfAccount is a financial UI
 // concept karvel doesn't share), so it lives here.
-import { sharedDeals, sharedDealStakeholders, sharedAgents } from "@huspy/shared-domain";
+import { sharedDeals, sharedDealStakeholders, sharedAgents, sharedOpportunities } from "@huspy/shared-domain";
 import type { DealStakeholder } from "@huspy/shared-domain";
 import type { Deal, StatementOfAccount } from "@/types";
 
-// Cast: shared.Deal.type is `DealType` (includes buy-sell, rent-lease);
-// agent-app.Deal narrows to `OpportunityType`. The 8 shared records use only
-// values in OpportunityType, so the cast is safe at runtime.
-export const mockDeals: Deal[] = sharedDeals as unknown as Deal[];
+// shared.Deal no longer has a .type field (DealType was removed); derive it
+// from the linked Opportunity so agent-app UI icons/labels still work.
+const oppTypeMap = new Map(sharedOpportunities.map(o => [o.id, o.type]));
+
+export const mockDeals: Deal[] = (sharedDeals as unknown as Deal[]).map(d => ({
+  ...d,
+  type: (oppTypeMap.get(d.opportunityId as string) ?? 'buy') as Deal['type'],
+}));
 
 export const CURRENT_AGENT_ID = 'agent-felicia';
 
@@ -17,7 +21,7 @@ const currentAgent = sharedAgents.find((a) => a.id === CURRENT_AGENT_ID);
 const agentDealIds = new Set(
   currentAgent
     ? sharedDealStakeholders
-        .filter((s) => s.partyId === currentAgent.partyId && s.role === 'agent')
+        .filter((s) => s.partyId === currentAgent.partyId && s.role === 'INTERNAL_PAYOUT')
         .map((s) => s.dealId)
     : []
 );
@@ -26,7 +30,7 @@ export const agentDeals: Deal[] = mockDeals.filter((d) => agentDealIds.has(d.id)
 // Maps dealId → the current agent's DealStakeholder record, for commission split lookups.
 export const agentStakeMap: Map<string, DealStakeholder> = new Map(
   (currentAgent
-    ? sharedDealStakeholders.filter((s) => s.partyId === currentAgent.partyId && s.role === "agent")
+    ? sharedDealStakeholders.filter((s) => s.partyId === currentAgent.partyId && s.role === "INTERNAL_PAYOUT")
     : []
   ).map((s) => [s.dealId, s])
 );

@@ -1,8 +1,12 @@
 import { useState } from 'react';
+import { format, isWithinInterval, parseISO } from 'date-fns';
 import { sharedPostings, sharedAgents, sharedLedgers } from '@huspy/shared-domain';
 import type { PostingLine } from '@huspy/shared-domain';
 import { Button } from '@/components/ui/button';
-import { FileText, TrendingUp, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { FileText, TrendingUp, ArrowDownLeft, ArrowUpRight, CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { CreateInvoiceModal } from '@/components/modals/create-invoice-modal';
 import { getPostingLines, getInvoices } from '@/data/earningsStore';
 import type { StatementOfAccount } from '@/types';
@@ -13,12 +17,6 @@ const AGENT_PARTY_ID = sharedAgents.find((a) => a.id === AGENT_ID)?.partyId ?? A
 const AGENT_LEDGER_NAME = `AgentLiability_${AGENT_ID}`;
 const AGENT_LEDGER_ID = sharedLedgers.find((l) => l.name === AGENT_LEDGER_NAME)?.id;
 
-
-const PERIODS = [
-  { value: '2026-01', label: 'Jan 2026' },
-  { value: '2026-04', label: 'Apr 2026' },
-  { value: '2026-05', label: 'May 2026' },
-];
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: '€', AED: 'د.إ', SAR: '﷼' };
 
@@ -51,14 +49,33 @@ function invoiceStatusStyle(status: string) {
   }
 }
 
+type EarningsMode = 'all' | 'custom';
+
 export function AgentEarningsView() {
-  const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
+  const [mode, setMode] = useState<EarningsMode>('all');
+  const [customFrom, setCustomFrom] = useState<Date | undefined>();
+  const [customTo, setCustomTo] = useState<Date | undefined>();
+  const [fromOpen, setFromOpen] = useState(false);
+  const [toOpen, setToOpen] = useState(false);
   const [showGenerateStatement, setShowGenerateStatement] = useState(false);
-  // Incrementing this forces a re-read from the store after a mutation.
   const [refreshKey, setRefreshKey] = useState(0);
   void refreshKey;
 
-  const allAgentInvoices = getInvoices().filter(i => i.direction === "inbound" && i.partyId === AGENT_PARTY_ID);
+  const dateRange = mode === 'custom' && customFrom && customTo ? { from: customFrom, to: customTo } : null;
+
+  const handleModeChange = (m: EarningsMode) => {
+    setMode(m);
+    if (m !== 'custom') { setCustomFrom(undefined); setCustomTo(undefined); }
+  };
+
+  const pillClass = (active: boolean) => cn(
+    'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
+    active
+      ? 'bg-foreground text-background'
+      : 'bg-surface-ds-raised text-fg-secondary hover:bg-surface-ds-raised/80'
+  );
+
+  const allAgentInvoices = getInvoices().filter(i => i.direction === "outbound" && i.partyId === AGENT_PARTY_ID);
   // Map invoiceId → invoiceNumber for the Invoice column in the ledger table.
   const invoiceNumberMap = new Map(allAgentInvoices.map(i => [i.id, i.invoiceNumber]));
 
@@ -71,12 +88,12 @@ export function AgentEarningsView() {
     .filter(l => !!l.posting)
     .sort((a, b) => a.posting.valueDate.localeCompare(b.posting.valueDate));
 
-  const filteredLines = selectedPeriod
-    ? agentLines.filter(l => l.posting.valueDate.startsWith(selectedPeriod))
+  const filteredLines = dateRange
+    ? agentLines.filter(l => isWithinInterval(parseISO(l.posting.valueDate), { start: dateRange.from, end: dateRange.to }))
     : agentLines;
 
-  const filteredInvoices = selectedPeriod
-    ? allAgentInvoices.filter(i => (i.period ?? "").startsWith(selectedPeriod) || selectedPeriod.startsWith((i.period ?? "").substring(0, 7)))
+  const filteredInvoices = dateRange
+    ? allAgentInvoices.filter(i => isWithinInterval(parseISO(i.issueDate), { start: dateRange.from, end: dateRange.to }))
     : allAgentInvoices;
 
   // Lines eligible for statement generation: uninvoiced (no invoiceId)
@@ -85,12 +102,14 @@ export function AgentEarningsView() {
 
   const periodNet = filteredLines.reduce((s, l) => l.side === 'CREDIT' ? s + l.amount : s - l.amount, 0);
 
+  const cycleLabel = dateRange
+    ? `${format(dateRange.from, 'MMM d, yyyy')} – ${format(dateRange.to, 'MMM d, yyyy')}`
+    : 'All periods';
+
   const pendingStatement: StatementOfAccount = {
     id: 'pending-stmt',
-    cycleLabel: selectedPeriod
-      ? (PERIODS.find(p => p.value === selectedPeriod)?.label ?? selectedPeriod)
-      : 'Current Period',
-    period: selectedPeriod ?? new Date().toISOString().slice(0, 7),
+    cycleLabel,
+    period: dateRange ? dateRange.from.toISOString().slice(0, 7) : new Date().toISOString().slice(0, 7),
     lineItems: statementEligibleLines.map(l => ({
       id: l.id,
       description: l.posting.description ?? 'Posting',
@@ -114,29 +133,39 @@ export function AgentEarningsView() {
 
       {/* Period filter */}
       <div className="flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => setSelectedPeriod(null)}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-            !selectedPeriod
-              ? 'bg-foreground text-background'
-              : 'bg-surface-ds-raised text-fg-secondary hover:bg-surface-ds-raised/80'
-          }`}
-        >
-          All periods
+        <button onClick={() => handleModeChange('all')} className={pillClass(mode === 'all')}>
+          All
         </button>
-        {PERIODS.map(p => (
-          <button
-            key={p.value}
-            onClick={() => setSelectedPeriod(p.value)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              selectedPeriod === p.value
-                ? 'bg-foreground text-background'
-                : 'bg-surface-ds-raised text-fg-secondary hover:bg-surface-ds-raised/80'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
+        <button onClick={() => handleModeChange('custom')} className={pillClass(mode === 'custom')}>
+          Custom
+        </button>
+        {mode === 'custom' && (
+          <div className="flex items-center gap-2">
+            <Popover open={fromOpen} onOpenChange={setFromOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full text-xs font-semibold bg-surface-ds-raised border-0">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {customFrom ? format(customFrom, 'MMM d, yyyy') : 'From'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={customFrom} onSelect={(d) => { setCustomFrom(d); setFromOpen(false); }} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+            <span className="text-xs text-fg-secondary">–</span>
+            <Popover open={toOpen} onOpenChange={setToOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full text-xs font-semibold bg-surface-ds-raised border-0">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {customTo ? format(customTo, 'MMM d, yyyy') : 'To'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar mode="single" selected={customTo} onSelect={(d) => { setCustomTo(d); setToOpen(false); }} disabled={(date) => customFrom ? date < customFrom : false} initialFocus className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
 
       {/* Ledger movements */}
@@ -221,7 +250,7 @@ export function AgentEarningsView() {
         {filteredLines.length > 0 && (
           <div className="border-t border-border-ds-primary px-4 py-3 flex items-center justify-between">
             <span className="text-sm text-fg-secondary">
-              {selectedPeriod ? `${PERIODS.find(p => p.value === selectedPeriod)?.label ?? selectedPeriod} net` : 'All periods net'}
+              {cycleLabel} net
             </span>
             <span
               className="text-[18px] font-semibold tabular-nums"

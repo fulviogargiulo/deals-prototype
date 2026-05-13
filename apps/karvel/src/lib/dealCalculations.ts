@@ -188,7 +188,7 @@ function applyEngineToREBU(deal: Deal): Deal | null {
     managerOverrideRate: first?.managerOverrideRate ?? 0,
     managerOverride: projection.splits.reduce((s, sp) => s + sp.managerPayout, 0),
     cogsInternal: projection.totalBucketB,
-    cogsExternal: projection.totalBucketC + projection.totalBucketA,
+    cogsExternal: projection.totalBucketC,
     cogsReferrals: 0,
     payables,
     dealAmount: projection.grossRevenue,

@@ -336,6 +336,8 @@ export interface Deal {
 
   // Rebates / Subsidy (inputs — kept as deal config)
   rebatePercentage?: number;
+  /** Computed at deal-creation time: grossRevenue × rebatePercentage / 100. Used by P&L engine directly. */
+  rebateAmount?: number;
   subsidyAmount?: number;
 
   // MBU-specific
@@ -515,6 +517,20 @@ export interface AgentDocument {
 }
 
 // ============================================================
+// DealComment — ops ↔ agent thread on a deal.
+// author="ops" means Huspy ops/finance asked a question or left a note.
+// author="agent" means the agent replied or raised a point.
+// ============================================================
+export interface DealComment {
+  id: string;
+  dealId: string;
+  author: "ops" | "agent";
+  authorName: string;
+  text: string;
+  createdAt: string;
+}
+
+// ============================================================
 // Accounting — Ledger / Posting / PostingLine
 // ============================================================
 
@@ -570,6 +586,12 @@ export interface Invoice {
   dueDate?: string;
   paidDate?: string;
   period?: string;
+  invoiceFileName?: string;
+  proofFileName?: string;
+  proofUploadedAt?: string;
+  paymentReference?: string;
+  cancelReason?: string;
+  cancelledAt?: string;
   createdAt: string;
   updatedAt: string;
 }

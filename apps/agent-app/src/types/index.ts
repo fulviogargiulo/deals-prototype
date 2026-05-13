@@ -12,7 +12,6 @@ import type {
 export type {
   // Enums
   DealStatus,
-  DealType,
   OpportunityType,
   OpportunityStatus,
   TaskStatus,
@@ -80,13 +79,12 @@ export interface ClientWithOpportunities extends Client {
 
 export interface Deal extends Omit<BaseDeal, "type" | "market"> {
   type: import("@huspy/shared-domain").OpportunityType;
-  marketType: "primary" | "secondary" | "leasing";
+  market: "primary" | "secondary" | "leasing";
   opportunityName: string;
   clientName: string;
   title: string;
   commissionPercentage: number;
   commissionAmount: number;
-  dispute?: import("@huspy/shared-domain").DealDispute;
   paymentDate?: string;
 }
 

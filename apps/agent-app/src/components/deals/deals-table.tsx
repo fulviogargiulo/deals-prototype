@@ -1,14 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Deal, DealStatus, OpportunityType } from '@/types';
 import { type DealStakeholder, computeAgentCommission } from '@huspy/shared-domain';
-import { ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { OpportunityIcon } from '@/components/opportunities/opportunity-icon';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { useNavigate } from 'react-router-dom';
 
 interface DealsTableProps {
   deals: Deal[];
-  disputedDealIds?: Set<string>;
   agentStakeMap?: Map<string, DealStakeholder>;
 }
 
@@ -40,7 +39,7 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
 type SortKey = 'title' | 'dealAmount' | 'commissionAmount' | 'reportDate';
 type SortDir = 'asc' | 'desc';
 
-export function DealsTable({ deals, disputedDealIds = new Set(), agentStakeMap }: DealsTableProps) {
+export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
   const navigate = useNavigate();
   const [sortKey, setSortKey] = useState<SortKey>('reportDate');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -116,19 +115,10 @@ export function DealsTable({ deals, disputedDealIds = new Set(), agentStakeMap }
                   <span className="text-sm text-foreground truncate">{deal.clientName}</span>
                   <span className="text-sm text-foreground text-right tabular-nums font-semibold">{deal.currency}{deal.dealAmount.toLocaleString()}</span>
                   <span className="text-sm text-foreground text-right tabular-nums font-semibold">{deal.currency}{agentCommission.toLocaleString()}</span>
-                  <div className="flex justify-center gap-1.5">
-                    {disputedDealIds.has(deal.id) ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: statusColors[deal.status].bg, color: statusColors[deal.status].color }}>
-                          {statusLabels[deal.status]}
-                        </span>
-                        <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: 'hsl(var(--ds-red))' }} />
-                      </div>
-                    ) : (
-                      <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: colors.bg, color: colors.color }}>
-                        {statusLabels[deal.status]}
-                      </span>
-                    )}
+                  <div className="flex justify-center">
+                    <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: colors.bg, color: colors.color }}>
+                      {statusLabels[deal.status]}
+                    </span>
                   </div>
                   <span className="text-xs text-fg-secondary text-right tabular-nums">
                     {new Date(deal.reportDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}

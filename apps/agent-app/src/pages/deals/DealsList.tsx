@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import { startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { isWithinInterval, parseISO } from 'date-fns';
 import { Search } from 'lucide-react';
 import { PageContainer } from '@/components/layout/page-container';
 import { TrackedTitle } from '@/components/ui/tracked-title';
@@ -16,23 +16,19 @@ import { agentDeals, agentStakeMap } from '@/data/mockDeals';
 
 export function DealsList() {
   const location = useLocation();
-  const [disputedDealIds, setDisputedDealIds] = useState<Set<string>>(
-    () => new Set(agentDeals.filter(d => d.isDisputed).map(d => d.id))
-  );
-  const now = new Date();
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: startOfWeek(now, { weekStartsOn: 1 }),
-    to: endOfWeek(now, { weekStartsOn: 1 }),
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "deals";
+
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [search, setSearch] = useState('');
 
   const pendingConfirmation = agentDeals.filter(d => d.status === 'pending-agent-approval');
   const pendingInfo = agentDeals.filter(d => d.status === 'pending-details');
 
   const filteredDeals = useMemo(() => {
-    let result = agentDeals.filter(d =>
-      isWithinInterval(parseISO(d.reportDate), { start: dateRange.from, end: dateRange.to })
-    );
+    let result = dateRange
+      ? agentDeals.filter(d => isWithinInterval(parseISO(d.reportDate), { start: dateRange.from, end: dateRange.to }))
+      : agentDeals;
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(d => d.title.toLowerCase().includes(q) || d.clientName.toLowerCase().includes(q));
@@ -46,10 +42,6 @@ export function DealsList() {
       if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 100);
     }
   }, [location.hash]);
-
-  const handleDealDisputed = (dealId: string) => {
-    setDisputedDealIds(prev => new Set(prev).add(dealId));
-  };
 
   return (
     <PageContainer>
@@ -71,7 +63,7 @@ export function DealsList() {
           </div>
         </div>
 
-        <Tabs defaultValue="deals">
+        <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v })}>
           <TabsList className="mb-6">
             <TabsTrigger value="deals">Deals</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
@@ -81,14 +73,12 @@ export function DealsList() {
             <ActionsRequiredSection
               pendingConfirmation={pendingConfirmation}
               pendingInfo={pendingInfo}
-              disputedDealIds={disputedDealIds}
-              onDealDisputed={handleDealDisputed}
               agentStakeMap={agentStakeMap}
             />
             <DealsFilterBar onDateRangeChange={setDateRange} />
             <DealsSummaryCards deals={filteredDeals} agentStakeMap={agentStakeMap} />
             <div id="all-deals">
-              <DealsTable deals={filteredDeals} disputedDealIds={disputedDealIds} agentStakeMap={agentStakeMap} />
+              <DealsTable deals={filteredDeals} agentStakeMap={agentStakeMap} />
             </div>
           </TabsContent>
 

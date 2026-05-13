@@ -13,6 +13,7 @@ export { sharedDealStakeholders } from "./dealStakeholders";
 export { sharedDocumentRequirementTemplates } from "./documentRequirementTemplates";
 export { sharedDealDocumentRequirements } from "./dealDocumentRequirements";
 export { sharedAgentDocuments } from "./agentDocuments";
+export { sharedDealComments } from "./dealComments";
 export { sharedAgentFinancials, getAgentFinancialsByAgentId } from "./agentFinancials";
 export {
   generateMockScheduleActivities,

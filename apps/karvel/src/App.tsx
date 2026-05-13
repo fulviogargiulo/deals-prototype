@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index";
 import Deals from "./pages/Deals";
 import DealDetail from "./pages/DealDetail";
+import InvoiceDetail from "./pages/InvoiceDetail";
 import Clients from "./pages/Clients";
 import Agents from "./pages/Agents";
 import AgentDetail from "./pages/AgentDetail";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/deals" element={<Deals />} />
             <Route path="/deals/:dealId" element={<DealDetail />} />
+            <Route path="/invoices/:invoiceId" element={<InvoiceDetail />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/agents" element={<Agents />} />
             <Route path="/agents/:agentId" element={<AgentDetail />} />

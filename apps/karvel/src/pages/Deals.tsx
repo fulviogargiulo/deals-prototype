@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Settings, Upload, Plus, UserRound, DollarSign, List, Landmark, ClipboardList } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Settings, Upload, Plus, UserRound, DollarSign, List, Receipt, ClipboardList } from "lucide-react";
 import { getDeals, setDeals as setStoreDeals, addDeals as addStoreDeals } from "@/data/dealStore";
-import { DealPnLView } from "@/components/DealPnLView";
 import { DealListingView } from "@/components/DealListingView";
-import { DealFinanceView } from "@/components/DealFinanceView";
+import { InvoicesView } from "@/components/InvoicesView";
 import { Deal, DealMarket, DealStatus, BusinessUnit, Country } from "@/data/types";
 import { MultiSelectFilter } from "@/components/MultiSelectFilter";
 import { DateRangePicker, DateRange, TimePeriod, getPresetRange } from "@/components/DateRangePicker";
@@ -23,10 +23,12 @@ export const countryCurrencyMap: Record<Country, string> = {
   sa: "SAR",
 };
 
-type ViewMode = "listing" | "pnl" | "finance" | "doc-requirements";
+type ViewMode = "listing" | "invoices" | "doc-requirements";
 
 const Deals = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>("listing");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewMode = (searchParams.get("tab") as ViewMode) ?? "listing";
+  const setViewMode = (mode: ViewMode) => setSearchParams({ tab: mode });
   const [selectedCountries, setSelectedCountries] = useState<string[]>([...COUNTRIES]);
   const [selectedBUs, setSelectedBUs] = useState<string[]>([...BUSINESS_UNITS]);
   const [selectedMarkets, setSelectedMarkets] = useState<string[]>([...MARKET_TYPES]);
@@ -103,23 +105,16 @@ const Deals = () => {
                 <button
                   onClick={() => setViewMode("listing")}
                   className={`p-2 rounded-md transition-colors ${viewMode === "listing" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                  title="Deal Listing"
+                  title="Deals"
                 >
                   <List className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => setViewMode("pnl")}
-                  className={`p-2 rounded-md transition-colors ${viewMode === "pnl" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                  title="P&L View"
+                  onClick={() => setViewMode("invoices")}
+                  className={`p-2 rounded-md transition-colors ${viewMode === "invoices" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  title="Invoices"
                 >
-                  <DollarSign className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode("finance")}
-                  className={`p-2 rounded-md transition-colors ${viewMode === "finance" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                  title="Finance View"
-                >
-                  <Landmark className="h-4 w-4" />
+                  <Receipt className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("doc-requirements")}
@@ -131,7 +126,7 @@ const Deals = () => {
               </div>
             </div>
 
-            {viewMode !== "finance" && viewMode !== "doc-requirements" && (
+            {viewMode === "listing" && (
               <div className="flex items-center gap-3">
                 <button onClick={() => setBulkUploadOpen(true)} className="flex items-center gap-2 px-4 py-2 border border-border rounded-md text-[13px] font-medium text-foreground bg-card hover:bg-muted transition-colors">
                   <Upload className="h-4 w-4" />
@@ -146,7 +141,7 @@ const Deals = () => {
           </div>
 
           {/* Filter selectors + Date picker */}
-          {viewMode !== "doc-requirements" && (
+          {viewMode === "listing" && (
             <div className="flex items-center gap-3 mb-6 flex-wrap">
               <MultiSelectFilter
                 label="Country"
@@ -186,10 +181,8 @@ const Deals = () => {
           {/* View */}
           {viewMode === "listing" ? (
             <DealListingView deals={filtered} currency={currency} dateRange={dateRange} />
-          ) : viewMode === "pnl" ? (
-            <DealPnLView deals={filtered} currency={currency} dateRange={dateRange} onDealsUpdate={handleBulkDealsUpdate} />
-          ) : viewMode === "finance" ? (
-            <DealFinanceView deals={filtered} currency={currency} dateRange={dateRange} onDealUpdate={handleDealUpdate} />
+          ) : viewMode === "invoices" ? (
+            <InvoicesView />
           ) : (
             <DocRequirementsView />
           )}

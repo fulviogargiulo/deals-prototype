@@ -1,6 +1,6 @@
 import { Deal } from "@/data/types";
 import { DealListingTable } from "./DealListingTable";
-import { FileText, TrendingUp, DollarSign, Percent, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useState } from "react";
 import { DateRange } from "./DateRangePicker";
 import {
@@ -33,21 +33,8 @@ export function DealListingView({ deals, currency = "EUR", dateRange }: Props) {
     );
   });
 
-  const totalDeals = filtered.length;
-  const totalVolume = filtered.reduce((sum, d) => sum + (d.dealPrice || d.dealAmount), 0);
-  const totalRevenue = filtered.reduce((sum, d) => sum + (d.huspyRevenue || 0), 0);
-  const avgRevenuePercent = totalVolume > 0 ? (totalRevenue / totalVolume) * 100 : 0;
-
   return (
     <div className="space-y-6">
-      {/* Summary tiles */}
-      <div className="grid grid-cols-4 gap-4">
-        <SummaryTile label="Total Deals" value={totalDeals.toString()} subtitle="Selected period" icon={<FileText className="h-5 w-5" />} />
-        <SummaryTile label="Total Volume" value={formatCompact(totalVolume, currency)} subtitle="Deal value" icon={<TrendingUp className="h-5 w-5" />} />
-        <SummaryTile label="Total Revenue" value={formatCompact(totalRevenue, currency)} subtitle="Revenue earned" icon={<DollarSign className="h-5 w-5" />} />
-        <SummaryTile label="Avg. Revenue %" value={`${avgRevenuePercent.toFixed(2)}%`} subtitle="Average revenue rate" icon={<Percent className="h-5 w-5" />} />
-      </div>
-
       {/* Search */}
       <div className="flex items-center gap-4">
         <div className="relative w-[320px]">
@@ -68,22 +55,3 @@ export function DealListingView({ deals, currency = "EUR", dateRange }: Props) {
   );
 }
 
-/* ---- Helpers ---- */
-function SummaryTile({ label, value, subtitle, icon }: { label: string; value: string; subtitle: string; icon: React.ReactNode }) {
-  return (
-    <div className="bg-card border border-border rounded-lg px-3 py-2.5 text-left">
-      <p className="text-[11px] font-medium text-foreground/70 mb-1">{label}</p>
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-[22px] font-bold leading-none text-foreground">{value}</span>
-      </div>
-      <p className="text-[9px] text-muted-foreground/70 mt-1">{subtitle}</p>
-    </div>
-  );
-}
-
-function formatCompact(amount: number, currency: string): string {
-  const symbol = currency === "EUR" ? "€" : currency === "AED" ? "AED " : "SAR ";
-  if (amount >= 1_000_000) return `${symbol}${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `${symbol}${(amount / 1_000).toFixed(0)}K`;
-  return `${symbol}${amount.toFixed(0)}`;
-}

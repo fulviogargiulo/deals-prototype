@@ -58,6 +58,12 @@ function expand(b: BaseInput): Deal {
   const opp = findOpp(b.opportunityId);
   const f = computeDealFinancials(b.dealAmount, b.conveyanceFee ?? 0);
   const businessUnit = b.businessUnit ?? "rebu";
+  // rebateAmount and subsidyAmount are stored as reference fields on the deal.
+  // The actual net amounts are already baked into each REVENUE_SOURCE stakeholder's financialAmount.
+  const grossCommission = Math.round((b.commissionPercentage / 100) * b.dealAmount);
+  const rebateAmount = b.rebatePercentage
+    ? Math.round((b.rebatePercentage / 100) * grossCommission)
+    : undefined;
   const blueprint = getBlueprint(b.country, businessUnit);
 
   // Primary agent display name (display cache only — full AgentEntry[] lives in Karvel enricher).
@@ -70,8 +76,8 @@ function expand(b: BaseInput): Deal {
   const client = clientStake ? sharedClients.find((c) => c.partyId === clientStake.partyId) : undefined;
   const clientParty = client ? sharedParties.find((p) => p.id === client.partyId) : undefined;
 
-  // Derive receivables from outbound invoices linked to this deal.
-  const dealInvoices = sharedInvoices.filter((i) => i.dealId === b.id && i.direction === "outbound");
+  // Derive receivables from inbound invoices linked to this deal.
+  const dealInvoices = sharedInvoices.filter((i) => i.dealId === b.id && i.direction === "inbound");
   const receivables: ReceivableEntry[] = dealInvoices.map((inv) => {
     const party = sharedParties.find((p) => p.id === inv.partyId);
     return {
@@ -126,6 +132,7 @@ function expand(b: BaseInput): Deal {
     conveyanceRevenue: b.conveyanceFee ?? 0,
     receivables,
     rebatePercentage: b.rebatePercentage ?? 0,
+    rebateAmount,
     subsidyAmount: b.market === "secondary" ? (b.subsidyAmount ?? 0) : 0,
     numberOfTranches: 0,
     disbursedAmount: 0,

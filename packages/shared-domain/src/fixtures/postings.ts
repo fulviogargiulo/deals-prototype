@@ -185,8 +185,8 @@ export const sharedPostings: Posting[] = [
     externalRef: "AGINV-018",
     businessProcess: "agent_invoice",
     createdBy: "user-ops-finance",
-    createdAt: "2026-04-15T11:00:00.000Z",
-    valueDate: "2026-04-15",
+    createdAt: "2026-04-25T11:00:00.000Z",
+    valueDate: "2026-04-25",
     currency: "EUR",
 
     description: "Agent invoice — Felicia Canovas, deal-018",
@@ -205,5 +205,97 @@ export const sharedPostings: Posting[] = [
     currency: "EUR",
 
     description: "Apr 2026 platform support fee — Felicia Canovas",
+  },
+
+  // ── deal-008 — seller + developer split (REBU, EUR) ───────────────────────
+
+  {
+    id: "posting-017",
+    dealId: "deal-008",
+    businessUnit: "rebu",
+    externalRef: "P0017",
+    businessProcess: "deal_close",
+    createdBy: "system",
+    createdAt: "2026-03-05T10:00:00.000Z",
+    valueDate: "2026-03-05",
+    currency: "EUR",
+
+    description: "Invoice to seller — deal-008 (EUR 3 700 net of subsidy)",
+  },
+
+  {
+    id: "posting-018",
+    dealId: "deal-008",
+    businessUnit: "rebu",
+    externalRef: "P0018",
+    businessProcess: "deal_close",
+    createdBy: "system",
+    createdAt: "2026-03-10T10:00:00.000Z",
+    valueDate: "2026-03-10",
+    currency: "EUR",
+
+    description: "Invoice to developer — deal-008 (EUR 5 800)",
+  },
+
+  // ── deal-014 — MBU, bank invoice (MBU, EUR) ─────────────────────────────
+
+  {
+    id: "posting-019",
+    dealId: "deal-014",
+    businessUnit: "mortgage",
+    externalRef: "P0019",
+    businessProcess: "deal_close",
+    createdBy: "system",
+    createdAt: "2026-04-15T10:00:00.000Z",
+    valueDate: "2026-04-15",
+    currency: "EUR",
+
+    description: "Invoice to bank — deal-014 (EUR 2 480)",
+  },
+
+  // ── deal-015 — MBU, bank invoice (MBU, SAR) ─────────────────────────────
+
+  {
+    id: "posting-020",
+    dealId: "deal-015",
+    businessUnit: "mortgage",
+    externalRef: "P0020",
+    businessProcess: "deal_close",
+    createdBy: "system",
+    createdAt: "2026-05-02T10:00:00.000Z",
+    valueDate: "2026-05-02",
+    currency: "SAR",
+
+    description: "Invoice to bank — deal-015 (SAR 4 600)",
+  },
+
+  // ── deal-018 — client invoice (REBU, EUR) ───────────────────────────────
+
+  {
+    id: "posting-021",
+    dealId: "deal-018",
+    businessUnit: "rebu",
+    externalRef: "P0021",
+    businessProcess: "deal_close",
+    createdBy: "system",
+    createdAt: "2026-04-15T09:00:00.000Z",
+    valueDate: "2026-04-15",
+    currency: "EUR",
+
+    description: "Invoice to client — deal-018 (EUR 24 250 net of subsidy)",
+  },
+
+  {
+    id: "posting-022",
+    dealId: "deal-018",
+    businessUnit: "rebu",
+    externalRef: "P0022",
+    businessProcess: "bank_statement_inbound_matched",
+    createdBy: "system",
+    createdAt: "2026-04-22T15:00:00.000Z",
+    valueDate: "2026-04-22",
+    currency: "EUR",
+
+    description: "Payment received — deal-018 (EUR 24 250)",
   },
 ];

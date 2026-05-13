@@ -124,11 +124,13 @@ erDiagram
         string opportunityId FK
         DocumentType type
     }
-    DealDispute {
+    DealComment {
         string id
         string dealId FK
-        DisputeField field
-        DisputeStatus status
+        string author "ops | agent"
+        string authorName
+        string text
+        string createdAt
     }
     Ledger {
         string id
@@ -165,7 +167,7 @@ erDiagram
     Opportunity     ||--o{ Deal                         : "produces"
     Deal            ||--|{ DealStakeholder               : "involves"
     Deal            ||--o{ DealDocumentRequirement       : "requires"
-    Deal            ||--o| DealDispute                   : "may have"
+    Deal            ||--o{ DealComment                    : "has thread"
     Deal            |o--o{ Posting                       : "generates"
     Deal            |o--|{ Invoice                       : "creates"
     Blueprint       |o--o{ Deal                          : "governs tax for"

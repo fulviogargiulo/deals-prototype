@@ -1,3 +1,8 @@
+/**
+ * @deprecated Removed from top-level tabs. Use InvoicesView instead for invoice/finance workflow.
+ * If deal-level P&L needs to surface, integrate into DealDetail instead.
+ */
+
 import { Deal } from "@/data/types";
 import { PnLDealTable } from "./PnLDealTable";
 import { PnLSummaryTable } from "./PnLSummaryTable";

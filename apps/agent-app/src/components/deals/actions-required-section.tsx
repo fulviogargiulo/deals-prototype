@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Deal } from '@/types';
 import { type DealStakeholder, computeAgentCommission } from '@huspy/shared-domain';
-import { Clock, AlertTriangle, CheckCircle2, MoreVertical, Timer } from 'lucide-react';
+import { Clock, CheckCircle2, MoreVertical, Timer, RotateCcw } from 'lucide-react';
 import { CountdownTimer } from '@/components/ui/countdown-timer';
 import { Button } from '@/components/ui/button';
 import { OpportunityIcon } from '@/components/opportunities/opportunity-icon';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
-import { DealDisputeModal } from '@/components/modals/deal-dispute-modal';
 import { ProvideInfoModal } from '@/components/modals/provide-info-modal';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -17,8 +16,6 @@ import { toast } from 'sonner';
 interface ActionsRequiredSectionProps {
   pendingConfirmation: Deal[];
   pendingInfo: Deal[];
-  disputedDealIds: Set<string>;
-  onDealDisputed?: (dealId: string) => void;
   agentStakeMap?: Map<string, DealStakeholder>;
 }
 
@@ -29,16 +26,16 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
   lease: { icon: LeaseBareIcon, color: '#CD52C3' },
 };
 
-export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, disputedDealIds, onDealDisputed, agentStakeMap }: ActionsRequiredSectionProps) {
-  const [disputeDeal, setDisputeDeal] = useState<Deal | null>(null);
+export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, agentStakeMap }: ActionsRequiredSectionProps) {
   const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
   const [infoDeal, setInfoDeal] = useState<Deal | null>(null);
   const [submittedInfoDealIds, setSubmittedInfoDealIds] = useState<Set<string>>(new Set());
   const [confirmedDealIds, setConfirmedDealIds] = useState<Set<string>>(new Set());
+  const [reviewRequestedIds, setReviewRequestedIds] = useState<Set<string>>(new Set());
   const [dealsExpiresAt] = useState(() => new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString());
 
   const activePendingInfo = pendingInfo.filter(d => !submittedInfoDealIds.has(d.id));
-  const remainingConfirmation = pendingConfirmation.filter(d => !confirmedDealIds.has(d.id) && !disputedDealIds.has(d.id));
+  const remainingConfirmation = pendingConfirmation.filter(d => !confirmedDealIds.has(d.id) && !reviewRequestedIds.has(d.id));
 
   type PendingItem = { kind: 'confirm'; deal: Deal } | { kind: 'info'; deal: Deal };
   const allItems: PendingItem[] = [
@@ -79,6 +76,11 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, dispu
   const handleConfirmSingle = (deal: Deal) => {
     toast.success(`"${deal.title}" confirmed for invoicing`);
     setConfirmedDealIds(prev => new Set(prev).add(deal.id));
+  };
+
+  const handleRequestReview = (deal: Deal) => {
+    setReviewRequestedIds(prev => new Set(prev).add(deal.id));
+    toast.success(`"${deal.title}" sent back to Ops for review`);
   };
 
   const renderDealIcon = (type: string) => {
@@ -240,7 +242,7 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, dispu
                           <MoreVertical className="h-4 w-4 rotate-90" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuContent align="end" className="w-44">
                         <DropdownMenuItem
                           className="cursor-pointer gap-2"
                           style={{ color: 'hsl(var(--ds-green))' }}
@@ -251,11 +253,11 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, dispu
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="cursor-pointer gap-2"
-                          style={{ color: 'hsl(var(--ds-red))' }}
-                          onClick={() => setDisputeDeal(deal)}
+                          style={{ color: 'hsl(var(--ds-orange))' }}
+                          onClick={() => handleRequestReview(deal)}
                         >
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          Dispute
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Request Review
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -276,12 +278,6 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, dispu
         </div>
       </div>
 
-      <DealDisputeModal
-        open={!!disputeDeal}
-        onOpenChange={(open) => !open && setDisputeDeal(null)}
-        deal={disputeDeal}
-        onDisputeSubmitted={(dealId) => onDealDisputed?.(dealId)}
-      />
       <ProvideInfoModal
         open={!!infoDeal}
         onOpenChange={(open) => !open && setInfoDeal(null)}
