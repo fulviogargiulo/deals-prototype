@@ -1,33 +1,22 @@
-import { useMemo } from 'react';
 import { Deal } from '@/types';
 import { FileText, Banknote, TrendingUp } from 'lucide-react';
-import { isWithinInterval, parseISO } from 'date-fns';
 import { type DealStakeholder, computeAgentCommission } from '@huspy/shared-domain';
 
 interface DealsSummaryCardsProps {
   deals: Deal[];
-  dateRange?: { from: Date; to: Date };
   agentStakeMap?: Map<string, DealStakeholder>;
 }
 
-export function DealsSummaryCards({ deals, dateRange, agentStakeMap }: DealsSummaryCardsProps) {
-  const filteredDeals = useMemo(() => {
-    if (!dateRange) return deals;
-    return deals.filter(d => {
-      const reportDate = parseISO(d.reportDate);
-      return isWithinInterval(reportDate, { start: dateRange.from, end: dateRange.to });
-    });
-  }, [deals, dateRange]);
-
-  const totalDealValue = filteredDeals.reduce((sum, d) => sum + d.dealAmount, 0);
-  const totalCommissionsPaid = filteredDeals
+export function DealsSummaryCards({ deals, agentStakeMap }: DealsSummaryCardsProps) {
+  const totalDealValue = deals.reduce((sum, d) => sum + d.dealAmount, 0);
+  const totalCommissionsPaid = deals
     .filter(d => d.status === 'finalized')
     .reduce((sum, d) => sum + computeAgentCommission(d.commissionAmount, agentStakeMap?.get(d.id)), 0);
 
   const cards = [
     {
       label: 'Deals Reported',
-      value: filteredDeals.length.toString(),
+      value: deals.length.toString(),
       icon: FileText,
       color: 'hsl(var(--accent-teal))',
       bg: 'hsl(var(--accent-teal) / 0.1)',

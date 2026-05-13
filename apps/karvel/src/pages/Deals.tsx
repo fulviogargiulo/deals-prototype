@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, Upload, Plus, UserRound, DollarSign, List, Landmark } from "lucide-react";
+import { Settings, Upload, Plus, UserRound, DollarSign, List, Landmark, ClipboardList } from "lucide-react";
 import { getDeals, setDeals as setStoreDeals, addDeals as addStoreDeals } from "@/data/dealStore";
 import { DealPnLView } from "@/components/DealPnLView";
 import { DealListingView } from "@/components/DealListingView";
@@ -11,6 +11,7 @@ import { MultiSelectFilter } from "@/components/MultiSelectFilter";
 import { DateRangePicker, DateRange, TimePeriod, getPresetRange } from "@/components/DateRangePicker";
 import { BulkUploadDialog } from "@/components/BulkUploadDialog";
 import { AddDealDialog } from "@/components/AddDealDialog";
+import { DocRequirementsView } from "@/components/DocRequirementsView";
 
 const COUNTRIES: Country[] = ["ae", "es", "sa"];
 const BUSINESS_UNITS: BusinessUnit[] = ["rebu", "mortgage"];
@@ -24,7 +25,7 @@ export const countryCurrencyMap: Record<Country, string> = {
   sa: "SAR",
 };
 
-type ViewMode = "listing" | "pnl" | "finance";
+type ViewMode = "listing" | "pnl" | "finance" | "doc-requirements";
 
 const Deals = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("listing");
@@ -127,10 +128,17 @@ const Deals = () => {
                 >
                   <Landmark className="h-4 w-4" />
                 </button>
+                <button
+                  onClick={() => { setViewMode("doc-requirements"); setSelectedDeal(null); }}
+                  className={`p-2 rounded-md transition-colors ${viewMode === "doc-requirements" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  title="Document Requirements"
+                >
+                  <ClipboardList className="h-4 w-4" />
+                </button>
               </div>
             </div>
 
-            {viewMode !== "finance" && (
+            {viewMode !== "finance" && viewMode !== "doc-requirements" && (
               <div className="flex items-center gap-3">
                 <button onClick={() => setBulkUploadOpen(true)} className="flex items-center gap-2 px-4 py-2 border border-border rounded-md text-[13px] font-medium text-foreground bg-card hover:bg-muted transition-colors">
                   <Upload className="h-4 w-4" />
@@ -145,48 +153,52 @@ const Deals = () => {
           </div>
 
           {/* Filter selectors + Date picker */}
-          <div className="flex items-center gap-3 mb-6 flex-wrap">
-            <MultiSelectFilter
-              label="Country"
-              options={COUNTRIES}
-              selected={selectedCountries}
-              onChange={setSelectedCountries}
-            />
-            <MultiSelectFilter
-              label="Business Unit"
-              options={BUSINESS_UNITS}
-              selected={selectedBUs}
-              onChange={setSelectedBUs}
-            />
-            <MultiSelectFilter
-              label="Market Type"
-              options={MARKET_TYPES}
-              selected={selectedMarkets}
-              onChange={setSelectedMarkets}
-            />
-            {showChannel && (
+          {viewMode !== "doc-requirements" && (
+            <div className="flex items-center gap-3 mb-6 flex-wrap">
               <MultiSelectFilter
-                label="Channel"
-                options={CHANNELS}
-                selected={selectedChannels}
-                onChange={setSelectedChannels}
+                label="Country"
+                options={COUNTRIES}
+                selected={selectedCountries}
+                onChange={setSelectedCountries}
               />
-            )}
-            <DateRangePicker
-              dateRange={dateRange}
-              timePeriod={timePeriod}
-              onDateRangeChange={setDateRange}
-              onTimePeriodChange={setTimePeriod}
-            />
-          </div>
+              <MultiSelectFilter
+                label="Business Unit"
+                options={BUSINESS_UNITS}
+                selected={selectedBUs}
+                onChange={setSelectedBUs}
+              />
+              <MultiSelectFilter
+                label="Market Type"
+                options={MARKET_TYPES}
+                selected={selectedMarkets}
+                onChange={setSelectedMarkets}
+              />
+              {showChannel && (
+                <MultiSelectFilter
+                  label="Channel"
+                  options={CHANNELS}
+                  selected={selectedChannels}
+                  onChange={setSelectedChannels}
+                />
+              )}
+              <DateRangePicker
+                dateRange={dateRange}
+                timePeriod={timePeriod}
+                onDateRangeChange={setDateRange}
+                onTimePeriodChange={setTimePeriod}
+              />
+            </div>
+          )}
 
           {/* View */}
           {viewMode === "listing" ? (
             <DealListingView deals={filtered} currency={currency} dateRange={dateRange} onDealClick={setSelectedDeal} />
           ) : viewMode === "pnl" ? (
             <DealPnLView deals={filtered} currency={currency} dateRange={dateRange} onDealsUpdate={handleBulkDealsUpdate} />
-          ) : (
+          ) : viewMode === "finance" ? (
             <DealFinanceView deals={filtered} currency={currency} dateRange={dateRange} onDealUpdate={handleDealUpdate} />
+          ) : (
+            <DocRequirementsView />
           )}
         </div>
 

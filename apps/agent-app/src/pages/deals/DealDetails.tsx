@@ -7,7 +7,7 @@ import { FileText, CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from
 import { DocumentRow } from '@/components/deals/document-row';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { mockDeals, agentStakeMap } from '@/data/mockDeals';
-import { computeDealFinancials, COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus } from '@huspy/shared-domain';
+import { computeDealFinancials, COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -39,38 +39,10 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
   lease: { icon: LeaseBareIcon, color: '#CD52C3' },
 };
 
-function getDocumentsForMarketType(marketType: string) {
-  switch (marketType) {
-    case 'primary':
-      return [
-        { name: 'Booking Form / Reservation Form', uploaded: true },
-        { name: "Buyer's Passport", uploaded: false },
-        { name: "Buyer's EID", uploaded: false },
-        { name: 'AML/KYC', uploaded: false },
-      ];
-    case 'leasing':
-      return [
-        { name: 'Tenancy Contract', uploaded: true },
-        { name: 'Tenant Passport', uploaded: false },
-        { name: 'Tenant EID', uploaded: false },
-        { name: 'Ejari / AML / KYC', uploaded: false },
-      ];
-    case 'secondary':
-    default:
-      return [
-        { name: 'Agent Handover Sheet', uploaded: true },
-        { name: 'Form F', uploaded: true },
-        { name: 'Title Deed', uploaded: false },
-        { name: 'Copy of 10% deposit cheque', uploaded: false },
-        { name: 'Buyer Passport', uploaded: true },
-        { name: 'Buyer EID', uploaded: false },
-        { name: 'Buyer Visa', uploaded: false },
-        { name: 'Seller Passport', uploaded: true },
-        { name: 'Seller EID', uploaded: false },
-        { name: 'Seller Visa', uploaded: false },
-        { name: 'AML/KYC', uploaded: false },
-      ];
-  }
+function getDocumentsForDeal(dealId: string) {
+  return sharedDealDocumentRequirements
+    .filter((r) => r.dealId === dealId)
+    .map((r) => ({ name: r.label, uploaded: r.status !== 'pending' }));
 }
 
 export function DealDetails() {
@@ -103,10 +75,7 @@ export function DealDetails() {
   };
 
 
-  const allDocsUploaded = ['pending-agent-approval', 'pending-receivables', 'finalized'].includes(viewDeal.status);
-  const documents = getDocumentsForMarketType(viewDeal.marketType).map(doc =>
-    allDocsUploaded ? { ...doc, uploaded: true } : doc
-  );
+  const documents = getDocumentsForDeal(viewDeal.id);
 
   return (
     <PageContainer>

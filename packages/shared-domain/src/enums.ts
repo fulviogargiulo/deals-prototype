@@ -58,13 +58,53 @@ export type BusinessProcess =
   | "manual_adjustment"
   | "reversal";
 
-export type StakeholderRole =
-  | "agent"
-  | "buyer"
-  | "seller"
-  | "tenant"
-  | "landlord"
-  | "borrower"
-  | "developer"
-  | "bank"
-  | "conveyance";
+/**
+ * StakeholderType — semantic financial role of a party on a deal.
+ *
+ * REVENUE_SOURCE:         Party paying Huspy. financialAmount > 0 contributes to commissionable gross.
+ * OPERATIONAL_DEDUCTION:  Fixed service costs Huspy pays (notaries, conveyance, legal). Routes to Bucket D.
+ * ACQUISITION_DEDUCTION:  Sales/referral costs Huspy pays (co-brokers, client rebates). Routes to Bucket C.
+ * INTERNAL_PAYOUT:        Agent — system-calculated via AgentStrategy. Routes to Bucket B.
+ *
+ * [TO BE DETERMINED] Agent split percentages will migrate to an Offer entity
+ * linked from the deal; splitPercentage on DealStakeholder is the interim source of truth.
+ */
+export type StakeholderType =
+  | "REVENUE_SOURCE"
+  | "OPERATIONAL_DEDUCTION"
+  | "ACQUISITION_DEDUCTION"
+  | "INTERNAL_PAYOUT";
+
+// ============================================================
+// Waterfall — cost-bucket taxonomy used by the lean P&L engine.
+// A: Top-level revenue reductions (VAT, mandatory fees) applied to gross.
+// B: Internal Huspy splits (agent, team-lead, manager) — calculated, not entered.
+// C: External commercial splits (referral partners, co-brokering agencies).
+// D: External service providers (notaries, conveyance, legal — fixed fees).
+// Buckets A and B are derived by the engine; C and D are user-declared.
+// ============================================================
+export type CostBucket = "A" | "B" | "C" | "D";
+
+// Discriminator for AgentFinancials.strategy. See entities.ts for the union shape.
+export type AgentStrategyKind = "flat" | "slab" | "max";
+
+// ============================================================
+// Deal document requirements — per-deal checklist driven by
+// DocumentRequirementTemplate keyed on (market, businessUnit, country).
+// ============================================================
+export type DocumentRequirementStatus = "pending" | "uploaded" | "approved" | "waived";
+
+// ============================================================
+// Agent-level compliance documents — managed by Ops in Karvel.
+// These are per-agent, not per-deal.
+// ============================================================
+export type AgentDocumentType =
+  | "passport"
+  | "eid"
+  | "id-number"
+  | "visa"
+  | "aml-kyc"
+  | "real-estate-license"
+  | "account-number"
+  | "bic"
+  | "other";

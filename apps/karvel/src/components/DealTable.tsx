@@ -1,8 +1,8 @@
 import { Deal } from "@/data/types";
 import { DealTypeBadge, DealStatusBadge } from "./DealBadges";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { computeDealPnL } from "@/lib/dealCalculations";
 
 interface Props {
   deals: Deal[];
@@ -12,8 +12,12 @@ interface Props {
 }
 
 export function DealTable({ deals, onRowClick, selectedId, currency = "EUR" }: Props) {
-  const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  const pnlByDealId = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof computeDealPnL>>();
+    deals.forEach((d) => m.set(d.id, computeDealPnL(d)));
+    return m;
+  }, [deals]);
   const perPage = 10;
   const totalCount = deals.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
@@ -32,40 +36,37 @@ export function DealTable({ deals, onRowClick, selectedId, currency = "EUR" }: P
                 <th className={thClass}>ID · {totalCount}</th>
                 <th className={thClass}>Type</th>
                 <th className={`${thClass} text-center`}>Status</th>
-                <th className={thClass}>Market</th>
-                <th className={thClass}>Client Name</th>
-                <th className={thClass}>Agent Name</th>
-                <th className={thClass}>Opportunity Name</th>
-                <th className={thClass}>Amount</th>
-                <th className={thClass}>Created At</th>
-                <th className={thClass}>Value Date</th>
+                <th className={thClass}>BU</th>
+                <th className={thClass}>Country</th>
+
+                <th className={`${thClass} text-right`}>Gross Revenue</th>
+                <th className={`${thClass} text-right`}>Net Revenue</th>
+                <th className={`${thClass} text-right`}>Huspy Margin</th>
+                <th className={thClass}>Created</th>
               </tr>
             </thead>
             <tbody>
-              {paginated.map((deal) => (
+              {paginated.map((deal) => {
+                const pnl = pnlByDealId.get(deal.id);
+                return (
                 <tr
                   key={deal.id}
                   onClick={() => onRowClick?.(deal)}
                   className={`border-b border-border hover:bg-muted/30 transition-colors cursor-pointer ${selectedId === deal.id ? "bg-muted/50" : ""}`}
                 >
-                  <td className={tdClass}>{deal.id}</td>
+                  <td className={`${tdClass} font-mono text-[12px] text-muted-foreground`}>{deal.id}</td>
                   <td className="px-5 py-3.5"><DealTypeBadge type={deal.type} /></td>
                   <td className="px-5 py-3.5 text-center"><DealStatusBadge status={deal.status} isDisputed={deal.isDisputed} /></td>
-                  <td className={tdClass}>{deal.market}</td>
-                  <td className={tdClass}>
-                    <button onClick={(e) => { e.stopPropagation(); navigate(`/clients?selected=${encodeURIComponent(deal.clientName)}`); }} className="text-primary underline underline-offset-2 hover:opacity-80">{deal.clientName}</button>
-                  </td>
-                  <td className={tdClass}>
-                    <button onClick={(e) => { e.stopPropagation(); navigate(`/agents?selected=${encodeURIComponent(deal.agentName)}`); }} className="text-primary underline underline-offset-2 hover:opacity-80">{deal.agentName}</button>
-                  </td>
-                  <td className={`${tdClass} max-w-[200px] truncate`}>
-                    <button onClick={(e) => { e.stopPropagation(); navigate(`/?selected=${encodeURIComponent(deal.opportunityName)}`); }} className="text-primary underline underline-offset-2 hover:opacity-80">{deal.opportunityName}</button>
-                  </td>
-                  <td className={tdClass}>{formatAmount(deal.dealAmount, currency)}</td>
-                  <td className={tdClass}>{deal.createdAt ? formatDate(deal.createdAt) : '—'}</td>
-                  <td className={tdClass}>{formatDate(deal.reportDate)}</td>
+                  <td className={tdClass}>{deal.businessUnit?.toUpperCase() ?? "—"}</td>
+                  <td className={tdClass}>{deal.country?.toUpperCase() ?? "—"}</td>
+
+                  <td className={`${tdClass} text-right tabular-nums`}>{deal.grossRevenue != null ? formatAmount(deal.grossRevenue, currency) : "—"}</td>
+                  <td className={`${tdClass} text-right tabular-nums`}>{pnl ? formatAmount(pnl.netRevenue, currency) : "—"}</td>
+                  <td className={`${tdClass} text-right tabular-nums`}>{pnl ? formatAmount(pnl.huspyMargin, currency) : "—"}</td>
+                  <td className={tdClass}>{deal.createdAt ? formatDate(deal.createdAt) : "—"}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

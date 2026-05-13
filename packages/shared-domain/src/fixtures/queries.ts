@@ -79,7 +79,7 @@ export const getDealStakeholdersForParty = (partyId: string) => sharedDealStakeh
 
 // Returns the agent-role DealStakeholder for a specific agent party on a given deal.
 export const getAgentStakeForDeal = (dealId: string, agentPartyId: string): DealStakeholder | undefined =>
-  sharedDealStakeholders.find((s) => s.dealId === dealId && s.partyId === agentPartyId && s.role === "agent");
+  sharedDealStakeholders.find((s) => s.dealId === dealId && s.partyId === agentPartyId && s.role === "INTERNAL_PAYOUT");
 
 // Computes the commission amount attributable to one agent based on their stake.
 // Uses fixedAmount when set; otherwise applies splitPercentage (defaults to 100%).
@@ -92,8 +92,7 @@ export const computeAgentCommission = (totalAgentCommission: number, stake: Deal
 // Returns the Client record for the primary client stakeholder on a deal.
 export const getClientForDeal = (dealId: string) => {
   const stakeholders = sharedDealStakeholders.filter((s) => s.dealId === dealId);
-  const clientRoles = new Set(["buyer", "seller", "tenant", "landlord", "borrower"]);
-  const clientStakeholder = stakeholders.find((s) => clientRoles.has(s.role));
+  const clientStakeholder = stakeholders.find((s) => s.role === "REVENUE_SOURCE");
   if (!clientStakeholder) return undefined;
   return sharedClients.find((c) => c.partyId === clientStakeholder.partyId);
 };

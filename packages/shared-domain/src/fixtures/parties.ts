@@ -53,6 +53,7 @@ export const sharedParties: Party[] = [
     email: "mariana.danobeitia@email.com",
     phone: "+34612345678",
     legalType: "individual",
+    taxId: "12345678A",
   },
   {
     id: "party-client-002",
@@ -60,6 +61,7 @@ export const sharedParties: Party[] = [
     email: "carlos.fernandez@email.com",
     phone: "+34698765432",
     legalType: "individual",
+    taxId: "23456789B",
   },
   {
     id: "party-client-003",
@@ -67,6 +69,7 @@ export const sharedParties: Party[] = [
     email: "ana.rodriguez@email.com",
     phone: "+34611223344",
     legalType: "individual",
+    taxId: "34567890C",
   },
   {
     id: "party-client-004",
@@ -74,6 +77,7 @@ export const sharedParties: Party[] = [
     email: "javier.martinez@email.com",
     phone: "+34699887766",
     legalType: "individual",
+    taxId: "45678901D",
   },
   {
     id: "party-client-005",
@@ -81,6 +85,7 @@ export const sharedParties: Party[] = [
     email: "khalid.alharbi@email.com",
     phone: "+966504269287",
     legalType: "individual",
+    taxId: "1098765432",
   },
   {
     id: "party-client-006",
@@ -88,6 +93,7 @@ export const sharedParties: Party[] = [
     email: "esra.sertcetin@email.com",
     phone: "+905387764299",
     legalType: "individual",
+    taxId: "56789012E",
   },
   {
     id: "party-client-007",
@@ -95,6 +101,7 @@ export const sharedParties: Party[] = [
     email: "fatima.almansouri@email.com",
     phone: "+971501234567",
     legalType: "individual",
+    taxId: "784198512345671",
   },
   {
     id: "party-client-008",
@@ -102,6 +109,7 @@ export const sharedParties: Party[] = [
     email: "ahmed.alrashidi@email.com",
     phone: "+971509876543",
     legalType: "individual",
+    taxId: "784199087654321",
   },
   {
     id: "party-client-009",
@@ -109,6 +117,7 @@ export const sharedParties: Party[] = [
     email: "lorenzo.romano@email.com",
     phone: "+34612998877",
     legalType: "individual",
+    taxId: "67890123F",
   },
   {
     id: "party-client-010",
@@ -116,6 +125,7 @@ export const sharedParties: Party[] = [
     email: "nadia.alzubairi@email.com",
     phone: "+966551122334",
     legalType: "individual",
+    taxId: "1087654321",
   },
 
   // ── Third parties (banks, developers) ─────────────────────────────────────
@@ -123,21 +133,25 @@ export const sharedParties: Party[] = [
     id: "party-third-inmobiliaria-grupo-norte",
     displayName: "Inmobiliaria Grupo Norte",
     legalType: "company",
+    taxId: "A12345678",
   },
   {
     id: "party-third-caixabank",
     displayName: "CaixaBank",
     legalType: "financial_institution",
+    taxId: "A08663619",
   },
   {
     id: "party-third-snb",
     displayName: "Saudi National Bank",
     legalType: "financial_institution",
+    taxId: "SA1000000001",
   },
   {
     id: "party-third-emaar",
     displayName: "Emaar Properties",
     legalType: "company",
+    taxId: "AE100000001",
   },
 
   // ── Conveyance firms ───────────────────────────────────────────────────────
@@ -145,15 +159,18 @@ export const sharedParties: Party[] = [
     id: "party-conv-gestoria-lopez",
     displayName: "Gestoría López & Asociados",
     legalType: "company",
+    taxId: "B98765432",
   },
   {
     id: "party-conv-tamm-legal",
     displayName: "TAMM Legal Services",
     legalType: "company",
+    taxId: "AE200000001",
   },
   {
     id: "party-conv-alrajhi-notarial",
     displayName: "Al Rajhi Notarial",
     legalType: "company",
+    taxId: "SA2000000001",
   },
 ];

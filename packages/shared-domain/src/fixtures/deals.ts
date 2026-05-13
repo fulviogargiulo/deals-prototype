@@ -6,6 +6,7 @@ import { sharedDealStakeholders } from "./dealStakeholders";
 import { sharedAgents } from "./agents";
 import { sharedInvoices } from "./invoices";
 import { computeDealFinancials, COMMISSION_RATES } from "../commissionCalc";
+import { getBlueprint } from "../blueprints";
 
 const agentDisplayName: Record<string, string> = {
   "agent-felicia": "Felicia Canovas",
@@ -16,20 +17,20 @@ const agentDisplayName: Record<string, string> = {
   "agent-zainab": "Zainab Al-Qadi",
 };
 
-const CLIENT_ROLES = new Set(["buyer", "seller", "tenant", "landlord", "borrower"]);
+const CLIENT_ROLES = new Set<string>(["REVENUE_SOURCE"]);
 
 function findOpp(id: string) {
   return sharedOpportunities.find((o) => o.id === id);
 }
 
-function deriveReceivableEntityType(partyId: string, dealId: string): ReceivableEntityType {
+function deriveReceivableEntityType(partyId: string, dealType: Deal["type"]): ReceivableEntityType {
   const party = sharedParties.find((p) => p.id === partyId);
   if (party?.legalType === "financial_institution") return "bank";
   if (party?.legalType === "company") return "developer";
-  const stake = sharedDealStakeholders.find((s) => s.partyId === partyId && s.dealId === dealId);
-  if (stake?.role === "seller") return "seller";
-  if (stake?.role === "tenant") return "tenant";
-  if (stake?.role === "landlord") return "landlord";
+  // Sub-type (seller/tenant/landlord) is no longer modelled on DealStakeholder —
+  // all client parties are REVENUE_SOURCE. Infer display label from deal type.
+  if (dealType === "sell") return "seller";
+  if (dealType === "rent" || dealType === "lease" || dealType === "rent-lease") return "tenant";
   return "buyer";
 }
 
@@ -60,9 +61,11 @@ interface BaseInput {
 function expand(b: BaseInput): Deal {
   const opp = findOpp(b.opportunityId);
   const f = computeDealFinancials(b.dealAmount, b.conveyanceFee ?? 0);
+  const businessUnit = b.businessUnit ?? "rebu";
+  const blueprint = getBlueprint(b.country, businessUnit, b.type);
 
   // Primary agent display name (display cache only — full AgentEntry[] lives in Karvel enricher).
-  const primaryAgentStake = sharedDealStakeholders.find((s) => s.dealId === b.id && s.role === "agent");
+  const primaryAgentStake = sharedDealStakeholders.find((s) => s.dealId === b.id && s.role === "INTERNAL_PAYOUT" && s.isPrimary);
   const primaryAgent = primaryAgentStake ? sharedAgents.find((a) => a.partyId === primaryAgentStake.partyId) : undefined;
   const agentName = primaryAgent ? (agentDisplayName[primaryAgent.id] ?? primaryAgent.id) : "Unknown";
 
@@ -77,7 +80,7 @@ function expand(b: BaseInput): Deal {
     const party = sharedParties.find((p) => p.id === inv.partyId);
     return {
       entityName: party?.displayName ?? "Unknown",
-      entityType: deriveReceivableEntityType(inv.partyId, b.id),
+      entityType: deriveReceivableEntityType(inv.partyId, b.type),
       amount: inv.amount,
       invoiceNumber: inv.invoiceNumber,
       invoiceStatus: inv.status,
@@ -94,13 +97,17 @@ function expand(b: BaseInput): Deal {
     type: b.type,
     status: b.status,
     market: b.market,
-    businessUnit: b.businessUnit ?? "rebu",
+    businessUnit,
     country: b.country,
     currency: b.currency,
     dealAmount: b.dealAmount,
     reportDate: b.reportDate,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
+
+    // Lean waterfall fields
+    grossRevenue: f.huspyRevenue,
+    blueprintId: blueprint.id,
 
     // Display caches — derived from DealStakeholder chain, not embedded FKs
     clientName: clientParty?.displayName ?? "Unknown",

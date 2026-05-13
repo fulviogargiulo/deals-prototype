@@ -1,17 +1,19 @@
 import type {
+  AgentDocumentType,
   BusinessProcess,
   BusinessUnit,
   Country,
   Currency,
   DealStatus,
   DealType,
+  DocumentRequirementStatus,
   InvoiceStatus,
   LedgerType,
   Market,
   OpportunityStatus,
   OpportunityType,
   PostingSide,
-  StakeholderRole,
+  StakeholderType,
 } from "./enums";
 
 // ============================================================
@@ -26,6 +28,8 @@ export interface Party {
   email?: string;
   phone?: string;
   legalType?: string;
+  /** Deduplication key. Two Party records with the same taxId represent the same legal entity. */
+  taxId?: string;
 }
 
 // ============================================================
@@ -322,7 +326,14 @@ export interface Deal {
   takeRate?: number;
   huspyRevenue?: number;
   netHuspyRevenue?: number;
+  /** @deprecated Conveyance fee — now modelled as a DealStakeholder with role "conveyance" and negative financialAmount. */
   conveyanceRevenue?: number;
+
+  // Lean waterfall — set by the new Deal creation flow.
+  /** Gross commission Huspy charges. For multi-payer deals, equals Σ DealStakeholder.financialAmount where > 0. */
+  grossRevenue?: number;
+  /** Blueprint id the engine used for the most recent projection. */
+  blueprintId?: string;
 
   // Rebates / Subsidy (inputs — kept as deal config)
   rebatePercentage?: number;
@@ -369,6 +380,70 @@ export interface Deal {
 }
 
 // ============================================================
+// AgentFinancials — per-agent commission strategy & rate config.
+// Replaces the in-memory agentFinancialsStore in AgentDetail.tsx.
+// Every internal split for an agent on a deal is derived from
+// the agent's strategy applied to the deal's net revenue.
+// ============================================================
+
+/** Flat: a constant % of the agent's share of net revenue. */
+export interface FlatAgentStrategy {
+  kind: "flat";
+  /** Percentage of net revenue paid as commission, e.g. 40 = 40%. */
+  pct: number;
+}
+
+/** Slab: progressive tiers applied to the agent's allocated net on the current deal.
+ *  Each `pct` applies to the slice between the previous slab's `upTo` and this one's. */
+export interface SlabAgentStrategy {
+  kind: "slab";
+  /** Slabs ordered by ascending `upTo`. Final slab should have `upTo: null` to mean unbounded. */
+  slabs: Array<{ upTo: number | null; pct: number }>;
+}
+
+/** Max: a flat % capped at an absolute amount. payout = min(pct × net, capAmount). */
+export interface MaxAgentStrategy {
+  kind: "max";
+  pct: number;
+  capAmount: number;
+}
+
+export type AgentStrategy = FlatAgentStrategy | SlabAgentStrategy | MaxAgentStrategy;
+
+export interface AgentFinancials {
+  id: string;
+  agentId: string;
+  /** Strategy used to compute the agent's payout against deal net revenue. */
+  strategy: AgentStrategy;
+  /** % of agent payout passed to the team lead (Huspy-borne overhead, additive on top). */
+  teamLeadRate?: number;
+  /** % of agent payout passed to the manager (Huspy-borne overhead, additive on top). */
+  managerRate?: number;
+  /** ISO date the policy became effective. Used when multiple records exist for one agent. */
+  effectiveFrom?: string;
+}
+
+// ============================================================
+// Blueprint — statutory tax configuration per (country, businessUnit).
+//
+// Tax is NOT modelled as a stakeholder or waterfall step. The Blueprint
+// service reads this at deal_close and emits the required PostingLines
+// against LIAB_STATUTORY_TAX_{CUR}. The P&L waterfall operates on
+// tax-exclusive amounts only.
+// ============================================================
+export interface Blueprint {
+  id: string;
+  country: Country;
+  businessUnit: BusinessUnit;
+  /** Optional further specialisation: if set, only applies to this dealType. */
+  dealType?: DealType;
+  /** Statutory tax rate applied to gross commission (e.g. 5 = VAT 5%, 21 = IVA 21%). */
+  taxRate: number;
+  /** Human-readable tax label for ledger descriptions (e.g. "VAT", "IVA"). */
+  taxLabel: string;
+}
+
+// ============================================================
 // DealStakeholder — links a Party to a Deal with a specific role.
 // Replaces the agentId/clientId FKs that were embedded on Deal.
 // ============================================================
@@ -376,9 +451,69 @@ export interface DealStakeholder {
   id: string;
   dealId: string;
   partyId: string;
-  role: StakeholderRole;
+  role: StakeholderType;
+  isPrimary?: boolean;
+  /** Agent's share of the commission pool (0–100). Only relevant for agent roles. */
   splitPercentage?: number;
   fixedAmount?: number;
+  /** Signed financial impact on the deal P&L.
+   *  Positive → party pays Huspy (gross revenue source). Engine sums these instead of Deal.grossRevenue when present.
+   *  Negative → Huspy pays party (cost). Bucket derived from role: conveyance → D; all others → C. */
+  financialAmount?: number;
+}
+
+// ============================================================
+// DealDocumentRequirement — per-deal document checklist.
+// Instantiated from DocumentRequirementTemplate when a deal is
+// created. Primary agent submits all documents; Ops approves or
+// waives in Karvel. Agent-specific docs (KYC, identity) are
+// managed on the Agent profile in Karvel, not here.
+// ============================================================
+export interface DealDocumentRequirement {
+  id: string;
+  dealId: string;
+  label: string;
+  required: boolean;
+  status: DocumentRequirementStatus;
+  documentId?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+}
+
+// ============================================================
+// DocumentRequirementTemplate — configurable registry of
+// required documents per (market, businessUnit, country).
+// Ops manages templates in Karvel; the engine instantiates
+// DealDocumentRequirement rows from matching templates on deal
+// creation.
+// ============================================================
+export interface DocumentRequirementTemplate {
+  id: string;
+  market: Market;
+  businessUnit: BusinessUnit;
+  country: Country;
+  label: string;
+  required: boolean;
+}
+
+// AgentDocument — per-agent compliance documents managed by Ops in Karvel.
+// Not deal-scoped. Covers identity, licensing, and payment details.
+// kind="file"  → Ops uploads a scanned document (passport, license, AML/KYC…)
+// kind="text"  → Ops types a reusable value (IBAN, BIC, NIE number…) stored in `value`
+export interface AgentDocument {
+  id: string;
+  agentId: string;
+  documentType: AgentDocumentType;
+  label: string;
+  required: boolean;
+  kind: "file" | "text";
+  status: DocumentRequirementStatus;
+  value?: string;
+  documentId?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  expiresAt?: string;
+  notes?: string;
 }
 
 // ============================================================

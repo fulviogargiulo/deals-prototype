@@ -1,9 +1,24 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { MessageSquare, Check, Archive, Pencil, Copy, Plus, X } from "lucide-react";
-import { sharedAgents, sharedParties, sharedPostingLines, sharedPostings, sharedLedgers } from "@huspy/shared-domain";
-import { COMMISSION_RATES, computeDealFinancials } from "@huspy/shared-domain";
-import type { Posting, PostingLine } from "@huspy/shared-domain";
+import { MessageSquare, Check, Archive, Pencil, Copy, Plus, X, Download } from "lucide-react";
+import {
+  sharedAgents,
+  sharedParties,
+  sharedPostingLines,
+  sharedPostings,
+  sharedLedgers,
+  sharedAgentFinancials,
+  sharedAgentDocuments,
+  COMMISSION_RATES,
+} from "@huspy/shared-domain";
+import type {
+  AgentDocument,
+  AgentFinancials as SharedAgentFinancials,
+  AgentStrategy,
+  DocumentRequirementStatus,
+  Posting,
+  PostingLine,
+} from "@huspy/shared-domain";
 import { getDeals } from "@/data/dealStore";
 import { DealTypeBadge, DealStatusBadge } from "@/components/DealBadges";
 import { Button } from "@/components/ui/button";
@@ -92,30 +107,45 @@ function getLedgerDisplay(ledgerId: number): { gl: string; sub: string | null } 
   return { gl: ledger.name, sub: null };
 }
 
-// ─── Financials per-agent state (prototype in-memory store) ──────────────────
+// ─── Financials per-agent state (canonical shared fixture) ───────────────────
+// Replaces the previous in-memory `agentFinancialsStore`; reads/writes the
+// shared-domain fixture array so edits persist across navigation within the
+// session. Edit semantics remain in-memory only (no backend).
 
-type AgentFinancials = {
-  agentGrossRate: number;
-  takeRate: number;
-  teamLeadRate: number;
-  managerRate: number;
-};
-
-const agentFinancialsStore: Record<string, AgentFinancials> = {};
-
-function getAgentFinancials(agentId: string): AgentFinancials {
-  return agentFinancialsStore[agentId] ?? {
-    agentGrossRate: COMMISSION_RATES.agentGrossRate,
-    takeRate: COMMISSION_RATES.takeRate,
+function findOrSeedAgentFinancials(agentId: string): SharedAgentFinancials {
+  const existing = sharedAgentFinancials.find((af) => af.agentId === agentId);
+  if (existing) return existing;
+  // Seed an entry with the global defaults so the editor always has a record.
+  const seeded: SharedAgentFinancials = {
+    id: `af-${agentId}`,
+    agentId,
+    strategy: { kind: "flat", pct: COMMISSION_RATES.agentGrossRate },
     teamLeadRate: COMMISSION_RATES.teamLeadRate,
     managerRate: COMMISSION_RATES.managerOverrideRate,
   };
+  sharedAgentFinancials.push(seeded);
+  return seeded;
+}
+
+function persistAgentFinancials(next: SharedAgentFinancials) {
+  const idx = sharedAgentFinancials.findIndex((af) => af.agentId === next.agentId);
+  if (idx >= 0) sharedAgentFinancials[idx] = next;
+  else sharedAgentFinancials.push(next);
+}
+
+function describeStrategy(s: AgentStrategy): string {
+  switch (s.kind) {
+    case "flat": return `Flat — ${s.pct}% of net`;
+    case "max":  return `Max — ${s.pct}% of net, capped at ${s.capAmount.toLocaleString()}`;
+    case "slab": return `Slab — ${s.slabs.length} tier${s.slabs.length === 1 ? "" : "s"}`;
+  }
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "overview",      label: "Overview" },
+  { id: "documents",     label: "Documents" },
   { id: "clients",       label: "Clients" },
   { id: "properties",    label: "Properties" },
   { id: "opportunities", label: "Opportunities" },
@@ -189,12 +219,80 @@ export default function AgentDetail() {
   const agent = sharedAgents.find((a) => a.id === agentId);
   const party = agent ? sharedParties.find((p) => p.id === agent.partyId) : undefined;
 
-  // Financials local state
-  const [fin, setFin] = useState<AgentFinancials>(() => getAgentFinancials(agentId ?? ""));
-  const [previewAmount, setPreviewAmount] = useState(300_000);
-  const [previewConveyanceFee, setPreviewConveyanceFee] = useState(0);
+  // Documents local state — seeded from shared fixture, mutated in-memory
+  const [agentDocs, setAgentDocs] = useState<AgentDocument[]>(
+    () => sharedAgentDocuments.filter((d) => d.agentId === agentId)
+  );
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetRef = useRef<string | null>(null);
+  const uploadedFilesRef = useRef<Record<string, File>>({});
+  const [textEditing, setTextEditing] = useState<Record<string, string>>({});
+
+  function triggerUpload(docId: string) {
+    uploadTargetRef.current = docId;
+    uploadInputRef.current?.click();
+  }
+
+  function handleFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !uploadTargetRef.current) return;
+    const docId = uploadTargetRef.current;
+    uploadedFilesRef.current[docId] = file;
+    setAgentDocs((prev) =>
+      prev.map((d) =>
+        d.id === docId ? { ...d, status: "uploaded", documentId: file.name } : d
+      )
+    );
+    uploadTargetRef.current = null;
+    e.target.value = "";
+  }
+
+  function handleDownload(doc: AgentDocument) {
+    const file = uploadedFilesRef.current[doc.id];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function saveTextValue(docId: string) {
+    const value = textEditing[docId]?.trim();
+    if (!value) return;
+    setAgentDocs((prev) =>
+      prev.map((d) =>
+        d.id === docId ? { ...d, value, status: "uploaded" } : d
+      )
+    );
+    setTextEditing((prev) => { const n = { ...prev }; delete n[docId]; return n; });
+  }
+
+  function updateDocStatus(docId: string, status: DocumentRequirementStatus) {
+    setAgentDocs((prev) =>
+      prev.map((d) =>
+        d.id === docId
+          ? { ...d, status, reviewedBy: status === "approved" || status === "waived" ? "user-ops" : undefined, reviewedAt: status === "approved" || status === "waived" ? new Date().toISOString().slice(0, 10) : undefined }
+          : d
+      )
+    );
+  }
+
+  // Financials local state — sourced from the shared fixture
+  const [fin, setFin] = useState<SharedAgentFinancials>(() => findOrSeedAgentFinancials(agentId ?? ""));
   const [finEditing, setFinEditing] = useState(false);
-  const [finDraft, setFinDraft] = useState<AgentFinancials>(fin);
+  const [finDraft, setFinDraft] = useState<SharedAgentFinancials>(fin);
+
+  const saveFinancials = () => {
+    persistAgentFinancials(finDraft);
+    setFin(finDraft);
+    setFinEditing(false);
+  };
+  const cancelFinancials = () => {
+    setFinDraft(fin);
+    setFinEditing(false);
+  };
 
   // Ledger local state
   const [manualPostings, setManualPostings] = useState<Posting[]>([]);
@@ -243,14 +341,6 @@ export default function AgentDetail() {
   const selectedPostingAllLines = selectedPostingId
     ? allPostingLines.filter((l) => l.postingId === selectedPostingId)
     : [];
-
-  // Financials preview
-  const preview = computeDealFinancials(previewAmount, previewConveyanceFee, {
-    agentGrossRate: fin.agentGrossRate,
-    takeRate: fin.takeRate,
-    teamLeadRate: fin.teamLeadRate,
-    managerOverrideRate: fin.managerRate,
-  });
 
   // ── Draft line helpers ──────────────────────────────────────────────────────
   function updateLine(id: string, updates: Partial<DraftLine>) {
@@ -469,6 +559,171 @@ export default function AgentDetail() {
           </div>
         )}
 
+        {/* DOCUMENTS */}
+        {activeTab === "documents" && (
+          <>
+            <input ref={uploadInputRef} type="file" className="hidden" onChange={handleFileChosen} />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[15px] font-semibold text-foreground">
+                Compliance Documents
+                {agentDocs.some((d) => d.status === "pending" || d.status === "uploaded") && (
+                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold px-2 py-0.5">
+                    {agentDocs.filter((d) => d.status === "pending" || d.status === "uploaded").length} pending
+                  </span>
+                )}
+              </h2>
+            </div>
+            <div className="bg-card rounded-xl overflow-hidden border border-border">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className={thClass}>Document</th>
+                    <th className={thClass}>Value / File</th>
+                    <th className={thClass}>Status</th>
+                    <th className={thClass}>Reviewed by</th>
+                    <th className={thClass}>Reviewed at</th>
+                    <th className={thClass}>Expires</th>
+                    <th className={thClass}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {agentDocs.map((doc) => {
+                    const isEditingText = doc.kind === "text" && doc.id in textEditing;
+                    return (
+                      <tr key={doc.id} className="border-b border-border last:border-0">
+                        <td className={tdClass}>
+                          {doc.label}
+                          {!doc.required && <span className="ml-1.5 text-[11px] text-muted-foreground font-normal">(optional)</span>}
+                          <span className={cn("ml-1.5 text-[10px] font-semibold uppercase tracking-wide", doc.kind === "text" ? "text-violet-500" : "text-sky-500")}>
+                            {doc.kind}
+                          </span>
+                        </td>
+
+                        {/* Value / File column */}
+                        <td className="px-4 py-2.5 min-w-[200px]">
+                          {doc.kind === "text" ? (
+                            isEditingText ? (
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  value={textEditing[doc.id]}
+                                  onChange={(e) => setTextEditing((prev) => ({ ...prev, [doc.id]: e.target.value }))}
+                                  onKeyDown={(e) => { if (e.key === "Enter") saveTextValue(doc.id); if (e.key === "Escape") setTextEditing((prev) => { const n = { ...prev }; delete n[doc.id]; return n; }); }}
+                                  placeholder="Enter value…"
+                                  className="w-full border border-border rounded px-2 py-1 text-[12px] bg-background font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+                                />
+                                <Button size="sm" variant="outline" className="h-7 text-[12px] shrink-0" onClick={() => saveTextValue(doc.id)}>Save</Button>
+                              </div>
+                            ) : (
+                              <span
+                                className={cn("text-[12px] font-mono cursor-pointer hover:opacity-70", doc.value ? "text-foreground" : "text-muted-foreground/50 italic")}
+                                onClick={() => setTextEditing((prev) => ({ ...prev, [doc.id]: doc.value ?? "" }))}
+                                title={doc.value ? "Click to edit" : undefined}
+                              >
+                                {doc.value ?? "—"}
+                              </span>
+                            )
+                          ) : (
+                            <span className={cn("text-[12px] font-mono truncate max-w-[180px] block", doc.documentId ? "text-muted-foreground" : "text-muted-foreground/40 italic")} title={doc.documentId}>
+                              {doc.documentId ?? "—"}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                            doc.status === "approved" && "bg-emerald-100 text-emerald-700",
+                            doc.status === "uploaded"  && "bg-blue-100 text-blue-700",
+                            doc.status === "pending"   && "bg-muted text-muted-foreground",
+                            doc.status === "waived"    && "bg-amber-100 text-amber-700",
+                          )}>
+                            {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className={`${tdClass} text-muted-foreground`}>{doc.reviewedBy ?? "—"}</td>
+                        <td className={`${tdClass} text-muted-foreground`}>{doc.reviewedAt ? fmtDate(doc.reviewedAt) : "—"}</td>
+                        <td className={cn(tdClass, doc.expiresAt && new Date(doc.expiresAt) < new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) ? "text-amber-600 font-semibold" : "text-muted-foreground")}>
+                          {doc.expiresAt ? fmtDate(doc.expiresAt) : "—"}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {doc.kind === "text" ? (
+                              <>
+                                {doc.status === "pending" && !isEditingText && (
+                                  <Button size="sm" variant="outline" className="h-7 text-[12px]"
+                                    onClick={() => setTextEditing((prev) => ({ ...prev, [doc.id]: "" }))}>
+                                    Enter value
+                                  </Button>
+                                )}
+                                {doc.status === "uploaded" && (
+                                  <Button size="sm" variant="outline" className="h-7 text-[12px] text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                    onClick={() => updateDocStatus(doc.id, "approved")}>
+                                    Approve
+                                  </Button>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {doc.status === "pending" && (
+                                  <Button size="sm" variant="outline" className="h-7 text-[12px]"
+                                    onClick={() => triggerUpload(doc.id)}>
+                                    Upload
+                                  </Button>
+                                )}
+                                {doc.status === "uploaded" && (
+                                  <>
+                                    <Button size="sm" variant="outline" className="h-7 text-[12px]"
+                                      onClick={() => handleDownload(doc)}>
+                                      <Download className="h-3 w-3 mr-1" />Download
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="h-7 text-[12px] text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                      onClick={() => updateDocStatus(doc.id, "approved")}>
+                                      Approve
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 text-[12px]"
+                                      onClick={() => triggerUpload(doc.id)}>
+                                      Replace
+                                    </Button>
+                                  </>
+                                )}
+                                {doc.status === "approved" && (
+                                  <Button size="sm" variant="outline" className="h-7 text-[12px]"
+                                    onClick={() => handleDownload(doc)}>
+                                    <Download className="h-3 w-3 mr-1" />Download
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            {(doc.status === "pending" || doc.status === "uploaded") && (
+                              <Button size="sm" variant="outline" className="h-7 text-[12px] text-amber-700 border-amber-300 hover:bg-amber-50"
+                                onClick={() => updateDocStatus(doc.id, "waived")}>
+                                Waive
+                              </Button>
+                            )}
+                            {(doc.status === "approved" || doc.status === "waived") && (
+                              <Button size="sm" variant="ghost" className="h-7 text-[12px] text-muted-foreground"
+                                onClick={() => updateDocStatus(doc.id, "pending")}>
+                                Reset
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {agentDocs.length === 0 && (
+                <div className="px-4 py-10 text-center text-muted-foreground text-[14px]">No documents on file for this agent</div>
+              )}
+            </div>
+          </>
+        )}
+
         {/* CLIENTS / PROPERTIES / OPPORTUNITIES — stubs */}
         {activeTab === "clients" && <StubTab label="Clients" />}
         {activeTab === "properties" && <StubTab label="Properties" />}
@@ -637,25 +892,21 @@ export default function AgentDetail() {
                     {finEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                   </Button>
                 </CardTitle>
-                <CardDescription className="text-xs">Agent commission rates applied to each closed deal</CardDescription>
+                <CardDescription className="text-xs">
+                  Agent take rate and commission strategy. Strategy is applied by the waterfall engine to the agent's allocated net revenue.
+                </CardDescription>
               </CardHeader>
               <CardContent className="pt-2 space-y-4">
-                <RateField label="Take Rate" sublabel="% Huspy charges the client on deal amount"
-                  value={finEditing ? finDraft.takeRate : fin.takeRate}
+                <StrategyEditor
+                  strategy={finEditing ? finDraft.strategy : fin.strategy}
                   editing={finEditing}
-                  onChange={(v) => setFinDraft((d) => ({ ...d, takeRate: v }))} />
-                <RateField label="Agent Gross Rate" sublabel="% of Huspy revenue paid to this agent"
-                  value={finEditing ? finDraft.agentGrossRate : fin.agentGrossRate}
-                  editing={finEditing}
-                  onChange={(v) => setFinDraft((d) => ({ ...d, agentGrossRate: v }))} />
+                  onChange={(s) => setFinDraft((d) => ({ ...d, strategy: s }))}
+                />
+
                 {finEditing && (
                   <div className="flex gap-2 pt-1">
-                    <Button size="sm" onClick={() => { setFin(finDraft); agentFinancialsStore[agent.id] = finDraft; setFinEditing(false); }}>
-                      Save
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setFinDraft(fin); setFinEditing(false); }}>
-                      Cancel
-                    </Button>
+                    <Button size="sm" onClick={saveFinancials}>Save</Button>
+                    <Button size="sm" variant="ghost" onClick={cancelFinancials}>Cancel</Button>
                   </div>
                 )}
               </CardContent>
@@ -679,7 +930,7 @@ export default function AgentDetail() {
                   <div className="grid grid-cols-2 gap-4">
                     <NonEditableField label="Name" value={agent.teamLeadName ?? "—"} />
                     <RateField label="Rate" sublabel="% of agent payout"
-                      value={finEditing ? finDraft.teamLeadRate : fin.teamLeadRate}
+                      value={finEditing ? (finDraft.teamLeadRate ?? 0) : (fin.teamLeadRate ?? 0)}
                       editing={finEditing}
                       onChange={(v) => setFinDraft((d) => ({ ...d, teamLeadRate: v }))} />
                   </div>
@@ -689,80 +940,20 @@ export default function AgentDetail() {
                   <div className="grid grid-cols-2 gap-4">
                     <NonEditableField label="Name" value={agent.managerName ?? "—"} />
                     <RateField label="Rate" sublabel="% of agent payout"
-                      value={finEditing ? finDraft.managerRate : fin.managerRate}
+                      value={finEditing ? (finDraft.managerRate ?? 0) : (fin.managerRate ?? 0)}
                       editing={finEditing}
                       onChange={(v) => setFinDraft((d) => ({ ...d, managerRate: v }))} />
                   </div>
                 </div>
                 {finEditing && (
                   <div className="flex gap-2 pt-1">
-                    <Button size="sm" onClick={() => { setFin(finDraft); agentFinancialsStore[agent.id] = finDraft; setFinEditing(false); }}>
-                      Save
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setFinDraft(fin); setFinEditing(false); }}>
-                      Cancel
-                    </Button>
+                    <Button size="sm" onClick={saveFinancials}>Save</Button>
+                    <Button size="sm" variant="ghost" onClick={cancelFinancials}>Cancel</Button>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* P&L Preview */}
-            <div className="md:col-span-2">
-              <Card>
-                <CardHeader className="gap-0">
-                  <CardTitle className="text-sm font-bold">P&L Preview</CardTitle>
-                  <CardDescription className="text-xs">
-                    Simulated deal calculation using this agent's current rates
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-6 mb-5">
-                    <div className="flex items-center gap-3">
-                      <label className="text-[13px] font-medium text-foreground">Deal amount</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">€</span>
-                        <input
-                          type="number"
-                          value={previewAmount}
-                          onChange={(e) => setPreviewAmount(Number(e.target.value) || 0)}
-                          className="pl-7 pr-4 py-2 border border-border rounded-md text-[13px] bg-card w-[160px] focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <label className="text-[13px] font-medium text-foreground">Conveyance fee</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">€</span>
-                        <input
-                          type="number"
-                          value={previewConveyanceFee}
-                          onChange={(e) => setPreviewConveyanceFee(Number(e.target.value) || 0)}
-                          className="pl-7 pr-4 py-2 border border-border rounded-md text-[13px] bg-card w-[160px] focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <PnLCard label="Deal Income" sublabel={`${fin.takeRate}% of deal`} amount={preview.huspyRevenue} />
-                    <PnLCard label="Conveyance Fee" sublabel="Form F — separate" amount={preview.conveyanceFee} />
-                    <PnLCard label="Total Revenue" sublabel="Deal income + conveyance" amount={preview.totalRevenue} highlight />
-                    <PnLCard label="Agent Payout" sublabel={`${fin.agentGrossRate}% of deal income`} amount={preview.agentCommissionPayout} highlight />
-                    <PnLCard label="Team Lead" sublabel={`${fin.teamLeadRate}% of agent payout`} amount={preview.teamLeadShare} muted />
-                    <PnLCard label="Manager" sublabel={`${fin.managerRate}% of agent payout`} amount={preview.managerOverride} muted />
-                    <PnLCard label="Conv. Agent" sublabel="25% of conveyance fee" amount={preview.conveyanceAgentPayout} muted />
-                    <PnLCard label="Huspy Net" sublabel="After all payouts" amount={preview.huspyNet} positive />
-                    <div className="bg-muted/40 rounded-lg p-4 border border-border">
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Huspy Margin</p>
-                      <p className="text-[20px] font-bold text-foreground">
-                        {(preview.totalRevenue > 0 ? (preview.huspyNet / preview.totalRevenue) * 100 : 0).toFixed(1)}%
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">of total revenue</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         )}
 
@@ -1121,6 +1312,144 @@ function RateField({ label, sublabel, value, editing, onChange }: {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function StrategyEditor({
+  strategy,
+  editing,
+  onChange,
+}: {
+  strategy: AgentStrategy;
+  editing: boolean;
+  onChange: (s: AgentStrategy) => void;
+}) {
+  if (!editing) {
+    return (
+      <div className="flex flex-wrap items-center border border-transparent gap-4 p-0 text-sm">
+        <div className="flex flex-1 flex-col gap-2">
+          <div className="h-3.5 text-sm font-medium leading-snug">Commission Strategy</div>
+          <p className="px-3 py-[6.5px] text-muted-foreground text-sm">{describeStrategy(strategy)}</p>
+          {strategy.kind === "slab" && (
+            <div className="px-3 pb-1 space-y-0.5">
+              {strategy.slabs.map((s, i) => (
+                <p key={i} className="text-[11px] text-muted-foreground font-mono">
+                  up to {s.upTo == null ? "∞" : s.upTo.toLocaleString()} → {s.pct}%
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="text-sm font-medium leading-snug">Commission Strategy</div>
+      <div className="flex gap-3 px-3">
+        {(["flat", "slab", "max"] as const).map((kind) => (
+          <label key={kind} className="flex items-center gap-1.5 text-[13px] cursor-pointer">
+            <input
+              type="radio"
+              name="strategy-kind"
+              checked={strategy.kind === kind}
+              onChange={() => {
+                if (kind === "flat") onChange({ kind: "flat", pct: 40 });
+                if (kind === "slab") onChange({ kind: "slab", slabs: [{ upTo: 5000, pct: 35 }, { upTo: null, pct: 45 }] });
+                if (kind === "max") onChange({ kind: "max", pct: 50, capAmount: 25000 });
+              }}
+            />
+            <span className="capitalize">{kind}</span>
+          </label>
+        ))}
+      </div>
+
+      {strategy.kind === "flat" && (
+        <div className="px-3 flex items-center gap-2">
+          <input
+            type="number" min={0} max={100} step={0.5}
+            value={strategy.pct}
+            onChange={(e) => onChange({ kind: "flat", pct: Number(e.target.value) })}
+            className="w-[80px] border border-border rounded px-2 py-1 text-[13px] bg-background"
+          />
+          <span className="text-[13px] text-muted-foreground">% of agent's allocated net</span>
+        </div>
+      )}
+
+      {strategy.kind === "max" && (
+        <div className="px-3 grid grid-cols-2 gap-3 max-w-[320px]">
+          <div>
+            <p className="text-[11px] text-muted-foreground mb-1">Percent</p>
+            <input
+              type="number" min={0} max={100} step={0.5}
+              value={strategy.pct}
+              onChange={(e) => onChange({ kind: "max", pct: Number(e.target.value), capAmount: strategy.capAmount })}
+              className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background"
+            />
+          </div>
+          <div>
+            <p className="text-[11px] text-muted-foreground mb-1">Cap Amount</p>
+            <input
+              type="number" min={0} step={500}
+              value={strategy.capAmount}
+              onChange={(e) => onChange({ kind: "max", pct: strategy.pct, capAmount: Number(e.target.value) })}
+              className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background"
+            />
+          </div>
+        </div>
+      )}
+
+      {strategy.kind === "slab" && (
+        <div className="px-3 space-y-2">
+          {strategy.slabs.map((slab, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-[12px] text-muted-foreground w-12">up to</span>
+              <input
+                type="number" min={0} step={500}
+                placeholder="∞"
+                value={slab.upTo ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value === "" ? null : Number(e.target.value);
+                  const next = [...strategy.slabs];
+                  next[i] = { ...next[i], upTo: v };
+                  onChange({ kind: "slab", slabs: next });
+                }}
+                className="w-[110px] border border-border rounded px-2 py-1 text-[13px] bg-background"
+              />
+              <span className="text-[12px] text-muted-foreground">→</span>
+              <input
+                type="number" min={0} max={100} step={0.5}
+                value={slab.pct}
+                onChange={(e) => {
+                  const next = [...strategy.slabs];
+                  next[i] = { ...next[i], pct: Number(e.target.value) };
+                  onChange({ kind: "slab", slabs: next });
+                }}
+                className="w-[80px] border border-border rounded px-2 py-1 text-[13px] bg-background"
+              />
+              <span className="text-[12px] text-muted-foreground">%</span>
+              <Button
+                size="icon" variant="ghost" className="h-7 w-7"
+                onClick={() => {
+                  const next = strategy.slabs.filter((_, idx) => idx !== i);
+                  onChange({ kind: "slab", slabs: next.length > 0 ? next : [{ upTo: null, pct: 40 }] });
+                }}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            size="sm" variant="outline"
+            onClick={() => onChange({ kind: "slab", slabs: [...strategy.slabs, { upTo: null, pct: 50 }] })}
+            className="gap-1.5"
+          >
+            <Plus className="h-3 w-3" /> Add tier
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

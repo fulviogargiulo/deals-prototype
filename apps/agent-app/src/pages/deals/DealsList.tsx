@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
+import { Search } from 'lucide-react';
 import { PageContainer } from '@/components/layout/page-container';
 import { TrackedTitle } from '@/components/ui/tracked-title';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 
 import { DealsSummaryCards } from '@/components/deals/deals-summary-cards';
-import { DealsDateRangeSelector } from '@/components/deals/deals-date-range-selector';
+import { DealsFilterBar } from '@/components/deals/deals-filter-bar';
 import { ActionsRequiredSection } from '@/components/deals/actions-required-section';
 import { DealsTable } from '@/components/deals/deals-table';
 import { AgentEarningsView } from '@/components/deals/agent-earnings-view';
@@ -22,8 +24,21 @@ export function DealsList() {
     from: startOfWeek(now, { weekStartsOn: 1 }),
     to: endOfWeek(now, { weekStartsOn: 1 }),
   });
+  const [search, setSearch] = useState('');
+
   const pendingConfirmation = agentDeals.filter(d => d.status === 'pending-agent-approval');
   const pendingInfo = agentDeals.filter(d => d.status === 'pending-details');
+
+  const filteredDeals = useMemo(() => {
+    let result = agentDeals.filter(d =>
+      isWithinInterval(parseISO(d.reportDate), { start: dateRange.from, end: dateRange.to })
+    );
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(d => d.title.toLowerCase().includes(q) || d.clientName.toLowerCase().includes(q));
+    }
+    return result;
+  }, [dateRange, search]);
 
   useEffect(() => {
     if (location.hash) {
@@ -43,7 +58,18 @@ export function DealsList() {
           <div className="h-px w-full" aria-hidden="true" />
         </TrackedTitle>
 
-        <h1 className="text-[32px] font-semibold leading-[120%]">Deals</h1>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-[32px] font-semibold leading-[120%]">Deals</h1>
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-secondary w-4 h-4" />
+            <Input
+              placeholder="Search deals..."
+              className="pl-10 bg-card rounded-full h-9 text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
 
         <Tabs defaultValue="deals">
           <TabsList className="mb-6">
@@ -52,8 +78,6 @@ export function DealsList() {
           </TabsList>
 
           <TabsContent value="deals" className="space-y-8 mt-0">
-            <DealsDateRangeSelector onChange={setDateRange} />
-            <DealsSummaryCards deals={agentDeals} dateRange={dateRange} agentStakeMap={agentStakeMap} />
             <ActionsRequiredSection
               pendingConfirmation={pendingConfirmation}
               pendingInfo={pendingInfo}
@@ -61,8 +85,10 @@ export function DealsList() {
               onDealDisputed={handleDealDisputed}
               agentStakeMap={agentStakeMap}
             />
+            <DealsFilterBar onDateRangeChange={setDateRange} />
+            <DealsSummaryCards deals={filteredDeals} agentStakeMap={agentStakeMap} />
             <div id="all-deals">
-              <DealsTable deals={agentDeals} disputedDealIds={disputedDealIds} agentStakeMap={agentStakeMap} />
+              <DealsTable deals={filteredDeals} disputedDealIds={disputedDealIds} agentStakeMap={agentStakeMap} />
             </div>
           </TabsContent>
 

@@ -1,4 +1,211 @@
 import { Deal, AgentEntry, PayableEntry } from "@/data/types";
+import {
+  calculateProjectedPnL,
+  getBlueprint,
+  sharedAgentFinancials,
+  sharedDealStakeholders,
+  sharedAgents,
+  sharedParties,
+  type AgentFinancials,
+  type Blueprint,
+  type DealStakeholder,
+  type Posting,
+  type PostingLine,
+  type ProjectedPnL,
+} from "@huspy/shared-domain";
+
+/**
+ * Phase C3 — REBU deals are now scored by the waterfall engine.
+ *
+ * Engine path is taken when the deal carries the lean-shape markers
+ * (grossRevenue, blueprintId) AND has at least one agent entry. Engine output
+ * is projected back onto the legacy Karvel fields (huspyRevenue, netHuspyRevenue,
+ * cogsInternal, agents[].agentCommissionPayout, ...) so existing PnL views read
+ * the same shape they always did — just with engine-derived numbers underneath.
+ *
+ * MBU continues to use the legacy `recalculateMBU` (bankSlab × disbursedAmount
+ * is product-specific math; gross-revenue derivation is done outside the engine
+ * per the agreed split, but the MBU wizard step lives in Phase D).
+ */
+
+function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[0] | null {
+  if (deal.businessUnit === "mortgage") return null;
+  if (deal.grossRevenue == null || !deal.blueprintId) return null;
+
+  const country = deal.country ?? "ae";
+  const currency = deal.currency ?? "AED";
+  const dealType = deal.type;
+  const blueprint = getBlueprint(country, "rebu", dealType);
+
+  const agentFinancialsByAgentId: Record<string, AgentFinancials> = {};
+  const partyIdToAgentId: Record<string, string> = {};
+  const partyDisplayNames: Record<string, string> = {};
+
+  // All fixture stakeholders for this deal (agents, payers, cost parties).
+  const allFixtureStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id);
+
+  // Resolve agent financials and party display names.
+  for (const stake of allFixtureStakes) {
+    const party = sharedParties.find((p) => p.id === stake.partyId);
+    if (party) partyDisplayNames[stake.partyId] = party.displayName;
+
+    if (stake.role === "INTERNAL_PAYOUT") {
+      const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
+      if (!agent) continue;
+      const af = sharedAgentFinancials.find((f) => f.agentId === agent.id);
+      if (!af) continue;
+      agentFinancialsByAgentId[agent.id] = af;
+      partyIdToAgentId[stake.partyId] = agent.id;
+    }
+  }
+
+  let stakeholders: DealStakeholder[] = allFixtureStakes;
+
+  // Fallback: legacy AgentEntry[] on the deal (wizard-created deals before stakeholder migration).
+  if (Object.keys(agentFinancialsByAgentId).length === 0 && deal.agents && deal.agents.length > 0) {
+    const legacyAgentStakes: DealStakeholder[] = [];
+    deal.agents.forEach((a, idx) => {
+      const agentId = a.agentId ?? `agent-${deal.id}-${idx}`;
+      const partyId = a.agentId ? `party-${a.agentId}` : `party-${agentId}`;
+      legacyAgentStakes.push({
+        id: `ds-${deal.id}-agent-${idx}`,
+        dealId: deal.id,
+        partyId,
+        role: "INTERNAL_PAYOUT",
+        splitPercentage: a.agentShare,
+      });
+      const fromFixture = sharedAgentFinancials.find((af) => af.agentId === agentId);
+      const af: AgentFinancials = fromFixture ?? {
+        id: `af-syn-${agentId}`,
+        agentId,
+        strategy: { kind: "flat", pct: a.agentCommissionRate || 40 },
+        teamLeadRate: a.teamLeadRate,
+        managerRate: a.managerOverrideRate,
+      };
+      agentFinancialsByAgentId[agentId] = af;
+      partyIdToAgentId[partyId] = agentId;
+    });
+    stakeholders = [...allFixtureStakes.filter((s) => s.role !== "INTERNAL_PAYOUT"), ...legacyAgentStakes];
+  }
+
+  if (Object.keys(agentFinancialsByAgentId).length === 0) return null;
+
+  // Infer financialAmount for payer stakeholders when none is set explicitly.
+  // Single payer gets the full grossRevenue; multiple payers split it evenly.
+  const PAYER_ROLE_SET = new Set(["buyer", "seller", "tenant", "landlord", "borrower", "developer", "bank"]);
+  const hasExplicitPayer = stakeholders.some((s) => (s.financialAmount ?? 0) > 0);
+  if (!hasExplicitPayer && deal.grossRevenue) {
+    const implicit = stakeholders.filter((s) => PAYER_ROLE_SET.has(s.role) && !s.financialAmount);
+    if (implicit.length > 0) {
+      const perPayer = deal.grossRevenue / implicit.length;
+      stakeholders = stakeholders.map((s) =>
+        PAYER_ROLE_SET.has(s.role) && !s.financialAmount ? { ...s, financialAmount: perPayer } : s
+      );
+    }
+  }
+  const reductions: { label: string; amount: number }[] = [];
+  const dealPrice = deal.dealPrice ?? deal.dealAmount ?? 0;
+  if (deal.rebatePercentage && deal.rebatePercentage > 0 && dealPrice > 0) {
+    reductions.push({ label: "Client Rebate", amount: (deal.rebatePercentage / 100) * dealPrice });
+  }
+  if (deal.subsidyAmount && deal.subsidyAmount > 0) {
+    reductions.push({ label: "Client Subsidy", amount: deal.subsidyAmount });
+  }
+
+  return {
+    country,
+    businessUnit: "rebu",
+    dealType,
+    currency,
+    grossRevenue: deal.grossRevenue,
+    stakeholders,
+    agentFinancialsByAgentId,
+    partyIdToAgentId,
+    blueprint,
+    partyDisplayNames,
+    reductions: reductions.length > 0 ? reductions : undefined,
+  };
+}
+
+function applyEngineToREBU(deal: Deal): Deal | null {
+  const input = buildEngineInput(deal);
+  if (!input) return null;
+  const projection = calculateProjectedPnL(input);
+
+  // Project results back onto legacy AgentEntry rows.
+  const splitsByAgentId = new Map(projection.splits.map((s) => [s.agentId, s]));
+  const updatedAgents: AgentEntry[] = (deal.agents ?? []).map((a, idx) => {
+    const agentId = a.agentId ?? `agent-${deal.id}-${idx}`;
+    const s = splitsByAgentId.get(agentId);
+    if (!s) return a;
+    const af = sharedAgentFinancials.find((x) => x.agentId === agentId);
+    return {
+      ...a,
+      agentCommissionRate:
+        af?.strategy.kind === "flat" ? af.strategy.pct : a.agentCommissionRate,
+      agentCommissionPayout: s.agentPayout,
+      agentTotalAmount: s.agentPayout + (a.agentIncentive ?? 0) - (a.agentDeductions ?? 0),
+      teamLeadRate: af?.teamLeadRate ?? a.teamLeadRate,
+      teamLeadShare: s.teamLeadPayout,
+      managerOverrideRate: af?.managerRate ?? a.managerOverrideRate,
+      managerOverride: s.managerPayout,
+    };
+  });
+
+  const externals = deal.externalPartners ?? [];
+
+  // Build payables from engine ledger entries (DEBITs with a bucket).
+  const existing = deal.payables ?? [];
+  const payables: PayableEntry[] = [];
+  projection.ledger
+    .filter((e) => e.side === "DEBIT" && e.bucket)
+    .forEach((e) => {
+      const entityType: PayableEntry["entityType"] =
+        e.bucket === "B"
+          ? e.label.startsWith("Agent")
+            ? "agent"
+            : e.label.startsWith("Team")
+              ? "team_lead"
+              : "manager"
+          : e.bucket === "C"
+            ? "external_partner"
+            : "conveyance";
+      const prev = existing.find((p) => p.entityLabel === e.label);
+      payables.push({
+        entityType,
+        entityLabel: e.label,
+        expectedAmount: e.amount,
+        refNumber: prev?.refNumber ?? "",
+        status: prev?.status ?? "pending",
+        paidAmount: prev?.paidAmount,
+        paidDate: prev?.paidDate,
+      });
+    });
+
+  const first = updatedAgents[0];
+  return {
+    ...deal,
+    agents: updatedAgents,
+    externalPartners: externals,
+    huspyRevenue: projection.grossRevenue,
+    netHuspyRevenue: projection.huspyMargin,
+    agentName: first?.agentName ?? deal.agentName,
+    agentShare: first?.agentShare ?? deal.agentShare ?? 0,
+    agentCommissionRate: first?.agentCommissionRate ?? deal.agentCommissionRate ?? 0,
+    agentCommissionPayout: projection.splits.reduce((s, sp) => s + sp.agentPayout, 0),
+    teamLeadName: first?.teamLeadName,
+    teamLeadRate: first?.teamLeadRate ?? 0,
+    teamLeadShare: projection.splits.reduce((s, sp) => s + sp.teamLeadPayout, 0),
+    managerName: first?.managerName,
+    managerOverrideRate: first?.managerOverrideRate ?? 0,
+    managerOverride: projection.splits.reduce((s, sp) => s + sp.managerPayout, 0),
+    cogsInternal: projection.totalBucketB,
+    cogsExternal: projection.totalBucketC + projection.totalBucketA,
+    cogsReferrals: 0,
+    payables,
+    dealAmount: projection.grossRevenue,
+  };
+}
 
 /** Build payable entries from all COGS entities, preserving user-edited payment fields */
 function buildPayables(deal: Deal, entries: { entityType: PayableEntry["entityType"]; entityLabel: string; expectedAmount: number }[]): PayableEntry[] {
@@ -191,7 +398,83 @@ export function recalculateMBU(deal: Deal): Deal {
 }
 
 export function recalculateDeal(deal: Deal): Deal {
-  return deal.businessUnit === "mortgage" ? recalculateMBU(deal) : recalculateREBU(deal);
+  if (deal.businessUnit === "mortgage") return recalculateMBU(deal);
+  // Try engine path first; if the deal lacks the lean-shape markers we fall back
+  // to the legacy per-agent-rate computation so editing those rates in the PnL
+  // panel still has an effect on deals that haven't been migrated yet.
+  const viaEngine = applyEngineToREBU(deal);
+  return viaEngine ?? recalculateREBU(deal);
+}
+
+export function computeDealPnL(deal: Deal) {
+  const input = buildEngineInput(deal);
+  if (!input) return null;
+  return calculateProjectedPnL(input);
+}
+
+// Maps currency to chart-of-accounts ledger IDs (matches sharedLedgers fixture).
+const LEDGER_IDS: Record<string, { ar: number; rev: number; exp: number; agentPayable: number; extPayable: number; tax: number }> = {
+  EUR: { ar: 2,  rev: 6,  exp: 7,  agentPayable: 3,  extPayable: 4,  tax: 5  },
+  AED: { ar: 9,  rev: 13, exp: 14, agentPayable: 10, extPayable: 11, tax: 12 },
+  SAR: { ar: 16, rev: 20, exp: 21, agentPayable: 17, extPayable: 18, tax: 19 },
+};
+
+export function draftPostings(projection: ProjectedPnL, deal: { id: string; businessUnit?: string; currency?: string }, blueprint?: Blueprint): { posting: Posting; lines: PostingLine[] } {
+  const currency = (deal.currency ?? "EUR") as "EUR" | "AED" | "SAR";
+  const ids = LEDGER_IDS[currency] ?? LEDGER_IDS.EUR;
+  const postingId = `draft-${deal.id}`;
+  const now = new Date().toISOString();
+
+  const posting: Posting = {
+    id: postingId,
+    dealId: deal.id,
+    businessUnit: deal.businessUnit as any,
+    businessProcess: "deal_close",
+    createdBy: "user-ops",
+    createdAt: now,
+    valueDate: now.slice(0, 10),
+    currency,
+    description: `Deal close — ${deal.id}`,
+  };
+
+  const lines: PostingLine[] = [];
+  let lineIdx = 0;
+  const line = (ledgerId: number, side: "DEBIT" | "CREDIT", amount: number): PostingLine => ({
+    id: `${postingId}-L${++lineIdx}`,
+    postingId,
+    ledgerId,
+    side,
+    amount: Math.round(amount * 100) / 100,
+  });
+
+  // Gross revenue: AR debit + Revenue credit
+  lines.push(line(ids.ar, "DEBIT", projection.grossRevenue));
+  lines.push(line(ids.rev, "CREDIT", projection.grossRevenue));
+
+  // Statutory tax: Revenue debit + Tax liability credit (Blueprint service — tax-exclusive model).
+  // taxAmount = grossRevenue × blueprint.taxRate. Only emitted when blueprint is provided.
+  if (blueprint && blueprint.taxRate > 0) {
+    const taxAmount = Math.round(projection.grossRevenue * (blueprint.taxRate / 100) * 100) / 100;
+    if (taxAmount > 0) {
+      lines.push(line(ids.rev, "DEBIT", taxAmount));
+      lines.push(line(ids.tax, "CREDIT", taxAmount));
+    }
+  }
+
+  // Bucket C + D (external partners): Expense debit + External payable credit
+  const externalTotal = projection.totalBucketC + projection.totalBucketD;
+  if (externalTotal > 0) {
+    lines.push(line(ids.exp, "DEBIT", externalTotal));
+    lines.push(line(ids.extPayable, "CREDIT", externalTotal));
+  }
+
+  // Bucket B (agent payouts): Expense debit + Agent payable credit
+  if (projection.totalBucketB > 0) {
+    lines.push(line(ids.exp, "DEBIT", projection.totalBucketB));
+    lines.push(line(ids.agentPayable, "CREDIT", projection.totalBucketB));
+  }
+
+  return { posting, lines };
 }
 
 export function createEmptyAgent(index: number): AgentEntry {

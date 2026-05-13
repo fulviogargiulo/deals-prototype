@@ -12,6 +12,7 @@ erDiagram
         string email
         string phone
         string legalType
+        string taxId "dedup key (optional)"
     }
     Agent {
         string id
@@ -86,8 +87,8 @@ erDiagram
         string id
         string code
         LedgerType type
-        string glId FK
-        string partyId FK
+        string glId "optional FK"
+        string partyId "optional FK - agent subledgers only"
         Currency currency
     }
     Posting {
@@ -115,7 +116,7 @@ erDiagram
     Opportunity ||--o{ Deal             : "produces"
     Deal        ||--|{ DealStakeholder  : "involves"
     Party       ||--o{ DealStakeholder  : "participates as"
-    Party       ||--o{ Ledger           : "owns"
+    Party       |o--o{ Ledger           : "owns (optional)"
     Party       ||--o{ Invoice          : "billed to/from"
     Deal        |o--|{ Invoice          : "creates"
     Deal        |o--o{ Posting          : "generates"
@@ -134,7 +135,18 @@ erDiagram
 ## Key architectural decisions
 
 ### Party
-Central identity record. `Agent` and `Client` are sub-types that link to a `Party` via `partyId`. Third parties (banks, developers) are also Parties — they have Party records but no Agent or Client records.
+Central identity record. `Agent` and `Client` are sub-types that link to a `Party` via `partyId`. Third parties (banks, developers, buyers, sellers) are also Parties — they have Party records but no Agent or Client records.
+
+**Deduplication:** `taxId` is the canonical identity key for external parties. Before creating a new Party record, look up by `taxId`. If a match exists, reuse that Party and attach it as a `DealStakeholder` — do not create a duplicate. Agents are deduplicated by their account; `taxId` applies to all other party types.
+
+### DealStakeholder and Party lifecycle
+`DealStakeholder` records (and their linked Parties) can be added at any point from deal creation up to — but not including — the transition to `pending-receivables`. Once the deal enters `pending-receivables`, all stakeholders must be set: invoices reference `Party.id` directly and cannot be created without a resolved Party record.
+
+Steps at deal creation or during ops review:
+1. Operator enters the external party's details and `taxId`.
+2. System looks up `taxId` — if found, link the existing Party; if not, create a new Party record.
+3. A `DealStakeholder` row is created linking the Party to the deal with the appropriate role.
+4. The deal may not advance to `pending-receivables` until all required stakeholders are present.
 
 ### DealStakeholder
 Replaces the `agentId`/`clientId` FKs that used to be embedded on `Deal`. Each deal now has one or more stakeholder records, each linking a Party to a role (`agent`, `buyer`, `seller`, `tenant`, `borrower`, …). This naturally supports multi-agent commission splits.
@@ -152,7 +164,13 @@ A reversed posting sets `reversedByPostingId` pointing to the correcting entry. 
 `Invoice` links directly to the Party being billed (outbound) or billing Huspy (inbound). This replaces the old `entityType`/`entityName`/`counterpartyId` pattern.
 
 ### Ledger.partyId
-Per-agent subledgers (e.g. `AgentLiability_agent-felicia`) link to the agent's Party record via `partyId`, replacing `entityType`/`entityId`.
+`partyId` is optional. Most GL accounts (revenue, expense, AR, bank) are company-wide and carry no `partyId`.
+
+Today only agent subledgers (e.g. `AgentLiability_agent-felicia`) set it, because Huspy carries an ongoing liability to agents across multiple deals — the subledger balance matters between payout runs.
+
+**Buyers and sellers** are Parties but have no subledgers. Their receivables are tracked at the `Invoice` level (`Invoice.partyId` + `direction: "outbound"`), which is sufficient for one-shot, per-deal transactions. `ASSET_AR_{CUR}` is a shared GL that absorbs all client receivables.
+
+**When to add external-party subledgers:** if a recurring external partner (referral firm, co-broker) accumulates payables across multiple deals and Huspy batch-pays them, mirror the agent pattern — add `ExternalLiability_partner-{slug}` subledgers under `LIAB_EXTERNAL_PAYABLE_{CUR}`. This is not in the current chart of accounts because no such batch-pay workflow exists yet.
 
 ## Deal status state machine
 

@@ -6,6 +6,8 @@ import { AlertTriangle, CheckCircle2, ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { DocumentRow } from './document-row';
+import { sharedAgentDocuments } from '@huspy/shared-domain';
+import { CURRENT_AGENT_ID } from '@/data/mockDeals';
 
 interface MissingField {
   id: string;
@@ -13,23 +15,20 @@ interface MissingField {
   placeholder?: string;
 }
 
-const MISSING_FIELDS: MissingField[] = [
-  {
-    id: 'bank-account',
-    label: 'Bank Account (IBAN)',
-    placeholder: 'e.g. ES91 2100 0418 4502 0005 1332',
-  },
-  {
-    id: 'beneficiary-name',
-    label: 'Beneficiary Name',
-    placeholder: 'Full legal name of the account holder',
-  },
-  {
-    id: 'tax-id',
-    label: 'Tax ID (NIF/CIF)',
-    placeholder: 'e.g. 12345678A',
-  },
-];
+const PLACEHOLDER: Record<string, string> = {
+  'account-number': 'e.g. ES91 2100 0418 4502 0005 1332',
+  'bic':            'e.g. CAIXESBBXXX',
+  'id-number':      'e.g. X-1234567-B',
+  'other':          '',
+};
+
+const MISSING_FIELDS: MissingField[] = sharedAgentDocuments
+  .filter((d) => d.agentId === CURRENT_AGENT_ID && d.kind === 'text' && d.status === 'pending')
+  .map((d) => ({
+    id:          d.id,
+    label:       d.label,
+    placeholder: PLACEHOLDER[d.documentType] ?? '',
+  }));
 
 interface DocumentItem {
   name: string;

@@ -105,7 +105,8 @@ const payableStatusColor = (s?: PayableStatus | string) => {
   }
 };
 
-export function DealListingDetailPanel({ deal, currency, onClose, onSave, onSwitchToPnL }: Props) {
+export function DealListingDetailPanel({ deal, currency: _currency, onClose, onSave, onSwitchToPnL }: Props) {
+  const currency = deal.currency ?? _currency;
   const navigate = useNavigate();
   const stageDates = getStageDates(deal);
   const currentIdx = getStageIndex(deal.status);

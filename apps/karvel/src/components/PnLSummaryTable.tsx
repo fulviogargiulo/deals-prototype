@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Deal } from "@/data/types";
 import { DealStatusBadge } from "./DealBadges";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown, Filter, Check } from "lucide-react";
+import { computeDealPnL } from "@/lib/dealCalculations";
 
 interface Props {
   deals: Deal[];
@@ -96,8 +97,11 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
   const fmt = (n: number) => formatAmount(n, currency);
   const dash = "—";
 
-  const maxReceivables = 2;
-  const maxPayables = 2;
+  const pnlByDealId = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof computeDealPnL>>();
+    deals.forEach((d) => m.set(d.id, computeDealPnL(d)));
+    return m;
+  }, [deals]);
 
   const statusOptions = useMemo(() => [...new Set(deals.map(d => d.status))].sort(), [deals]);
   const marketOptions = useMemo(() => [...new Set(deals.map(d => d.market))].sort(), [deals]);
@@ -112,23 +116,14 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
     });
   }, [deals, statusFilter, marketFilter, typeFilter]);
 
-  const getPropTotalRevenue = (d: Deal) => d.huspyRevenue;
-  const getPropTotalExtCogs = (d: Deal) => d.cogsExternal + d.cogsRebates + d.cogsSubsidy;
-  const getPropTotalIntCogs = (d: Deal) => d.cogsInternal + d.cogsReferrals;
-  const getPropNetRevenue = (d: Deal) => getPropTotalRevenue(d) - getPropTotalExtCogs(d) - getPropTotalIntCogs(d);
-
-  const getConvTotalRevenue = (d: Deal) => d.conveyanceRevenue || 0;
-  const getConvTotalCogs = (d: Deal) => d.conveyanceAgentPayout || 0;
-  const getConvNetRevenue = (d: Deal) => getConvTotalRevenue(d) - getConvTotalCogs(d);
-
   const sortGetters: Record<string, (d: Deal) => any> = {
-    propTotalRevenue: getPropTotalRevenue,
-    propTotalExtCogs: getPropTotalExtCogs,
-    propTotalIntCogs: getPropTotalIntCogs,
-    propNetRevenue: getPropNetRevenue,
-    convTotalRevenue: getConvTotalRevenue,
-    convTotalCogs: getConvTotalCogs,
-    convNetRevenue: getConvNetRevenue,
+    grossRevenue: (d) => pnlByDealId.get(d.id)?.grossRevenue ?? d.grossRevenue ?? 0,
+    totalBucketA: (d) => pnlByDealId.get(d.id)?.totalBucketA ?? 0,
+    totalBucketC: (d) => pnlByDealId.get(d.id)?.totalBucketC ?? 0,
+    totalBucketD: (d) => pnlByDealId.get(d.id)?.totalBucketD ?? 0,
+    netRevenue:   (d) => pnlByDealId.get(d.id)?.netRevenue ?? 0,
+    totalBucketB: (d) => pnlByDealId.get(d.id)?.totalBucketB ?? 0,
+    huspyMargin:  (d) => pnlByDealId.get(d.id)?.huspyMargin ?? 0,
   };
 
   const sorted = useMemo(() => {
@@ -143,7 +138,7 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
       const cmp = typeof va === "string" ? va.localeCompare(vb) : va - vb;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [filtered, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir, pnlByDealId]);
 
   const perPage = 15;
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
@@ -180,10 +175,7 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
             <thead>
               <tr className="border-b border-border">
                 <th colSpan={5} className={`${groupHeaderClass} text-foreground/80 bg-muted sticky left-0 z-[7]`} style={{ minWidth: 510 }}>Deal Info</th>
-                <th colSpan={4} className={`${groupHeaderClass} text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10`}>Property Transaction</th>
-                <th colSpan={3} className={`${groupHeaderClass} text-violet-700 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/10`}>Conveyance Transaction</th>
-                <th colSpan={maxReceivables * 2} className={`${groupHeaderClass} text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10`}>Receivables</th>
-                <th colSpan={maxPayables * 2} className={`${groupHeaderClass} text-amber-700 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/10 border-r-0`}>Payables</th>
+                <th colSpan={7} className={`${groupHeaderClass} text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r-0`}>P&L Waterfall</th>
               </tr>
               <tr className="border-b border-border bg-muted/30">
                 <th className={`${thClass} min-w-[90px] sticky left-0 z-[6] bg-muted`}>Deal ID</th>
@@ -201,49 +193,26 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
                 </th>
 
                 <th className={`${thClass} min-w-[110px] text-right`}>
-                  <button onClick={() => toggleSort("propTotalRevenue")} className="flex items-center gap-1 ml-auto">Total Revenue <SortIcon col="propTotalRevenue" /></button>
+                  <button onClick={() => toggleSort("grossRevenue")} className="flex items-center gap-1 ml-auto">Gross Rev <SortIcon col="grossRevenue" /></button>
                 </th>
-                <th className={`${thClass} min-w-[120px] text-right`}>
-                  <button onClick={() => toggleSort("propTotalExtCogs")} className="flex items-center gap-1 ml-auto">Ext. COGS <SortIcon col="propTotalExtCogs" /></button>
+                <th className={`${thClass} min-w-[100px] text-right`}>
+                  <button onClick={() => toggleSort("totalBucketA")} className="flex items-center gap-1 ml-auto">Reductions <SortIcon col="totalBucketA" /></button>
                 </th>
-                <th className={`${thClass} min-w-[120px] text-right`}>
-                  <button onClick={() => toggleSort("propTotalIntCogs")} className="flex items-center gap-1 ml-auto">Int. COGS <SortIcon col="propTotalIntCogs" /></button>
+                <th className={`${thClass} min-w-[100px] text-right`}>
+                  <button onClick={() => toggleSort("totalBucketC")} className="flex items-center gap-1 ml-auto">Ext. Splits <SortIcon col="totalBucketC" /></button>
                 </th>
-                <th className={`${thClass} min-w-[110px] text-right border-r-2 border-r-border`}>
-                  <button onClick={() => toggleSort("propNetRevenue")} className="flex items-center gap-1 ml-auto">Net Revenue <SortIcon col="propNetRevenue" /></button>
-                </th>
-
-                <th className={`${thClass} min-w-[110px] text-right`}>
-                  <button onClick={() => toggleSort("convTotalRevenue")} className="flex items-center gap-1 ml-auto">Total Revenue <SortIcon col="convTotalRevenue" /></button>
+                <th className={`${thClass} min-w-[100px] text-right`}>
+                  <button onClick={() => toggleSort("totalBucketD")} className="flex items-center gap-1 ml-auto">Svc. Fees <SortIcon col="totalBucketD" /></button>
                 </th>
                 <th className={`${thClass} min-w-[110px] text-right`}>
-                  <button onClick={() => toggleSort("convTotalCogs")} className="flex items-center gap-1 ml-auto">Total COGS <SortIcon col="convTotalCogs" /></button>
+                  <button onClick={() => toggleSort("netRevenue")} className="flex items-center gap-1 ml-auto">Net Rev <SortIcon col="netRevenue" /></button>
                 </th>
-                <th className={`${thClass} min-w-[110px] text-right border-r-2 border-r-border`}>
-                  <button onClick={() => toggleSort("convNetRevenue")} className="flex items-center gap-1 ml-auto">Net Revenue <SortIcon col="convNetRevenue" /></button>
+                <th className={`${thClass} min-w-[100px] text-right`}>
+                  <button onClick={() => toggleSort("totalBucketB")} className="flex items-center gap-1 ml-auto">Agent Cost <SortIcon col="totalBucketB" /></button>
                 </th>
-
-                {Array.from({ length: maxReceivables }, (_, i) => {
-                  const n = ` ${i + 1}`;
-                  const isLast = i === maxReceivables - 1;
-                  return (
-                    <React.Fragment key={`recv-h-${i}`}>
-                      <th className={`${thClass} min-w-[130px]`}>Ref/Invoice#{n}</th>
-                      <th className={`${thClass} min-w-[100px] ${isLast ? "border-r-2 border-r-border" : ""}`}>Status{n}</th>
-                    </React.Fragment>
-                  );
-                })}
-
-                {Array.from({ length: maxPayables }, (_, i) => {
-                  const n = ` ${i + 1}`;
-                  const isLast = i === maxPayables - 1;
-                  return (
-                    <React.Fragment key={`pay-h-${i}`}>
-                      <th className={`${thClass} min-w-[130px]`}>Ref#{n}</th>
-                      <th className={`${thClass} min-w-[100px] ${isLast ? "border-r-0" : ""}`}>Status{n}</th>
-                    </React.Fragment>
-                  );
-                })}
+                <th className={`${thClass} min-w-[110px] text-right border-r-0`}>
+                  <button onClick={() => toggleSort("huspyMargin")} className="flex items-center gap-1 ml-auto">Margin <SortIcon col="huspyMargin" /></button>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -265,48 +234,26 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
                     </span>
                   </td>
 
-                  <td className={`${tdClass} text-right tabular-nums`}>{fmt(getPropTotalRevenue(deal))}</td>
-                  <td className={`${tdClass} text-right tabular-nums`}>{fmt(getPropTotalExtCogs(deal))}</td>
-                  <td className={`${tdClass} text-right tabular-nums`}>{fmt(getPropTotalIntCogs(deal))}</td>
-                  <td className={`${tdClass} text-right tabular-nums font-semibold border-r-2 border-r-border`}>{fmt(getPropNetRevenue(deal))}</td>
-
-                  <td className={`${tdClass} text-right tabular-nums`}>{deal.market === "secondary" ? fmt(getConvTotalRevenue(deal)) : dash}</td>
-                  <td className={`${tdClass} text-right tabular-nums`}>{deal.market === "secondary" ? fmt(getConvTotalCogs(deal)) : dash}</td>
-                  <td className={`${tdClass} text-right tabular-nums font-semibold border-r-2 border-r-border`}>{deal.market === "secondary" ? fmt(getConvNetRevenue(deal)) : dash}</td>
-
-                  {Array.from({ length: maxReceivables }, (_, i) => {
-                    const r = deal.receivables?.[i];
-                    const isLast = i === maxReceivables - 1;
-                    return (
-                      <React.Fragment key={`recv-${i}`}>
-                        <td className={tdClass}>{r?.invoiceNumber || dash}</td>
-                        <td className={`${tdClass} ${isLast ? "border-r-2 border-r-border" : ""}`}>
-                          {r?.invoiceStatus ? (
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${getInvoiceStatusColor(r.invoiceStatus)}`}>
-                              {r.invoiceStatus}
-                            </span>
-                          ) : dash}
-                        </td>
-                      </React.Fragment>
+                  {(() => {
+                    const pnl = pnlByDealId.get(deal.id);
+                    return pnl ? (
+                      <>
+                        <td className={`${tdClass} text-right tabular-nums`}>{fmt(pnl.grossRevenue)}</td>
+                        <td className={`${tdClass} text-right tabular-nums text-muted-foreground`}>{pnl.totalBucketA > 0 ? `−${fmt(pnl.totalBucketA)}` : dash}</td>
+                        <td className={`${tdClass} text-right tabular-nums text-muted-foreground`}>{pnl.totalBucketC > 0 ? `−${fmt(pnl.totalBucketC)}` : dash}</td>
+                        <td className={`${tdClass} text-right tabular-nums text-muted-foreground`}>{pnl.totalBucketD > 0 ? `−${fmt(pnl.totalBucketD)}` : dash}</td>
+                        <td className={`${tdClass} text-right tabular-nums font-semibold`}>{fmt(pnl.netRevenue)}</td>
+                        <td className={`${tdClass} text-right tabular-nums text-muted-foreground`}>{pnl.totalBucketB > 0 ? `−${fmt(pnl.totalBucketB)}` : dash}</td>
+                        <td className={`${tdClass} text-right tabular-nums font-bold text-emerald-700 border-r-2 border-r-border`}>{fmt(pnl.huspyMargin)}</td>
+                      </>
+                    ) : (
+                      <>
+                        {Array.from({ length: 6 }, (_, i) => <td key={i} className={`${tdClass} text-right text-muted-foreground/40`}>{dash}</td>)}
+                        <td className={`${tdClass} text-right text-muted-foreground/40 border-r-2 border-r-border`}>{dash}</td>
+                      </>
                     );
-                  })}
+                  })()}
 
-                  {Array.from({ length: maxPayables }, (_, i) => {
-                    const p = deal.payables?.[i];
-                    const isLast = i === maxPayables - 1;
-                    return (
-                      <React.Fragment key={`pay-${i}`}>
-                        <td className={tdClass}>{p?.refNumber || dash}</td>
-                        <td className={`${tdClass} ${isLast ? "border-r-0" : ""}`}>
-                          {p?.status ? (
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${getPayableStatusColor(p.status)}`}>
-                              {p.status}
-                            </span>
-                          ) : dash}
-                        </td>
-                      </React.Fragment>
-                    );
-                  })}
                 </tr>
               ))}
               {paginated.length === 0 && (
@@ -341,27 +288,3 @@ export function PnLSummaryTable({ deals, currency = "EUR" }: Props) {
   );
 }
 
-/* ═══ Helpers ═══ */
-
-function getInvoiceStatusColor(status: string): string {
-  switch (status) {
-    case "paid": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
-    case "sent": return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
-    case "created": return "bg-muted text-muted-foreground";
-    case "overdue": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
-    case "paid-partial": return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
-    case "cancelled": return "bg-muted text-muted-foreground line-through";
-    default: return "bg-muted text-muted-foreground";
-  }
-}
-
-function getPayableStatusColor(status: string): string {
-  switch (status) {
-    case "paid": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
-    case "approved": return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
-    case "pending": return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
-    case "rejected": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
-    case "overdue": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
-    default: return "bg-muted text-muted-foreground";
-  }
-}

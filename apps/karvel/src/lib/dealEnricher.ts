@@ -20,7 +20,7 @@ const agentDisplayName: Record<string, string> = {
 export function enrichDeal(deal: BaseDeal): Deal {
   const f = computeDealFinancials(deal.dealAmount, deal.conveyanceRevenue ?? 0);
 
-  const agentStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id && s.role === "agent");
+  const agentStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id && s.role === "INTERNAL_PAYOUT");
   const agents: AgentEntry[] = agentStakes.map((stake) => {
     const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
     const name = agent ? (agentDisplayName[agent.id] ?? agent.id) : stake.partyId;
@@ -48,7 +48,7 @@ export function enrichDeal(deal: BaseDeal): Deal {
 
   const primaryEntry = agents[0];
 
-  const conveyanceStake = sharedDealStakeholders.find((s) => s.dealId === deal.id && s.role === "conveyance");
+  const conveyanceStake = sharedDealStakeholders.find((s) => s.dealId === deal.id && s.role === "OPERATIONAL_DEDUCTION");
   const conveyanceParty = conveyanceStake ? sharedParties.find((p) => p.id === conveyanceStake.partyId) : undefined;
 
   const rebateAmount = deal.market === "primary"
