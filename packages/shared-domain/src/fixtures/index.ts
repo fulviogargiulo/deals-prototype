@@ -52,3 +52,4 @@ export {
   computeAgentCommission,
 } from "./queries";
 export { generateManyClients } from "./manyClientsGenerator";
+export { buildWaterfallInput } from "./dealWaterfall";

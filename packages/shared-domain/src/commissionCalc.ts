@@ -94,7 +94,7 @@ export interface DealFinancials {
 export function computeDealFinancials(
   dealAmount: number,
   conveyanceFee = 0,
-  overrides?: Partial<typeof COMMISSION_RATES>,
+  overrides?: Partial<Record<keyof typeof COMMISSION_RATES, number>>,
 ): DealFinancials {
   const rates = { ...COMMISSION_RATES, ...overrides };
 

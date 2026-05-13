@@ -7,7 +7,7 @@ import { FileText, CheckCircle2, AlertTriangle, ChevronDown, RotateCcw } from 'l
 import { DocumentRow } from '@/components/deals/document-row';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { mockDeals, agentStakeMap } from '@/data/mockDeals';
-import { computeDealFinancials, COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements, sharedDealComments } from '@huspy/shared-domain';
+import { COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements, sharedDealComments, buildWaterfallInput, calculateProjectedPnL } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -190,41 +190,52 @@ export function DealDetails() {
 
         {/* Commission Breakdown — visible once deal is approved or further along */}
         {['pending-agent-approval', 'pending-receivables', 'finalized'].includes(viewDeal.status) && (() => {
-          const f = computeDealFinancials(viewDeal.dealAmount, 0, viewDeal.commissionPercentage ? { takeRate: viewDeal.commissionPercentage } : undefined);
           const stake = agentStakeMap.get(viewDeal.id);
-          const personalCommission = computeAgentCommission(f.agentCommissionPayout, stake);
+          const waterfallInput = buildWaterfallInput(viewDeal);
+          const projection = waterfallInput ? calculateProjectedPnL(waterfallInput) : null;
+          const agentSplit = projection?.splits.find(s => s.partyId === stake?.partyId);
+          const personalCommission = agentSplit?.agentPayout ?? computeAgentCommission(viewDeal.commissionAmount, stake);
           const splitPct = stake?.splitPercentage ?? 100;
           const isExpandable = viewDeal.status !== 'pending-agent-approval';
 
           const content = (
             <>
-              {/* Formula */}
-              <div className="px-4 py-3 border-b border-border-ds-primary">
-                <p className="text-[12px] text-fg-secondary leading-[140%]">
-                  Your Payout = Deal Price × {viewDeal.commissionPercentage ?? COMMISSION_RATES.takeRate}% (Huspy rate) × {COMMISSION_RATES.agentGrossRate}% (your commission rate){splitPct < 100 ? ` × ${splitPct}% (your deal split)` : ''}
-                </p>
-              </div>
-
-              {/* Breakdown rows */}
+              {/* Breakdown rows — waterfall engine output */}
               <div className="divide-y divide-border-ds-primary">
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
                   <span className="text-[12px] text-fg-secondary leading-[140%]">Deal Price</span>
                   <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{viewDeal.currency}{viewDeal.dealAmount.toLocaleString()}</span>
                 </div>
                 <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                  <span className="text-[12px] text-fg-secondary leading-[140%]">Huspy Revenue (×{viewDeal.commissionPercentage ?? COMMISSION_RATES.takeRate}%)</span>
-                  <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>{viewDeal.currency}{f.huspyRevenue.toLocaleString()}</span>
+                  <span className="text-[12px] text-fg-secondary leading-[140%]">Gross Revenue</span>
+                  <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>{viewDeal.currency}{(projection?.grossRevenue ?? viewDeal.huspyRevenue).toLocaleString()}</span>
                 </div>
-                <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                  <span className="text-[12px] text-fg-secondary leading-[140%]">Your Commission Rate</span>
-                  <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{COMMISSION_RATES.agentGrossRate}%</span>
-                </div>
+                {projection && projection.totalBucketD > 0 && (
+                  <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
+                    <span className="text-[12px] text-fg-secondary leading-[140%]">Operational Deductions</span>
+                    <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-red))' }}>−{viewDeal.currency}{projection.totalBucketD.toLocaleString()}</span>
+                  </div>
+                )}
+                {projection && projection.totalBucketD > 0 && (
+                  <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
+                    <span className="text-[12px] text-fg-secondary leading-[140%]">Net Revenue</span>
+                    <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{viewDeal.currency}{projection.netRevenue.toLocaleString()}</span>
+                  </div>
+                )}
                 {splitPct < 100 && (
                   <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
                     <span className="text-[12px] text-fg-secondary leading-[140%]">Your Deal Split</span>
                     <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{splitPct}%</span>
                   </div>
                 )}
+                <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
+                  <span className="text-[12px] text-fg-secondary leading-[140%]">Your Commission Rate</span>
+                  <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">
+                    {agentSplit?.strategyKind === "flat" && agentSplit.allocatedNet > 0
+                      ? `${Math.round((agentSplit.agentPayout / agentSplit.allocatedNet) * 100)}%`
+                      : `${COMMISSION_RATES.agentGrossRate}%`}
+                  </span>
+                </div>
               </div>
 
               {/* Total */}
@@ -357,7 +368,7 @@ export function DealDetails() {
                     <div className="flex items-center gap-3">
                       {header}
                       <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: 'hsl(var(--accent-indigo) / 0.1)', color: 'hsl(var(--accent-indigo))' }}>
-                        {viewDeal.currency}{f.agentCommissionPayout.toLocaleString()}
+                        {viewDeal.currency}{personalCommission.toLocaleString()}
                       </span>
                     </div>
                     <ChevronDown className="w-4 h-4 text-[hsl(var(--fg-secondary))] transition-transform duration-200 [[data-state=open]>&]:rotate-180" />

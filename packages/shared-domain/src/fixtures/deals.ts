@@ -56,7 +56,7 @@ interface BaseInput {
 
 function expand(b: BaseInput): Deal {
   const opp = findOpp(b.opportunityId);
-  const f = computeDealFinancials(b.dealAmount, b.conveyanceFee ?? 0);
+  const f = computeDealFinancials(b.dealAmount, b.conveyanceFee ?? 0, { takeRate: b.commissionPercentage });
   const businessUnit = b.businessUnit ?? "rebu";
   // rebateAmount and subsidyAmount are stored as reference fields on the deal.
   // The actual net amounts are already baked into each REVENUE_SOURCE stakeholder's financialAmount.
@@ -154,7 +154,7 @@ function expand(b: BaseInput): Deal {
     // Agent-app — agent-facing
     marketType: b.market,
     commissionPercentage: b.commissionPercentage,
-    commissionAmount: f.agentCommissionPayout,
+    commissionAmount: Math.round((f.huspyRevenue - (b.subsidyAmount ?? 0)) * (COMMISSION_RATES.agentGrossRate / 100)),
     paymentDate: b.paymentDate,
   };
 }
