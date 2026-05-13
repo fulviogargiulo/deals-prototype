@@ -27,8 +27,6 @@ function roleLabel(type: StakeholderType): string {
 }
 
 function resolvePartyName(partyId: string): string {
-  const agent = sharedAgents.find((a) => a.partyId === partyId);
-  if (agent?.name) return agent.name;
   return sharedParties.find((p) => p.id === partyId)?.displayName ?? partyId;
 }
 

@@ -6,6 +6,7 @@ import {
   sharedDealStakeholders,
   sharedAgents,
   sharedParties,
+  sharedLedgers,
   type AgentFinancials,
   type Blueprint,
   type DealStakeholder,
@@ -92,14 +93,13 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
 
   // Infer financialAmount for payer stakeholders when none is set explicitly.
   // Single payer gets the full grossRevenue; multiple payers split it evenly.
-  const PAYER_ROLE_SET = new Set(["buyer", "seller", "tenant", "landlord", "borrower", "developer", "bank"]);
   const hasExplicitPayer = stakeholders.some((s) => (s.financialAmount ?? 0) > 0);
   if (!hasExplicitPayer && deal.grossRevenue) {
-    const implicit = stakeholders.filter((s) => PAYER_ROLE_SET.has(s.role) && !s.financialAmount);
+    const implicit = stakeholders.filter((s) => s.role === "REVENUE_SOURCE" && !s.financialAmount);
     if (implicit.length > 0) {
       const perPayer = deal.grossRevenue / implicit.length;
       stakeholders = stakeholders.map((s) =>
-        PAYER_ROLE_SET.has(s.role) && !s.financialAmount ? { ...s, financialAmount: perPayer } : s
+        s.role === "REVENUE_SOURCE" && !s.financialAmount ? { ...s, financialAmount: perPayer } : s
       );
     }
   }
@@ -468,10 +468,17 @@ export function draftPostings(projection: ProjectedPnL, deal: { id: string; busi
     lines.push(line(ids.extPayable, "CREDIT", externalTotal));
   }
 
-  // Bucket B (agent payouts): Expense debit + Agent payable credit
+  // Bucket B (agent payouts): one Expense debit for the total, then one Credit per
+  // agent subledger (AgentLiability_agent-{id}). Falls back to the GL parent only
+  // when no subledger is found for an agent — preserving double-entry balance.
   if (projection.totalBucketB > 0) {
     lines.push(line(ids.exp, "DEBIT", projection.totalBucketB));
-    lines.push(line(ids.agentPayable, "CREDIT", projection.totalBucketB));
+    for (const split of projection.splits) {
+      const agentTotal = split.agentPayout + split.teamLeadPayout + split.managerPayout;
+      if (agentTotal <= 0) continue;
+      const subledger = sharedLedgers.find((l) => l.name === `AgentLiability_${split.agentId}`);
+      lines.push(line(subledger?.id ?? ids.agentPayable, "CREDIT", agentTotal));
+    }
   }
 
   return { posting, lines };
