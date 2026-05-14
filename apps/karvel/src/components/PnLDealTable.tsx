@@ -1,8 +1,9 @@
 import { Deal, DealStatus, DealMarket, BusinessUnit, Country } from "@/data/types";
 import { DealStatusBadge } from "./DealBadges";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown, Filter, X, MessageSquare, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown, Filter, X, MessageSquare } from "lucide-react";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { computeDealPnL } from "@/lib/dealCalculations";
+import { sharedDealComments } from "@huspy/shared-domain";
 
 const ALL_STATUSES: DealStatus[] = ["pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"];
 const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
@@ -123,6 +124,13 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
     return m;
   }, [deals]);
 
+  const latestCommentByDealId = useMemo(() => {
+    const m = new Map<string, string>();
+    const sorted = [...sharedDealComments].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    sorted.forEach((c) => m.set(c.dealId, c.text));
+    return m;
+  }, []);
+
   const fmt = useCallback((n: number, dealCurrency?: string) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: dealCurrency ?? currency, maximumFractionDigits: 0 }).format(n),
   [currency]);
@@ -199,7 +207,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
               <tr className="border-b border-border">
                 <th colSpan={6} className={`${groupHeaderClass} text-foreground/80 bg-muted sticky left-0 z-[7]`}>Deal Info</th>
                 <th colSpan={7} className={`${groupHeaderClass} text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-r-0`}>P&L Waterfall</th>
-                <th colSpan={2} className={`${groupHeaderClass} text-slate-600 bg-slate-50/50 border-r-0`}>Notes</th>
+                <th colSpan={1} className={`${groupHeaderClass} text-slate-600 bg-slate-50/50 border-r-0`}>Notes</th>
               </tr>
               <tr className="border-b border-border bg-muted/30">
                 {/* Deal Info */}
@@ -239,7 +247,6 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
                 </th>
 
                 {/* Notes */}
-                <th className={`${thBase} min-w-[80px] text-left`}>Dispute</th>
                 <th className={`${thBase} min-w-[200px] text-left`}>Comment</th>
               </tr>
             </thead>
@@ -257,7 +264,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
                     <td className={`${tdClass} sticky left-[90px] z-[3] bg-card font-medium text-primary`} style={{ minWidth: 90, width: 90, maxWidth: 90 }}>
                       <a href={`/deals/${deal.id}`} className="underline underline-offset-2 hover:text-primary/80 text-[11px] font-mono">{deal.id}</a>
                     </td>
-                    <td className={`${tdClass}`}><DealStatusBadge status={deal.status} isDisputed={deal.isDisputed} /></td>
+                    <td className={`${tdClass}`}><DealStatusBadge status={deal.status} /></td>
                     <td className={`${tdClass}`}><BUBadge bu={deal.businessUnit} /></td>
                     <td className={`${tdClass} text-[11px] uppercase`}>{deal.country ?? dash}</td>
 
@@ -281,19 +288,11 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
                     )}
 
                     {/* Notes */}
-                    <td className={`${tdClass} max-w-[80px]`}>
-                      {deal.isDisputed && deal.disputeNote ? (
-                        <span className="flex items-center gap-1 text-destructive text-[11px]">
-                          <AlertTriangle className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{deal.disputeNote}</span>
-                        </span>
-                      ) : <span className="text-muted-foreground/40">{dash}</span>}
-                    </td>
                     <td className={`${tdClass} max-w-[200px]`}>
-                      {deal.latestNote ? (
+                      {latestCommentByDealId.get(deal.id) ? (
                         <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                           <MessageSquare className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{deal.latestNote}</span>
+                          <span className="truncate">{latestCommentByDealId.get(deal.id)}</span>
                         </span>
                       ) : <span className="text-muted-foreground/40">{dash}</span>}
                     </td>
@@ -302,7 +301,7 @@ export function PnLDealTable({ deals, currency, onDealsUpdate: _onDealsUpdate }:
               })}
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={16} className="px-4 py-8 text-center text-muted-foreground text-[13px]">No deals match the selected filters</td>
+                  <td colSpan={15} className="px-4 py-8 text-center text-muted-foreground text-[13px]">No deals match the selected filters</td>
                 </tr>
               )}
             </tbody>

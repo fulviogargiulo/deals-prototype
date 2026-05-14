@@ -133,19 +133,6 @@ export interface ReceivableEntry {
   paymentReceivedAmount?: number;
 }
 
-// Agent-app dispute model
-export type DisputeStatus = "open" | "resolved";
-export type DisputeField = "deal-amount" | "commission-percentage" | "report-date" | "other";
-export interface DealDispute {
-  id: string;
-  dealId: string;
-  field: DisputeField;
-  description: string;
-  correctValue?: string;
-  status: DisputeStatus;
-  createdAt: string;
-}
-
 // ============================================================
 // Task / Document / Agent / ScheduleActivity
 // ============================================================
@@ -365,11 +352,6 @@ export interface Deal {
   paymentReceivedDate?: string;
   paymentReceivedAmount?: number;
 
-  // Notes / Dispute
-  latestNote?: string;
-  isDisputed?: boolean;
-  disputeNote?: string;
-
   // ==========================================================
   // Agent-app — agent-facing commission / invoice fields
   // ==========================================================
@@ -377,7 +359,6 @@ export interface Deal {
   commissionPercentage?: number;
   commissionAmount?: number;
   paymentDate?: string;
-  dispute?: DealDispute;
 }
 
 // ============================================================

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Deal } from '@/types';
-import { type DealStakeholder, computeAgentCommission } from '@huspy/shared-domain';
+import { type DealStakeholder, computeAgentCommission, buildWaterfallInput, calculateProjectedPnL } from '@huspy/shared-domain';
 import { Clock, CheckCircle2, MoreVertical, Timer, RotateCcw } from 'lucide-react';
 import { CountdownTimer } from '@/components/ui/countdown-timer';
 import { Button } from '@/components/ui/button';
@@ -212,7 +212,14 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, agent
 
                 {/* Commission */}
                 <span className="text-sm font-semibold text-foreground text-right tabular-nums">
-                  {deal.currency}{computeAgentCommission(deal.commissionAmount, agentStakeMap?.get(deal.id)).toLocaleString()}
+                  {(() => {
+                    const stake = agentStakeMap?.get(deal.id);
+                    const waterfallInput = buildWaterfallInput(deal);
+                    const projection = waterfallInput ? calculateProjectedPnL(waterfallInput) : null;
+                    const agentSplit = projection?.splits.find(s => s.partyId === stake?.partyId);
+                    const commission = agentSplit?.agentPayout ?? computeAgentCommission(deal.commissionAmount, stake);
+                    return `${deal.currency}${commission.toLocaleString()}`;
+                  })()}
                 </span>
 
                 {/* Date */}

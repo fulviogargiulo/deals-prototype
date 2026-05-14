@@ -114,9 +114,6 @@ export type Deal = BaseDeal & {
 export type {
   Client,
   Opportunity,
-  DealDispute,
-  DisputeStatus,
-  DisputeField,
   PriceRange,
   SizeRange,
   ReceivableEntry,

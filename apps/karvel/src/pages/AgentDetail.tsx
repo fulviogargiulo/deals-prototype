@@ -759,7 +759,7 @@ export default function AgentDetail() {
                             className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer">
                             <td className={`${tdClass} text-muted-foreground font-mono text-[12px]`}>{deal.id}</td>
 
-                            <td className="px-4 py-3 text-center"><DealStatusBadge status={deal.status} isDisputed={deal.isDisputed} /></td>
+                            <td className="px-4 py-3 text-center"><DealStatusBadge status={deal.status} /></td>
                             <td className={tdClass}>{deal.market ?? "—"}</td>
                             <td className={tdClass}>{deal.clientName ?? "—"}</td>
                             <td className={tdClass}>{fmt(deal.dealAmount, deal.currency ?? "EUR")}</td>

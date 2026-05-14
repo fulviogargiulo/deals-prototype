@@ -5,7 +5,17 @@ import { PageContainer } from '@/components/layout/page-container';
 import { TrackedTitle } from '@/components/ui/tracked-title';
 import { ExpectedPayoutSection } from '@/components/deals/expected-payout-section';
 import { PaidInvoicesModal } from '@/components/modals/paid-invoices-modal';
-import { agentDeals, mockStatement } from '@/data/mockDeals';
+import { agentDeals, agentStakeMap, mockStatement } from '@/data/mockDeals';
+import { buildWaterfallInput, calculateProjectedPnL, computeAgentCommission } from '@huspy/shared-domain';
+import type { Deal } from '@/types';
+
+function resolvedCommission(d: Deal): number {
+  const stake = agentStakeMap.get(d.id);
+  const input = buildWaterfallInput(d);
+  const projection = input ? calculateProjectedPnL(input) : null;
+  const split = projection?.splits.find(s => s.partyId === stake?.partyId);
+  return split?.agentPayout ?? computeAgentCommission(d.commissionAmount, stake);
+}
 
 const PIPELINE_STATUSES = ['under-review', 'pending-agent-approval', 'pending-receivables'];
 const CLOSED_STATUSES = ['finalized'];
@@ -17,8 +27,8 @@ export function PaymentHistory() {
   const pipelineDeals = agentDeals.filter(d => PIPELINE_STATUSES.includes(d.status));
 
   const totalClosedDeals = closedDeals.length;
-  const totalIncome = closedDeals.reduce((sum, d) => sum + d.commissionAmount, 0);
-  const potentialIncome = pipelineDeals.reduce((sum, d) => sum + d.commissionAmount, 0);
+  const totalIncome = closedDeals.reduce((sum, d) => sum + resolvedCommission(d), 0);
+  const potentialIncome = pipelineDeals.reduce((sum, d) => sum + resolvedCommission(d), 0);
 
   return (
     <PageContainer>
@@ -130,7 +140,7 @@ export function PaymentHistory() {
                     <p className="text-[12px] font-normal leading-[140%] text-fg-secondary">{deal.clientName}</p>
                   </div>
                   <p className="text-[14px] font-semibold leading-[140%] tabular-nums text-foreground">
-                    €{deal.commissionAmount.toLocaleString()}
+                    €{resolvedCommission(deal).toLocaleString()}
                   </p>
                 </div>
               ))}
@@ -144,6 +154,7 @@ export function PaymentHistory() {
         onOpenChange={setShowPaidInvoices}
         deals={closedDeals}
         totalIncome={totalIncome}
+        agentStakeMap={agentStakeMap}
       />
     </PageContainer>
   );

@@ -12,7 +12,7 @@ import { DateRange } from "./DateRangePicker";
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
 type PnLTab = "detailed" | "summary";
-type TileFilter = "pendingDetails" | "disputed" | "underReview" | "approved" | null;
+type TileFilter = "pendingDetails" | "underReview" | "approved" | null;
 
 interface Props {
   deals: Deal[];
@@ -45,13 +45,11 @@ export function DealPnLView({ deals, currency = "EUR", dateRange, onDealsUpdate 
   });
 
   const pendingDetailsDeals = searched.filter(d => d.status === "pending-details");
-  const disputedDeals = searched.filter(d => d.isDisputed === true && ["pending-details", "under-review"].includes(d.status));
   const underReviewDeals = searched.filter(d => d.status === "under-review");
   const approvedDeals = searched.filter(d => d.status === "pending-agent-approval");
 
   const kanbanCounts = {
     pendingDetails: { count: pendingDetailsDeals.length, amount: pendingDetailsDeals.reduce((s, d) => s + d.dealPrice, 0) },
-    disputed: { count: disputedDeals.length, amount: disputedDeals.reduce((s, d) => s + d.dealPrice, 0) },
     underReview: { count: underReviewDeals.length, amount: underReviewDeals.reduce((s, d) => s + d.dealPrice, 0) },
     approved: { count: approvedDeals.length, amount: approvedDeals.reduce((s, d) => s + d.dealPrice, 0) },
   };
@@ -60,7 +58,6 @@ export function DealPnLView({ deals, currency = "EUR", dateRange, onDealsUpdate 
   const filtered = activeTile
     ? searched.filter((d) => {
         if (activeTile === "pendingDetails") return d.status === "pending-details";
-        if (activeTile === "disputed") return d.isDisputed === true;
         if (activeTile === "underReview") return d.status === "under-review";
         if (activeTile === "approved") return d.status === "pending-agent-approval";
         return true;
@@ -74,9 +71,8 @@ export function DealPnLView({ deals, currency = "EUR", dateRange, onDealsUpdate 
   return (
     <div className="space-y-6 min-w-0 w-full">
       {/* Kanban status tiles */}
-      <div className="grid grid-cols-4 gap-3 max-w-[720px]">
+      <div className="grid grid-cols-3 gap-3 max-w-[540px]">
         <KanbanTile label="pending-details" count={kanbanCounts.pendingDetails.count} amount={kanbanCounts.pendingDetails.amount} currency={currency} color="amber" active={activeTile === "pendingDetails"} onClick={() => handleTileClick("pendingDetails")} />
-        <KanbanTile label="disputed" count={kanbanCounts.disputed.count} amount={kanbanCounts.disputed.amount} currency={currency} color="red" active={activeTile === "disputed"} onClick={() => handleTileClick("disputed")} />
         <KanbanTile label="under-review" count={kanbanCounts.underReview.count} amount={kanbanCounts.underReview.amount} currency={currency} color="blue" active={activeTile === "underReview"} onClick={() => handleTileClick("underReview")} />
         <KanbanTile label="Approved For Invoicing" count={kanbanCounts.approved.count} amount={kanbanCounts.approved.amount} currency={currency} color="green" active={activeTile === "approved"} onClick={() => handleTileClick("approved")} />
       </div>

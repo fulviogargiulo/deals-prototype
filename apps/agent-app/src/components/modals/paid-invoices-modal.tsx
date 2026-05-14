@@ -3,12 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Deal } from '@/types';
 import { toast } from 'sonner';
+import { type DealStakeholder, buildWaterfallInput, calculateProjectedPnL, computeAgentCommission } from '@huspy/shared-domain';
 
 interface PaidInvoicesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   deals: Deal[];
   totalIncome: number;
+  agentStakeMap?: Map<string, DealStakeholder>;
 }
 
 function formatDate(dateStr?: string) {
@@ -16,7 +18,7 @@ function formatDate(dateStr?: string) {
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome }: PaidInvoicesModalProps) {
+export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome, agentStakeMap }: PaidInvoicesModalProps) {
   const sortedDeals = [...deals].sort((a, b) => 
     new Date(b.paymentDate || b.reportDate).getTime() - new Date(a.paymentDate || a.reportDate).getTime()
   );
@@ -57,7 +59,13 @@ export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome }: Pa
                   </p>
                 </div>
                 <p className="text-[16px] font-semibold leading-[140%] tabular-nums shrink-0" style={{ color: 'hsl(var(--ds-green))' }}>
-                  €{deal.commissionAmount.toLocaleString()}
+                  {(() => {
+                    const stake = agentStakeMap?.get(deal.id);
+                    const input = buildWaterfallInput(deal);
+                    const projection = input ? calculateProjectedPnL(input) : null;
+                    const split = projection?.splits.find(s => s.partyId === stake?.partyId);
+                    return `€${(split?.agentPayout ?? computeAgentCommission(deal.commissionAmount, stake)).toLocaleString()}`;
+                  })()}
                 </p>
               </div>
 

@@ -8,12 +8,13 @@ import { PageContainer } from "@/components/layout/page-container";
 import { Card } from "@/components/ui/card";
 import { ActionCardStack, ActionCard, ActionCardStackHandle } from "@/components/home/action-card-stack";
 import { OpportunityTypeGrid, OpportunitiesLayoutMode, TableFilterStyle } from "@/components/home/opportunity-type-grid";
-import { DealsSummaryWidget } from "@/components/home/deals-summary-widget";
+// TODO: deal widgets removed from home — commission calculation needs updating before re-enabling
+// import { DealsSummaryWidget } from "@/components/home/deals-summary-widget";
+// import { IncomeOverviewGrid } from "@/components/home/income-overview-grid";
 import { NewPropertiesGrid, PropertiesLayoutMode, ViewAllMode } from "@/components/home/new-properties-grid";
 import { ActivityWidget, ScheduleDisplayMode, OverdueDisplayMode } from "@/components/schedule/activity-widget";
 import { HomeDevTool, ActionCardCount, HomeLayoutVariant, HomeHeaderVariant, GreetingOverride, PropertiesDisplayMode, InquiryScenario } from "@/components/dev-tools/home-dev-tool";
 import { MeshGradient } from "@/components/home/mesh-gradient";
-import { IncomeOverviewGrid } from "@/components/home/income-overview-grid";
 import { OpportunityType } from "@/types";
 import { ReviewInquiryModal, InquiryData } from "@/components/modals/review-inquiry-modal";
 import apartmentImage1 from "@/assets/apartment-la-latina-1.jpg";
@@ -76,49 +77,21 @@ const opportunityActionCards: ActionCard[] = [
   description: 'New property match found in Salamanca matching buyer criteria'
 }];
 
-// Deals action cards (always shown)
-const dealsActionCards: ActionCard[] = [
-{
-  id: 'deals-confirm',
-  type: 'buy',
-  cardVariant: 'deals',
-  iconKey: 'confirm-deals',
-  badges: [
-    { label: 'Deals', variant: 'type' },
-    { label: '3 pending', variant: 'source' },
-  ],
-  clientName: 'Confirm Deals for Invoicing',
-  description: '€20,400 in commissions pending confirmation',
-  countdown: '48h 0m',
-  ctaLabel: 'Confirm',
-},
-{
-  id: 'deals-pending-info',
-  type: 'rent',
-  cardVariant: 'deals',
-  iconKey: 'pending-info',
-  badges: [
-    { label: 'Deals', variant: 'type' },
-    { label: '2 pending', variant: 'source' },
-  ],
-  clientName: 'Deals Pending Information',
-  description: '2 deals need additional details before processing',
-  ctaLabel: 'Provide Info',
-},
-{
-  id: 'deals-statement',
-  type: 'sell',
-  cardVariant: 'deals',
-  iconKey: 'statement',
-  badges: [
-    { label: 'Statement', variant: 'type' },
-    { label: 'Mar 2025', variant: 'source' },
-  ],
-  clientName: 'Statement Confirmation',
-  description: 'Review and confirm your statement of account · €4,250 balance',
-  countdown: '72h 0m',
-  ctaLabel: 'Review',
-}];
+// TODO: deal action cards removed from home — commission amounts are hardcoded; update before re-enabling
+// const dealsActionCards: ActionCard[] = [
+//   { id: 'deals-confirm', type: 'buy', cardVariant: 'deals', iconKey: 'confirm-deals',
+//     badges: [{ label: 'Deals', variant: 'type' }, { label: '3 pending', variant: 'source' }],
+//     clientName: 'Confirm Deals for Invoicing', description: '€20,400 in commissions pending confirmation',
+//     countdown: '48h 0m', ctaLabel: 'Confirm' },
+//   { id: 'deals-pending-info', type: 'rent', cardVariant: 'deals', iconKey: 'pending-info',
+//     badges: [{ label: 'Deals', variant: 'type' }, { label: '2 pending', variant: 'source' }],
+//     clientName: 'Deals Pending Information', description: '2 deals need additional details before processing',
+//     ctaLabel: 'Provide Info' },
+//   { id: 'deals-statement', type: 'sell', cardVariant: 'deals', iconKey: 'statement',
+//     badges: [{ label: 'Statement', variant: 'type' }, { label: 'Mar 2025', variant: 'source' }],
+//     clientName: 'Statement Confirmation', description: 'Review and confirm your statement of account · €4,250 balance',
+//     countdown: '72h 0m', ctaLabel: 'Review' },
+// ];
 
 export default function Home() {
   const { setPageTitle } = usePageTitle();
@@ -246,7 +219,7 @@ export default function Home() {
     }
   }, [navigate]);
 
-  const activeCards = [...opportunityActionCards.slice(0, actionCardCount), ...dealsActionCards];
+  const activeCards = [...opportunityActionCards.slice(0, actionCardCount)];
   const [activeGradientType, setActiveGradientType] = useState<OpportunityType>(activeCards[0]?.type ?? 'buy');
 
   const getGreeting = () => {
@@ -283,12 +256,13 @@ export default function Home() {
   ) : null;
 
   const opportunitiesElement = <OpportunityTypeGrid layoutMode={opportunitiesLayoutMode} tableFilterStyle={tableFilterStyle} />;
-  const dealsAndIncomeElement = (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <DealsSummaryWidget />
-      <IncomeOverviewGrid />
-    </div>
-  );
+  // TODO: deal widgets removed — commission calculation needs updating before re-enabling
+  // const dealsAndIncomeElement = (
+  //   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  //     <DealsSummaryWidget />
+  //     <IncomeOverviewGrid />
+  //   </div>
+  // );
   const scheduleElement = showSchedule ? <ActivityWidget displayMode={scheduleDisplayMode} overdueDisplayMode={overdueDisplayMode} /> : null;
   const propertiesElement = showNewProperties !== 'hidden' ? <NewPropertiesGrid layoutMode={propertiesLayoutMode} viewAllMode={viewAllMode} isEmpty={showNewProperties === 'empty'} /> : null;
   
@@ -399,7 +373,6 @@ export default function Home() {
     <>
       {isCompactBox && compactBoxElement}
       {opportunitiesElement}
-      {dealsAndIncomeElement}
       {scheduleElement}
       {propertiesElement}
     </>
@@ -416,7 +389,6 @@ export default function Home() {
               <div className="lg:col-span-8 space-y-8">
                 {compactBoxElement}
                 {opportunitiesElement}
-                {dealsAndIncomeElement}
                 {/* Schedule inline on mobile */}
                 {scheduleElement && (
                   <div className="lg:hidden">
@@ -440,7 +412,6 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 space-y-8">
             {opportunitiesElement}
-            {dealsAndIncomeElement}
             {/* Schedule inline on mobile */}
             {scheduleElement && (
               <div className="lg:hidden">
@@ -482,7 +453,6 @@ export default function Home() {
         {/* Wide main: opportunities */}
         <div className="lg:col-span-9">
           {opportunitiesElement}
-          {dealsAndIncomeElement}
         </div>
       </div>
     </>
@@ -498,7 +468,6 @@ export default function Home() {
               <div className="lg:col-span-8 space-y-10">
                 {compactBoxElement}
                 {opportunitiesElement}
-                {dealsAndIncomeElement}
                 {/* Schedule inline on mobile, hidden on desktop */}
                 {scheduleElement && (
                   <div className="lg:hidden">
@@ -525,7 +494,6 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 space-y-10">
             {opportunitiesElement}
-            {dealsAndIncomeElement}
             {/* Schedule inline on mobile */}
             {scheduleElement && (
               <div className="lg:hidden">

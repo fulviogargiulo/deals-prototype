@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Deal, DealStatus, OpportunityType } from '@/types';
-import { type DealStakeholder, computeAgentCommission } from '@huspy/shared-domain';
+import { type DealStakeholder, computeAgentCommission, buildWaterfallInput, calculateProjectedPnL } from '@huspy/shared-domain';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { OpportunityIcon } from '@/components/opportunities/opportunity-icon';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
@@ -35,6 +35,8 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
   rent: { icon: RentBareIcon, color: '#5856D6' },
   lease: { icon: LeaseBareIcon, color: '#CD52C3' },
 };
+
+const COMMISSION_STATUSES = new Set<DealStatus>(['pending-agent-approval', 'pending-receivables', 'finalized']);
 
 type SortKey = 'title' | 'dealAmount' | 'commissionAmount' | 'reportDate';
 type SortDir = 'asc' | 'desc';
@@ -98,7 +100,15 @@ export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
             sorted.map((deal) => {
               const config = typeConfig[deal.type];
               const colors = statusColors[deal.status];
-              const agentCommission = computeAgentCommission(deal.commissionAmount, agentStakeMap?.get(deal.id));
+              const showCommission = COMMISSION_STATUSES.has(deal.status);
+              const stake = agentStakeMap?.get(deal.id);
+              let agentCommission: number | null = null;
+              if (showCommission) {
+                const waterfallInput = buildWaterfallInput(deal);
+                const projection = waterfallInput ? calculateProjectedPnL(waterfallInput) : null;
+                const agentSplit = projection?.splits.find(s => s.partyId === stake?.partyId);
+                agentCommission = agentSplit?.agentPayout ?? computeAgentCommission(deal.commissionAmount, stake);
+              }
               return (
                 <div
                   key={deal.id}
@@ -114,7 +124,9 @@ export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
                   </div>
                   <span className="text-sm text-foreground truncate">{deal.clientName}</span>
                   <span className="text-sm text-foreground text-right tabular-nums font-semibold">{deal.currency}{deal.dealAmount.toLocaleString()}</span>
-                  <span className="text-sm text-foreground text-right tabular-nums font-semibold">{deal.currency}{agentCommission.toLocaleString()}</span>
+                  <span className="text-sm text-right tabular-nums font-semibold" style={{ color: showCommission ? undefined : 'hsl(var(--fg-secondary))' }}>
+                    {showCommission && agentCommission !== null ? `${deal.currency}${agentCommission.toLocaleString()}` : '—'}
+                  </span>
                   <div className="flex justify-center">
                     <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: colors.bg, color: colors.color }}>
                       {statusLabels[deal.status]}

@@ -52,8 +52,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
   const [disbursedAmount, setDisbursedAmount] = useState(""); // MBU
   const [bankSlab, setBankSlab] = useState("0.5"); // MBU
 
-  // ─── Step 3: Notes + postings preview ────────────────────────────────────
-  const [latestNote, setLatestNote] = useState("");
+  // ─── Step 3: Postings preview ─────────────────────────────────────────────
   const [showPostings, setShowPostings] = useState(false);
 
   const filteredOpps = useMemo(() => {
@@ -216,7 +215,6 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       externalPartners: [],
       receivables: [],
       payables: [],
-      latestNote: latestNote || undefined,
     };
 
     const finalDeal = recalculateDeal(deal);
@@ -444,15 +442,6 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                   )}
                 </div>
 
-                <div>
-                  <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Notes (optional)</Label>
-                  <textarea
-                    value={latestNote}
-                    onChange={(e) => setLatestNote(e.target.value)}
-                    className="w-full h-20 mt-1.5 rounded-md border border-input bg-background px-3 py-2 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-                    placeholder="Anything ops should know about this deal..."
-                  />
-                </div>
               </div>
             </ScrollArea>
           );

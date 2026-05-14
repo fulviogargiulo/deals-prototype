@@ -43,15 +43,12 @@ interface BaseInput {
   reportDate: string;
   createdAt: string;
   updatedAt: string;
-  isDisputed?: boolean;
   commissionPercentage: number;
   paymentDate?: string;
   channel?: string;
   conveyanceFee?: number;
   rebatePercentage?: number;
   subsidyAmount?: number;
-  disputeNote?: string;
-  latestNote?: string;
 }
 
 function expand(b: BaseInput): Deal {
@@ -147,10 +144,6 @@ function expand(b: BaseInput): Deal {
     dsPayout: 0,
     externalCommissionRate: 0,
     externalPayout: 0,
-    isDisputed: b.isDisputed ?? false,
-    disputeNote: b.disputeNote,
-    latestNote: b.latestNote,
-
     // Agent-app — agent-facing
     marketType: b.market,
     commissionPercentage: b.commissionPercentage,
@@ -182,7 +175,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 14400, reportDate: "2026-02-22",
     createdAt: "2026-02-22T00:00:00.000Z", updatedAt: "2026-02-22T00:00:00.000Z",
     commissionPercentage: 8,
-    latestNote: "Awaiting signed contract from landlord",
   }),
   expand({
     id: "deal-004", opportunityId: "opp-004",
@@ -191,7 +183,6 @@ export const sharedDeals: Deal[] = [
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-03T00:00:00.000Z",
     commissionPercentage: 2,
     subsidyAmount: 6000,
-    latestNote: "Client requested extra time to gather mortgage documents",
   }),
   expand({
     id: "deal-005", opportunityId: "opp-005",
@@ -215,9 +206,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 475000, reportDate: "2026-03-05",
     createdAt: "2026-03-05T00:00:00.000Z", updatedAt: "2026-03-05T00:00:00.000Z",
     commissionPercentage: 2.5,
-    isDisputed: true,
-    disputeNote: "Agent disputes deal price — client claims lower amount was agreed verbally",
-    latestNote: "Escalated to ops team for review",
     subsidyAmount: 3000,
   }),
   expand({
@@ -236,7 +224,6 @@ export const sharedDeals: Deal[] = [
     commissionPercentage: 2,
     channel: "B2C/Digital",
     rebatePercentage: 2.0,
-    latestNote: "New deal just reported, awaiting paperwork",
   }),
   expand({
     id: "deal-010", opportunityId: "opp-008",

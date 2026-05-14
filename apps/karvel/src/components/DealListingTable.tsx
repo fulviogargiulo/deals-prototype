@@ -218,7 +218,7 @@ export function DealListingTable({ deals, currency }: Props) {
                     <td className={`${tdClass} font-mono text-[11px] text-muted-foreground`}>
                       {deal.id}
                     </td>
-                    <td className="px-4 py-3"><DealStatusBadge status={deal.status} isDisputed={deal.isDisputed} /></td>
+                    <td className="px-4 py-3"><DealStatusBadge status={deal.status} /></td>
                     <td className={tdClass}><BUBadge bu={deal.businessUnit} /></td>
                     <td className={`${tdClass} uppercase text-[12px]`}>{deal.country ?? dash}</td>
 

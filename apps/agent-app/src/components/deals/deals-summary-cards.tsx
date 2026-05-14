@@ -1,6 +1,6 @@
 import { Deal } from '@/types';
 import { FileText, Banknote, TrendingUp } from 'lucide-react';
-import { type DealStakeholder, computeAgentCommission } from '@huspy/shared-domain';
+import { type DealStakeholder, computeAgentCommission, buildWaterfallInput, calculateProjectedPnL } from '@huspy/shared-domain';
 
 interface DealsSummaryCardsProps {
   deals: Deal[];
@@ -11,7 +11,13 @@ export function DealsSummaryCards({ deals, agentStakeMap }: DealsSummaryCardsPro
   const totalDealValue = deals.reduce((sum, d) => sum + d.dealAmount, 0);
   const totalCommissionsPaid = deals
     .filter(d => d.status === 'finalized')
-    .reduce((sum, d) => sum + computeAgentCommission(d.commissionAmount, agentStakeMap?.get(d.id)), 0);
+    .reduce((sum, d) => {
+      const stake = agentStakeMap?.get(d.id);
+      const waterfallInput = buildWaterfallInput(d);
+      const projection = waterfallInput ? calculateProjectedPnL(waterfallInput) : null;
+      const agentSplit = projection?.splits.find(s => s.partyId === stake?.partyId);
+      return sum + (agentSplit?.agentPayout ?? computeAgentCommission(d.commissionAmount, stake));
+    }, 0);
 
   const cards = [
     {

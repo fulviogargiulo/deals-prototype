@@ -27,17 +27,65 @@ export const sharedDealComments: DealComment[] = [
     createdAt: "2026-01-09T09:00:00.000Z",
   },
 
-  // ── deal-007 (under-review) — open question, no agent reply yet ───────────
+  // ── deal-003 (pending-details) — awaiting landlord ────────────────────────
+  {
+    id: "dc-003-1",
+    dealId: "deal-003",
+    author: "ops",
+    authorName: "Ops Team",
+    text: "Awaiting signed contract from landlord before we can progress.",
+    createdAt: "2026-02-24T09:00:00.000Z",
+  },
+
+  // ── deal-004 (pending-details) — mortgage docs pending ────────────────────
+  {
+    id: "dc-004-1",
+    dealId: "deal-004",
+    author: "ops",
+    authorName: "Ops Team",
+    text: "Client requested extra time to gather mortgage documents.",
+    createdAt: "2026-03-05T10:30:00.000Z",
+  },
+
+  // ── deal-005 (under-review) — amount discrepancy ─────────────────────────
+  {
+    id: "dc-005-1",
+    dealId: "deal-005",
+    author: "ops",
+    authorName: "Ops Team",
+    text: "The deal amount (SAR 1.8M) doesn't match the MOU we have on file (SAR 1.75M). Please clarify and re-upload the correct document.",
+    createdAt: "2026-02-18T14:00:00.000Z",
+  },
+
+  // ── deal-007 (under-review) — price dispute raised by agent ──────────────
   {
     id: "dc-007-1",
     dealId: "deal-007",
+    author: "agent",
+    authorName: "Guilherme Castro",
+    text: "I need to flag this — the client is claiming we verbally agreed on a lower sale price. The deal was reported at €475,000 but the client insists it should be €460,000.",
+    createdAt: "2026-03-06T09:15:00.000Z",
+  },
+  {
+    id: "dc-007-2",
+    dealId: "deal-007",
     author: "ops",
     authorName: "Ops Team",
-    text: "We need the notary deed and the buyer's NIE — please upload both before we can proceed.",
-    createdAt: "2026-03-12T11:00:00.000Z",
+    text: "Thanks for flagging. Moving to under-review and escalating to the ops team — we'll follow up once we've checked the original offer documentation.",
+    createdAt: "2026-03-06T11:00:00.000Z",
   },
 
-  // ── deal-018 (pending-agent-approval) — back-and-forth ────────────────────
+  // ── deal-009 (under-review) — new deal, paperwork pending ────────────────
+  {
+    id: "dc-009-1",
+    dealId: "deal-009",
+    author: "ops",
+    authorName: "Ops Team",
+    text: "New deal just reported — awaiting paperwork.",
+    createdAt: "2026-05-01T12:00:00.000Z",
+  },
+
+  // ── deal-018 (finalized) — back-and-forth ────────────────────────────────
   {
     id: "dc-018-1",
     dealId: "deal-018",
@@ -69,15 +117,5 @@ export const sharedDealComments: DealComment[] = [
     authorName: "Felicia Canovas",
     text: "Yes, it's in the offer letter. I'll attach it now.",
     createdAt: "2026-04-11T10:00:00.000Z",
-  },
-
-  // ── deal-005 (under-review) — ops question ───────────────────────────────
-  {
-    id: "dc-005-1",
-    dealId: "deal-005",
-    author: "ops",
-    authorName: "Ops Team",
-    text: "The deal amount (SAR 1.8M) doesn't match the MOU we have on file (SAR 1.75M). Please clarify and re-upload the correct document.",
-    createdAt: "2026-02-18T14:00:00.000Z",
   },
 ];

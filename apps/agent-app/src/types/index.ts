@@ -21,8 +21,6 @@ export type {
   ScheduleActivityStatus,
   VisitOutcome,
   ClientInterestLevel,
-  DisputeStatus,
-  DisputeField,
   // Entities
   Task,
   Document,
@@ -33,8 +31,6 @@ export type {
   MeetingPoint,
   VisitDocument,
   VisitFeedback,
-  // Deal dispute
-  DealDispute,
 } from "@huspy/shared-domain";
 
 // ----------------------------------------------------------------
@@ -115,7 +111,7 @@ export interface StatementLineItemDispute {
   issue: LineItemIssue;
   description: string;
   correctValue?: string;
-  status: import("@huspy/shared-domain").DisputeStatus;
+  status: "open" | "resolved";
   createdAt: string;
 }
 
