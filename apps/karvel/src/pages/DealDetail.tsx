@@ -9,17 +9,18 @@ import { toast } from "sonner";
 import {
   canTransitionDealStatus,
   getAllowedDealTransitions,
-  sharedParties,
-  sharedAgents,
   sharedInvoices,
+  sharedParties,
   sharedDealComments,
   sharedDealDocumentRequirements,
-  type LedgerEntry,
+  sharedPostings,
+  sharedPostingLines,
+  sharedLedgers,
   type InvoiceStatus,
   type DocumentRequirementStatus,
   type DealDocumentRequirement,
 } from "@huspy/shared-domain";
-import { StakeholdersPanel } from "@/components/StakeholdersPanel";
+import { PnLWaterfall } from "@/components/PnLWaterfall";
 
 const STAGE_ORDER: { key: DealStatus; label: string }[] = [
   { key: "pending-details", label: "Pending Details" },
@@ -233,112 +234,21 @@ const DealDetail = () => {
               </div>
             </SectionCard>
 
-            {/* Stakeholders */}
-            <SectionCard title="Stakeholders">
-              <StakeholdersPanel
-                dealId={deal.id}
+            {/* Invoices */}
+            <InvoicesSection dealId={deal.id} navigate={navigate} />
+
+            {/* Accounting Events */}
+            <PostingsSection dealId={deal.id} />
+
+            {/* P&L */}
+            <SectionCard title="P&L">
+              <PnLWaterfall
+                deal={deal}
                 currency={currency}
                 pnl={pnl}
+                canEdit={canEditOps}
                 onChanged={() => setStakesVersion((v) => v + 1)}
-                canEdit={status === "under-review"}
               />
-            </SectionCard>
-
-            {/* Receivables */}
-            <ReceivablesSection dealId={deal.id} navigate={navigate} />
-
-            {/* P&L Waterfall */}
-            <SectionCard title="P&L Waterfall">
-              {pnl ? (
-                <div className="max-w-lg">
-
-                  {/* Deal context — above the line */}
-                  {(deal.dealPrice ?? deal.dealAmount) > 0 && (
-                    <div className="mb-3 border-b border-border/40 pb-2">
-                      <div className="flex items-center justify-between py-1">
-                        <span className="text-[12px] text-muted-foreground">
-                          Deal Amount
-                          {deal.commissionPercentage ? <span className="ml-1 text-muted-foreground/60">× {deal.commissionPercentage}%</span> : null}
-                        </span>
-                        <span className="text-[12px] text-muted-foreground tabular-nums font-mono">
-                          {fmt(deal.dealPrice ?? deal.dealAmount, currency)}
-                        </span>
-                      </div>
-                      {(deal.rebateAmount ?? 0) > 0 && (
-                        <div className="flex items-center justify-between py-0.5 pl-3">
-                          <span className="text-[11px] text-muted-foreground/60">
-                            Client rebate{deal.rebatePercentage ? ` (${deal.rebatePercentage}%)` : ""}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground/60 tabular-nums font-mono">
-                            −{fmt(deal.rebateAmount!, currency)}
-                          </span>
-                        </div>
-                      )}
-                      {(deal.subsidyAmount ?? 0) > 0 && (
-                        <div className="flex items-center justify-between py-0.5 pl-3">
-                          <span className="text-[11px] text-muted-foreground/60">Client subsidy</span>
-                          <span className="text-[11px] text-muted-foreground/60 tabular-nums font-mono">
-                            −{fmt(deal.subsidyAmount!, currency)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ── Gross Revenue (net of rebate/subsidy — already in payer financialAmounts) */}
-                  <LedgerAnchor label="Gross Revenue" amount={pnl.grossRevenue} currency={currency} />
-                  {pnl.ledger
-                    .filter((e) => e.side === "CREDIT" && !e.id.includes("::net") && e.partyId)
-                    .map((e) => <LedgerLine key={e.id} entry={e} currency={currency} indent />)}
-
-                  {/* ── Bucket D — Operational deductions ──────────── */}
-                  {pnl.ledger.some((e) => e.bucket === "D") && (
-                    <div className="mt-3">
-                      <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-1 pl-1">
-                        Operational
-                      </p>
-                      {pnl.ledger
-                        .filter((e) => e.bucket === "D")
-                        .map((e) => <LedgerLine key={e.id} entry={e} currency={currency} />)}
-                    </div>
-                  )}
-
-                  {/* ── Net Revenue ─────────────────────────────────── */}
-                  <div className="border-t border-border mt-3 pt-2" />
-                  <LedgerAnchor label="Net Revenue" amount={pnl.netRevenue} currency={currency} />
-
-                  {/* ── Bucket B — Agent payouts ─────────────────────── */}
-                  {pnl.ledger.some((e) => e.bucket === "B") && (
-                    <div className="mt-3">
-                      <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest mb-1 pl-1">
-                        Agent Payouts
-                      </p>
-                      {pnl.ledger
-                        .filter((e) => e.bucket === "B")
-                        .map((e) => <LedgerLine key={e.id} entry={e} currency={currency} />)}
-                    </div>
-                  )}
-
-                  {/* ── Huspy Margin ─────────────────────────────────── */}
-                  <div className="border-t border-border mt-3 pt-2" />
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-[13px] font-semibold text-foreground">Huspy Margin</span>
-                    <div className="flex items-center gap-2">
-                      {pnl.grossRevenue > 0 && (
-                        <span className="text-[11px] text-muted-foreground tabular-nums">
-                          ({((pnl.huspyMargin / pnl.grossRevenue) * 100).toFixed(1)}%)
-                        </span>
-                      )}
-                      <span className="text-[14px] font-bold text-emerald-600 tabular-nums">{fmt(pnl.huspyMargin, currency)}</span>
-                    </div>
-                  </div>
-
-                </div>
-              ) : (
-                <p className="text-[13px] text-muted-foreground italic">
-                  {isMBU ? "P&L waterfall not available for MBU deals." : "Engine input incomplete — P&L cannot be projected."}
-                </p>
-              )}
             </SectionCard>
 
             {/* Ops ↔ Agent thread */}
@@ -357,7 +267,7 @@ const DealDetail = () => {
             />
           </div>
 
-          {/* Right sidebar: Deal Progress */}
+          {/* Right sidebar: Deal Progress + Timeline */}
           <div className="flex flex-col gap-5">
             <SectionCard title="Deal Progress">
               <div className="relative pl-4">
@@ -385,18 +295,6 @@ const DealDetail = () => {
                     </div>
                   );
                 })}
-
-                {statusHistory.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-border">
-                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">History</p>
-                    {statusHistory.map((entry, i) => (
-                      <div key={i} className="flex items-start gap-2 py-1">
-                        <span className="text-[11px] text-muted-foreground shrink-0 w-[110px]">{formatDateTime(entry.timestamp)}</span>
-                        <span className="text-[11px] text-foreground">{entry.from} → {entry.to}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </SectionCard>
           </div>
@@ -408,49 +306,95 @@ const DealDetail = () => {
 
 export default DealDetail;
 
-// ─── Waterfall sub-components ────────────────────────────────────────────────
 
-function resolvePartyName(partyId: string): string {
-  return sharedParties.find((p) => p.id === partyId)?.displayName ?? partyId;
+const PROCESS_LABELS: Record<string, string> = {
+  deal_close: "Deal Close",
+  agent_invoice: "Commission",
+  conveyance_invoice: "Conveyance Fee",
+  bank_statement_inbound_matched: "Payment In",
+  bank_statement_outbound_matched: "Payment Out",
+  payout_instructed: "Payout",
+  bonus: "Bonus",
+  incentive: "Incentive",
+  platform_fee: "Platform Fee",
+  manual_adjustment: "Adjustment",
+  reversal: "Reversal",
+};
+
+function ledgerLabel(ledgerId: number): string {
+  return sharedLedgers.find((l) => l.id === ledgerId)?.description ?? String(ledgerId);
 }
 
-function resolvePartyIdentifier(partyId: string): string | undefined {
-  const agent = sharedAgents.find((a) => a.partyId === partyId);
-  if (agent) return agent.id;
-  return sharedParties.find((p) => p.id === partyId)?.taxId;
-}
+function PostingsSection({ dealId }: { dealId: string }) {
+  const { postings, linesByPosting } = useMemo(() => {
+    const dealInvoiceIds = new Set(
+      sharedInvoices.filter((inv) => inv.dealId === dealId).map((inv) => inv.id),
+    );
+    const relatedPostingIds = new Set([
+      // Direct deal FK — covers all postings attributed to this deal
+      ...sharedPostings.filter((p) => p.dealId === dealId).map((p) => p.id),
+      // Via invoice lines — catches agent postings where the invoice has no dealId
+      ...sharedPostingLines
+        .filter((l) => l.invoiceId && dealInvoiceIds.has(l.invoiceId))
+        .map((l) => l.postingId),
+    ]);
+    const postings = sharedPostings
+      .filter((p) => relatedPostingIds.has(p.id))
+      .sort((a, b) => a.valueDate.localeCompare(b.valueDate));
+    const linesByPosting: Record<string, typeof sharedPostingLines> = {};
+    for (const p of postings) {
+      linesByPosting[p.id] = sharedPostingLines.filter((l) => l.postingId === p.id);
+    }
+    return { postings, linesByPosting };
+  }, [dealId]);
 
-function LedgerAnchor({ label, amount, currency }: { label: string; amount: number; currency: string }) {
+  if (postings.length === 0) return null;
+
   return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-[13px] font-semibold text-foreground">{label}</span>
-      <span className="text-[14px] font-bold text-foreground tabular-nums">{fmt(amount, currency)}</span>
-    </div>
-  );
-}
-
-function LedgerLine({ entry, currency, indent = false }: { entry: LedgerEntry; currency: string; indent?: boolean }) {
-  const partyName = entry.partyId ? resolvePartyName(entry.partyId) : null;
-  const identifier = entry.partyId ? resolvePartyIdentifier(entry.partyId) : null;
-  const isCredit = entry.side === "CREDIT";
-
-  return (
-    <div className={`flex items-center justify-between py-1.5 ${indent ? "pl-4" : "pl-3"}`}>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[13px] text-muted-foreground">{partyName ?? entry.label}</span>
-          {partyName && entry.label !== partyName && (
-            <span className="text-[11px] text-muted-foreground/60">· {entry.label}</span>
-          )}
-          {identifier && (
-            <code className="text-[11px] font-mono text-foreground/50">{identifier}</code>
-          )}
-        </div>
+    <SectionCard title="Accounting Events">
+      <div className="rounded-lg border border-border overflow-hidden">
+        <table className="w-full text-[13px]">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="text-left px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Ledger</th>
+              <th className="text-right px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Debit</th>
+              <th className="text-right px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Credit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {postings.map((posting) => {
+              const lines = linesByPosting[posting.id] ?? [];
+              return (
+                <>
+                  <tr key={`hdr-${posting.id}`} className="border-t border-border bg-muted/20">
+                    <td colSpan={3} className="px-4 py-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                          {PROCESS_LABELS[posting.businessProcess] ?? posting.businessProcess}
+                        </span>
+                        <span className="text-[12px] text-muted-foreground flex-1 truncate">{posting.description ?? "—"}</span>
+                        <span className="text-[12px] text-muted-foreground shrink-0">{formatDate(posting.valueDate)}</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {lines.map((line) => (
+                    <tr key={line.id} className="border-t border-border/30">
+                      <td className="px-4 py-2.5 text-muted-foreground text-[12px]">{ledgerLabel(line.ledgerId)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-mono font-semibold">
+                        {line.side === "DEBIT" ? fmt(line.amount, posting.currency) : <span className="text-muted-foreground/30">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-mono font-semibold">
+                        {line.side === "CREDIT" ? fmt(line.amount, posting.currency) : <span className="text-muted-foreground/30">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
-      <span className={`text-[13px] font-semibold tabular-nums shrink-0 ml-4 ${isCredit ? "text-emerald-600" : "text-orange-500"}`}>
-        {isCredit ? "+" : "−"}{fmt(entry.amount, currency)}
-      </span>
-    </div>
+    </SectionCard>
   );
 }
 
@@ -468,60 +412,74 @@ const STATUS_CLASSES: Record<InvoiceStatus, string> = {
   cancelled: "bg-red-50 text-red-500 border border-red-200",
 };
 
-function ReceivablesSection({ dealId, navigate }: { dealId: string; navigate: ReturnType<typeof useNavigate> }) {
-  const receivables = useMemo(() => {
-    return sharedInvoices.filter((inv) => inv.dealId === dealId && inv.direction === "inbound");
+const DIRECTION_LABEL: Record<"inbound" | "outbound", string> = {
+  inbound: "Receivable",
+  outbound: "Payable",
+};
+
+const DIRECTION_CLASSES: Record<"inbound" | "outbound", string> = {
+  inbound: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  outbound: "bg-amber-50 text-amber-700 border border-amber-200",
+};
+
+function InvoicesSection({ dealId, navigate }: { dealId: string; navigate: ReturnType<typeof useNavigate> }) {
+  const invoices = useMemo(() => {
+    return sharedInvoices
+      .filter((inv) => inv.dealId === dealId)
+      .sort((a, b) => a.issueDate.localeCompare(b.issueDate));
   }, [dealId]);
 
-  if (receivables.length === 0) {
+  if (invoices.length === 0) {
     return (
-      <SectionCard title="Receivables">
-        <p className="text-[13px] text-muted-foreground italic">No inbound invoices for this deal.</p>
+      <SectionCard title="Invoices">
+        <p className="text-[13px] text-muted-foreground italic">No invoices for this deal.</p>
       </SectionCard>
     );
   }
 
   return (
-    <SectionCard title="Receivables">
+    <SectionCard title="Invoices">
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="w-full text-[13px]">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Invoice #
-              </th>
-              <th className="text-right px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Amount
-              </th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Status
-              </th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Due Date
-              </th>
+              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Invoice #</th>
+              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Counterparty</th>
+              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Type</th>
+              <th className="text-right px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Amount</th>
+              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Status</th>
+              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Issue Date</th>
             </tr>
           </thead>
           <tbody>
-            {receivables.map((inv) => (
-              <tr
-                key={inv.id}
-                onClick={() => navigate(`/invoices/${inv.id}`)}
-                className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
-              >
-                <td className="px-4 py-3 font-mono text-[12px] text-foreground">{inv.invoiceNumber}</td>
-                <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums">
-                  {fmt(inv.amount, inv.currency)}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-medium inline-block ${STATUS_CLASSES[inv.status]}`}
-                  >
-                    {STATUS_LABEL[inv.status]}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">{inv.dueDate ?? "—"}</td>
-              </tr>
-            ))}
+            {invoices.map((inv) => {
+              const party = sharedParties.find((p) => p.id === inv.partyId);
+              const dir = inv.direction as "inbound" | "outbound";
+              return (
+                <tr
+                  key={inv.id}
+                  onClick={() => navigate(`/invoices/${inv.id}`)}
+                  className="border-b border-border/50 last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
+                >
+                  <td className="px-4 py-3 font-mono text-[12px] text-foreground">{inv.invoiceNumber}</td>
+                  <td className="px-4 py-3 text-[12px] text-muted-foreground">{party?.displayName ?? inv.partyId}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium inline-block ${DIRECTION_CLASSES[dir]}`}>
+                      {DIRECTION_LABEL[dir]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums">
+                    {fmt(inv.amount, inv.currency)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium inline-block ${STATUS_CLASSES[inv.status]}`}>
+                      {STATUS_LABEL[inv.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{inv.issueDate ?? "—"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -702,3 +660,4 @@ function DocumentsSection({
     </SectionCard>
   );
 }
+

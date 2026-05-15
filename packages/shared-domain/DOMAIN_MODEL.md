@@ -67,6 +67,8 @@ erDiagram
         DealType dealType
         number taxRate
         string taxLabel
+        number withholdingRate "optional — markets with income withholding (e.g. IRPF)"
+        string withholdingLabel "optional — e.g. IRPF"
     }
     DealStakeholder {
         string id
@@ -100,7 +102,10 @@ erDiagram
         string dealId FK
         string invoiceNumber
         InvoiceStatus status
-        number amount
+        number amount "base commission (pre-VAT); gross = amount + vatAmount"
+        number vatAmount "optional — VAT charged on top of base"
+        number withholdingRate "optional — IRPF rate applied (agent-editable)"
+        number withholdingAmount "optional — withheld by Huspy, remitted to authority"
         Currency currency
         string issueDate
         string dueDate
@@ -376,7 +381,8 @@ One set of GL accounts per currency. BU attribution is a dimension on `Posting`,
 | `ASSET_AR_{CUR}` | asset | Client accounts receivable |
 | `LIAB_AGENT_PAYABLE_{CUR}` | liability | GL parent for all agent subledgers |
 | `LIAB_EXTERNAL_PAYABLE_{CUR}` | liability | External partner payables |
-| `LIAB_STATUTORY_TAX_{CUR}` | liability | Tax withheld at source (IRPF, VAT) |
+| `LIAB_VAT_{CUR}` | liability | VAT liability — CREDIT on client revenue (output VAT), DEBIT on agent invoices (input VAT); net balance = VAT owed to authority |
+| `LIAB_WITHHOLDING_TAX_{CUR}` | liability | Income withholding (IRPF Spain) deducted from agent payouts and remitted to tax authority |
 | `REV_{CUR}` | revenue | All commission and fee revenue |
 | `EXP_COMMISSION_{CUR}` | expense | Agent commission expense (gross) |
 | `AgentLiability_agent-{slug}` | liability | Subledger per agent; `glId → LIAB_AGENT_PAYABLE_{CUR}`, `partyId → party-agent-{slug}` |
@@ -390,8 +396,9 @@ Supported currencies: `EUR`, `AED`, `SAR`.
 | `deal_close` | DEBIT `ASSET_AR_{CUR}`, CREDIT `REV_{CUR}` |
 | `bank_statement_inbound_matched` | DEBIT `Bank_Operating_{CUR}`, CREDIT `ASSET_AR_{CUR}` |
 | `agent_invoice` | DEBIT `EXP_COMMISSION_{CUR}` (gross), CREDIT `AgentLiability_agent-{slug}` (net), CREDIT `LIAB_STATUTORY_TAX_{CUR}` (withheld) |
-| `payout_instructed` | DEBIT `AgentLiability_agent-{slug}`, CREDIT `Bank_Operating_{CUR}` |
-| `bank_statement_outbound_matched` | DEBIT `AgentLiability_agent-{slug}`, CREDIT `Bank_Operating_{CUR}` |
+| `conveyance_invoice` | DEBIT `EXP_COMMISSION_{CUR}` (cost accrual), CREDIT `LIAB_EXTERNAL_PAYABLE_{CUR}` (tagged to invoice). Payment closing the payable uses `bank_statement_outbound_matched`. |
+| `payout_instructed` | DEBIT `AgentLiability_agent-{slug}` (base), DEBIT `LIAB_VAT_{CUR}` (input VAT — offsets output VAT), CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (IRPF, Spain only), CREDIT `Bank_Operating_{CUR}` (net payout = base + VAT − withholding) |
+| `bank_statement_outbound_matched` | Agent payout: DEBIT `AgentLiability_agent-{slug}`, CREDIT `Bank_Operating_{CUR}`. External payable (conveyance, third-party): DEBIT `LIAB_EXTERNAL_PAYABLE_{CUR}`, CREDIT `Bank_Operating_{CUR}`. Payment posting lines are **not** tagged with `invoiceId` — only the originating accrual line carries the tag. |
 | `bonus` / `incentive` | DEBIT `EXP_COMMISSION_{CUR}`, CREDIT `AgentLiability_agent-{slug}` |
 | `platform_fee` | DEBIT `AgentLiability_agent-{slug}`, CREDIT `REV_{CUR}` |
 | `manual_adjustment` | Flexible — use for standalone corrections |
@@ -401,7 +408,7 @@ Supported currencies: `EUR`, `AED`, `SAR`.
 
 **1. Blueprint tax (deal_close posting — charged to client)**
 
-Applied by `draftPostings` at deal close. Rate comes from `blueprints.ts`. Lines: DEBIT `REV_{CUR}`, CREDIT `LIAB_STATUTORY_TAX_{CUR}`.
+Applied by `draftPostings` at deal close. Rate comes from `blueprints.ts`. Lines: DEBIT `REV_{CUR}`, CREDIT `LIAB_VAT_{CUR}`.
 
 | Country | Blueprint tax | Rate |
 |---|---|---|
@@ -409,18 +416,19 @@ Applied by `draftPostings` at deal close. Rate comes from `blueprints.ts`. Lines
 | UAE (`ae`) | VAT | 5% |
 | Saudi Arabia (`sa`) | VAT | 15% |
 
-**2. Withholding tax on agent invoices (`agent_invoice` posting — withheld from agent)**
+**2. VAT + withholding on agent invoices (added at invoice creation, posted at payout)**
 
-When Finance processes an agent invoice, tax is withheld at source before crediting the agent subledger.
+When an agent creates an invoice, VAT is added on top of the base commission. For Spain, IRPF withholding is also applied (agent-editable rate). These are posted at `payout_instructed` time.
 
-| Country | Withholding tax | Rate |
+| Country | VAT on agent invoice | Withholding (IRPF) |
 |---|---|---|
-| Spain (`es`) | IRPF | 19% of gross agent commission |
-| UAE (`ae`) | VAT | 5% of gross agent commission |
+| Spain (`es`) | IVA 21% — DEBIT `LIAB_VAT_{CUR}` (reduces VAT owed to authority) | 15% — CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (Huspy remits to Hacienda) |
+| UAE (`ae`) | VAT 5% — DEBIT `LIAB_VAT_{CUR}` | None |
+| Saudi Arabia (`sa`) | VAT 15% — DEBIT `LIAB_VAT_{CUR}` | None |
 
-Lines: DEBIT `EXP_COMMISSION_{CUR}` (gross), CREDIT `AgentLiability_agent-{slug}` (net), CREDIT `LIAB_STATUTORY_TAX_{CUR}` (withheld).
+`Invoice.amount` = base commission (pre-VAT). Gross invoice = `amount + vatAmount`. Net payout to agent = `amount + vatAmount − withholdingAmount`.
 
-Agent subledger is credited the **net** amount (gross − withheld). `EXP_COMMISSION` is always the **gross** amount.
+Agent subledger is credited the **base** amount at `agent_invoice` time. VAT and withholding are posted separately at `payout_instructed`.
 
 ## Waterfall engine (`src/waterfall.ts`)
 

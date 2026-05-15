@@ -36,7 +36,6 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-003",
-    dealId: "deal-001",
     businessUnit: "rebu",
     externalRef: "AGINV-001",
     businessProcess: "agent_invoice",
@@ -44,12 +43,10 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-01-20T11:00:00.000Z",
     valueDate: "2026-01-20",
     currency: "EUR",
-
-    description: "Agent invoice — Felicia Canovas, deal-001",
+    description: "Agent invoice — Felicia Canovas, Jan 2026",
   },
   {
     id: "posting-004",
-    dealId: "deal-001",
     businessUnit: "rebu",
     externalRef: "PAY-001",
     businessProcess: "payout_instructed",
@@ -57,8 +54,7 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-01-25T10:00:00.000Z",
     valueDate: "2026-01-25",
     currency: "EUR",
-
-    description: "Agent payout — Felicia Canovas, deal-001",
+    description: "Agent payout — Felicia Canovas",
   },
 
   // ── deal-016 — AED, split receivable, fully paid (REBU) ───────────────────
@@ -103,7 +99,7 @@ export const sharedPostings: Posting[] = [
     description: "Payment received — INV-2026-016B (Emaar Properties, developer)",
   },
 
-  // ── Standalone — Q1 2026 performance bonus, agent-felicia (REBU, EUR) ─────
+  // ── Standalone — Q1 2026 performance bonus, agent-001 (REBU, EUR) ─────
 
   {
     id: "posting-010",
@@ -118,11 +114,10 @@ export const sharedPostings: Posting[] = [
     description: "Q1 2026 performance bonus — Felicia Canovas",
   },
 
-  // ── deal-016 — agent invoice, agent-gelo (REBU, AED) ─────────────────────
+  // ── deal-016 — agent invoice, agent-004 (REBU, AED) ─────────────────────
 
   {
     id: "posting-011",
-    dealId: "deal-016",
     businessUnit: "rebu",
     externalRef: "AGINV-016",
     businessProcess: "agent_invoice",
@@ -130,11 +125,10 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-05-10T11:00:00.000Z",
     valueDate: "2026-05-10",
     currency: "AED",
-
-    description: "Agent invoice — Gelo Huspy, deal-016",
+    description: "Agent invoice — Gelo Huspy, May 2026",
   },
 
-  // ── Standalone — Q2 2026 incentive + platform fee, agent-gelo (REBU, AED) ─
+  // ── Standalone — Q2 2026 incentive + platform fee, agent-004 (REBU, AED) ─
 
   {
     id: "posting-012",
@@ -161,7 +155,7 @@ export const sharedPostings: Posting[] = [
     description: "May 2026 platform support fee — Gelo Huspy",
   },
 
-  // ── Standalone — Jan 2026 platform fee, agent-felicia (REBU, EUR) ─────────
+  // ── Standalone — Jan 2026 platform fee, agent-001 (REBU, EUR) ─────────
 
   {
     id: "posting-014",
@@ -176,11 +170,10 @@ export const sharedPostings: Posting[] = [
     description: "Jan 2026 platform support fee — Felicia Canovas",
   },
 
-  // ── deal-018 — agent-felicia, UNALLOCATED (REBU, EUR) ────────────────────
+  // ── deal-018 — agent-001, UNALLOCATED (REBU, EUR) ────────────────────
 
   {
     id: "posting-015",
-    dealId: "deal-018",
     businessUnit: "rebu",
     externalRef: "AGINV-018",
     businessProcess: "agent_invoice",
@@ -188,11 +181,10 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-04-25T11:00:00.000Z",
     valueDate: "2026-04-25",
     currency: "EUR",
-
-    description: "Agent invoice — Felicia Canovas, deal-018",
+    description: "Agent invoice — Felicia Canovas, Apr 2026",
   },
 
-  // ── Standalone — Apr 2026 platform fee, agent-felicia (REBU, EUR) ─────────
+  // ── Standalone — Apr 2026 platform fee, agent-001 (REBU, EUR) ─────────
 
   {
     id: "posting-016",
@@ -267,6 +259,100 @@ export const sharedPostings: Posting[] = [
     currency: "SAR",
 
     description: "Invoice to bank — deal-015 (SAR 4 600)",
+  },
+
+  // ── Conveyance invoices + payments ────────────────────────────────────────
+
+  // deal-001 — Gestoría López accrual (EUR 800)
+  {
+    id: "posting-023",
+    dealId: "deal-001",
+    businessUnit: "rebu",
+    externalRef: "CONV-2026-001",
+    businessProcess: "conveyance_invoice",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-01-10T09:00:00.000Z",
+    valueDate: "2026-01-10",
+    currency: "EUR",
+    description: "Conveyance fee — deal-001 (Gestoría López & Asociados)",
+  },
+  {
+    id: "posting-024",
+    dealId: "deal-001",
+    businessUnit: "rebu",
+    externalRef: "PAY-CONV-2026-001",
+    businessProcess: "bank_statement_outbound_matched",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-01-25T10:00:00.000Z",
+    valueDate: "2026-01-25",
+    currency: "EUR",
+    description: "Payment — Gestoría López & Asociados, deal-001",
+  },
+
+  // deal-008 — Gestoría López accrual (EUR 800, pending payment)
+  {
+    id: "posting-025",
+    dealId: "deal-008",
+    businessUnit: "rebu",
+    externalRef: "CONV-2026-008",
+    businessProcess: "conveyance_invoice",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-03-05T10:00:00.000Z",
+    valueDate: "2026-03-05",
+    currency: "EUR",
+    description: "Conveyance fee — deal-008 (Gestoría López & Asociados)",
+  },
+
+  // deal-016 — TAMM Legal accrual (AED 3 000)
+  {
+    id: "posting-026",
+    dealId: "deal-016",
+    businessUnit: "rebu",
+    externalRef: "CONV-2026-016",
+    businessProcess: "conveyance_invoice",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-04T09:00:00.000Z",
+    valueDate: "2026-05-04",
+    currency: "AED",
+    description: "Conveyance fee — deal-016 (TAMM Legal Services)",
+  },
+  {
+    id: "posting-027",
+    dealId: "deal-016",
+    businessUnit: "rebu",
+    externalRef: "PAY-CONV-2026-016",
+    businessProcess: "bank_statement_outbound_matched",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-20T11:00:00.000Z",
+    valueDate: "2026-05-20",
+    currency: "AED",
+    description: "Payment — TAMM Legal Services, deal-016",
+  },
+
+  // deal-018 — Gestoría López accrual (EUR 1 200)
+  {
+    id: "posting-028",
+    dealId: "deal-018",
+    businessUnit: "rebu",
+    externalRef: "CONV-2026-018",
+    businessProcess: "conveyance_invoice",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-04-15T09:00:00.000Z",
+    valueDate: "2026-04-15",
+    currency: "EUR",
+    description: "Conveyance fee — deal-018 (Gestoría López & Asociados)",
+  },
+  {
+    id: "posting-029",
+    dealId: "deal-018",
+    businessUnit: "rebu",
+    externalRef: "PAY-CONV-2026-018",
+    businessProcess: "bank_statement_outbound_matched",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-05T10:00:00.000Z",
+    valueDate: "2026-05-05",
+    currency: "EUR",
+    description: "Payment — Gestoría López & Asociados, deal-018",
   },
 
   // ── deal-018 — client invoice (REBU, EUR) ───────────────────────────────

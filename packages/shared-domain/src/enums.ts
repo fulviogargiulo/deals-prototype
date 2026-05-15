@@ -45,6 +45,7 @@ export type PostingSide = "DEBIT" | "CREDIT";
 export type BusinessProcess =
   | "deal_close"
   | "agent_invoice"
+  | "conveyance_invoice"
   | "bank_statement_inbound_matched"
   | "bank_statement_outbound_matched"
   | "payout_instructed"
