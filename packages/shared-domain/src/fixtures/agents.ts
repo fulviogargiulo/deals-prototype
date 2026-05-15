@@ -2,9 +2,9 @@ import type { Agent } from "../entities";
 
 export const sharedAgents: Agent[] = [
   {
-    id: "agent-felicia",
+    id: "agent-001",
     uid: 1001,
-    partyId: "party-agent-felicia",
+    partyId: "party-agent-001",
     employmentStatus: "active",
     teamLeadName: "Santiago Vega",
     managerName: "Isabel Torres",
@@ -16,9 +16,9 @@ export const sharedAgents: Agent[] = [
     totalSales: 156,
   },
   {
-    id: "agent-guilherme",
+    id: "agent-002",
     uid: 1002,
-    partyId: "party-agent-guilherme",
+    partyId: "party-agent-002",
     employmentStatus: "active",
     teamLeadName: "Santiago Vega",
     managerName: "Isabel Torres",
@@ -30,9 +30,9 @@ export const sharedAgents: Agent[] = [
     totalSales: 203,
   },
   {
-    id: "agent-omar",
+    id: "agent-003",
     uid: 1003,
-    partyId: "party-agent-omar",
+    partyId: "party-agent-003",
     employmentStatus: "active",
     teamLeadName: "Majid Al Harbi",
     managerName: "Karim Mourad",
@@ -44,9 +44,9 @@ export const sharedAgents: Agent[] = [
     totalSales: 89,
   },
   {
-    id: "agent-gelo",
+    id: "agent-004",
     uid: 1004,
-    partyId: "party-agent-gelo",
+    partyId: "party-agent-004",
     employmentStatus: "active",
     teamLeadName: "Santiago Vega",
     managerName: "Isabel Torres",
@@ -58,9 +58,9 @@ export const sharedAgents: Agent[] = [
     totalSales: 178,
   },
   {
-    id: "agent-ravi",
+    id: "agent-005",
     uid: 1005,
-    partyId: "party-agent-ravi",
+    partyId: "party-agent-005",
     employmentStatus: "active",
     teamLeadName: "Leila Ahmadi",
     managerName: "Karim Mourad",
@@ -72,9 +72,9 @@ export const sharedAgents: Agent[] = [
     totalSales: 112,
   },
   {
-    id: "agent-zainab",
+    id: "agent-006",
     uid: 1006,
-    partyId: "party-agent-zainab",
+    partyId: "party-agent-006",
     employmentStatus: "active",
     teamLeadName: "Leila Ahmadi",
     managerName: "Karim Mourad",

@@ -81,8 +81,8 @@ describe("calculateProjectedPnL — internal split (bucket B), flat strategy", (
       { id: "ds-1", dealId: "d", partyId: "party-felicia", role: "INTERNAL_PAYOUT", splitPercentage: 100 },
     ];
     const af: AgentFinancials = {
-      id: "af-felicia",
-      agentId: "agent-felicia",
+      id: "af-001",
+      agentId: "agent-001",
       strategy: { kind: "flat", pct: 40 },
       teamLeadRate: 10,
       managerRate: 5,
@@ -91,8 +91,8 @@ describe("calculateProjectedPnL — internal split (bucket B), flat strategy", (
       baseInput({
         blueprint: minimalBlueprint,
         stakeholders,
-        agentFinancialsByAgentId: { "agent-felicia": af },
-        partyIdToAgentId: { "party-felicia": "agent-felicia" },
+        agentFinancialsByAgentId: { "agent-001": af },
+        partyIdToAgentId: { "party-felicia": "agent-001" },
       }),
     );
 
@@ -116,8 +116,8 @@ describe("calculateProjectedPnL — internal split (bucket B), flat strategy", (
       { id: "ds-1", dealId: "d", partyId: "party-felicia", role: "INTERNAL_PAYOUT", splitPercentage: 100 },
     ];
     const af: AgentFinancials = {
-      id: "af-felicia",
-      agentId: "agent-felicia",
+      id: "af-001",
+      agentId: "agent-001",
       strategy: { kind: "flat", pct: 40 },
       teamLeadRate: 10,
       managerRate: 5,
@@ -129,8 +129,8 @@ describe("calculateProjectedPnL — internal split (bucket B), flat strategy", (
         currency: "EUR",
         country: "es",
         stakeholders,
-        agentFinancialsByAgentId: { "agent-felicia": af },
-        partyIdToAgentId: { "party-felicia": "agent-felicia" },
+        agentFinancialsByAgentId: { "agent-001": af },
+        partyIdToAgentId: { "party-felicia": "agent-001" },
       }),
     );
 
@@ -149,8 +149,8 @@ describe("calculateProjectedPnL — slab strategy", () => {
       { id: "ds-1", dealId: "d", partyId: "party-ravi", role: "INTERNAL_PAYOUT", splitPercentage: 100 },
     ];
     const af: AgentFinancials = {
-      id: "af-ravi",
-      agentId: "agent-ravi",
+      id: "af-005",
+      agentId: "agent-005",
       strategy: {
         kind: "slab",
         slabs: [
@@ -165,8 +165,8 @@ describe("calculateProjectedPnL — slab strategy", () => {
         blueprint: minimalBlueprint,
         grossRevenue: 25_000,
         stakeholders,
-        agentFinancialsByAgentId: { "agent-ravi": af },
-        partyIdToAgentId: { "party-ravi": "agent-ravi" },
+        agentFinancialsByAgentId: { "agent-005": af },
+        partyIdToAgentId: { "party-ravi": "agent-005" },
       }),
     );
     expect(r.splits[0].agentPayout).toBe(11_250);

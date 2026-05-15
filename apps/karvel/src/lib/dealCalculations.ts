@@ -10,6 +10,7 @@ import {
   type AgentFinancials,
   type Blueprint,
   type DealStakeholder,
+  type LedgerEntry,
   type Posting,
   type PostingLine,
   type ProjectedPnL,
@@ -413,14 +414,35 @@ export function recalculateDeal(deal: Deal): Deal {
 export function computeDealPnL(deal: Deal) {
   const input = buildEngineInput(deal);
   if (!input) return null;
-  return calculateProjectedPnL(input);
+  const pnl = calculateProjectedPnL(input);
+
+  const fixedAgents = sharedDealStakeholders.filter(
+    (s) => s.dealId === deal.id && s.role === "INTERNAL_PAYOUT" && s.fixedAmount != null
+  );
+  if (fixedAgents.length === 0) return pnl;
+
+  let additionalB = 0;
+  const extraLedger: LedgerEntry[] = [];
+  for (const stake of fixedAgents) {
+    const name = sharedParties.find((p) => p.id === stake.partyId)?.displayName ?? stake.partyId;
+    const amount = Math.abs(stake.fixedAmount!);
+    additionalB += amount;
+    extraLedger.push({ id: `fixed::${stake.id}`, label: `${name} — fixed commission`, bucket: "B", side: "DEBIT", amount, partyId: stake.partyId });
+  }
+
+  return {
+    ...pnl,
+    totalBucketB: pnl.totalBucketB + additionalB,
+    huspyMargin: pnl.huspyMargin - additionalB,
+    ledger: [...pnl.ledger, ...extraLedger],
+  };
 }
 
 // Maps currency to chart-of-accounts ledger IDs (matches sharedLedgers fixture).
-const LEDGER_IDS: Record<string, { ar: number; rev: number; exp: number; agentPayable: number; extPayable: number; tax: number }> = {
-  EUR: { ar: 2,  rev: 6,  exp: 7,  agentPayable: 3,  extPayable: 4,  tax: 5  },
-  AED: { ar: 9,  rev: 13, exp: 14, agentPayable: 10, extPayable: 11, tax: 12 },
-  SAR: { ar: 16, rev: 20, exp: 21, agentPayable: 17, extPayable: 18, tax: 19 },
+const LEDGER_IDS: Record<string, { ar: number; rev: number; exp: number; agentPayable: number; extPayable: number; tax: number; withholding: number }> = {
+  EUR: { ar: 2,  rev: 6,  exp: 7,  agentPayable: 3,  extPayable: 4,  tax: 5,  withholding: 28 },
+  AED: { ar: 9,  rev: 13, exp: 14, agentPayable: 10, extPayable: 11, tax: 12, withholding: 29 },
+  SAR: { ar: 16, rev: 20, exp: 21, agentPayable: 17, extPayable: 18, tax: 19, withholding: 30 },
 };
 
 export function draftPostings(projection: ProjectedPnL, deal: { id: string; businessUnit?: string; currency?: string }, blueprint?: Blueprint): { posting: Posting; lines: PostingLine[] } {

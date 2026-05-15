@@ -12,7 +12,7 @@ import { getPostingLines, getInvoices } from '@/data/earningsStore';
 import type { StatementOfAccount } from '@/types';
 
 // Prototype: hardcoded to the current agent. In production this comes from auth context.
-const AGENT_ID = 'agent-felicia';
+const AGENT_ID = 'agent-001';
 const AGENT_PARTY_ID = sharedAgents.find((a) => a.id === AGENT_ID)?.partyId ?? AGENT_ID;
 const AGENT_LEDGER_NAME = `AgentLiability_${AGENT_ID}`;
 const AGENT_LEDGER_ID = sharedLedgers.find((l) => l.name === AGENT_LEDGER_NAME)?.id;

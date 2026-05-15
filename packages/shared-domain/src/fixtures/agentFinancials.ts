@@ -10,41 +10,41 @@ import { COMMISSION_RATES } from "../commissionCalc";
  *
  * Defaults align with COMMISSION_RATES (40% / 10% / 5%). Two agents below
  * use non-flat strategies to exercise the engine:
- *   - agent-ravi: slab strategy (per-deal tiers)
- *   - agent-zainab: max strategy (flat % capped at an absolute amount)
+ *   - agent-005: slab strategy (per-deal tiers)
+ *   - agent-006: max strategy (flat % capped at an absolute amount)
  */
 export const sharedAgentFinancials: AgentFinancials[] = [
   {
-    id: "af-felicia",
-    agentId: "agent-felicia",
+    id: "af-001",
+    agentId: "agent-001",
     strategy: { kind: "flat", pct: COMMISSION_RATES.agentGrossRate },
     teamLeadRate: COMMISSION_RATES.teamLeadRate,
     managerRate: COMMISSION_RATES.managerOverrideRate,
   },
   {
-    id: "af-guilherme",
-    agentId: "agent-guilherme",
+    id: "af-002",
+    agentId: "agent-002",
     strategy: { kind: "flat", pct: 45 },
     teamLeadRate: COMMISSION_RATES.teamLeadRate,
     managerRate: COMMISSION_RATES.managerOverrideRate,
   },
   {
-    id: "af-omar",
-    agentId: "agent-omar",
+    id: "af-003",
+    agentId: "agent-003",
     strategy: { kind: "flat", pct: COMMISSION_RATES.agentGrossRate },
     teamLeadRate: COMMISSION_RATES.teamLeadRate,
     managerRate: COMMISSION_RATES.managerOverrideRate,
   },
   {
-    id: "af-gelo",
-    agentId: "agent-gelo",
+    id: "af-004",
+    agentId: "agent-004",
     strategy: { kind: "flat", pct: 42 },
     teamLeadRate: COMMISSION_RATES.teamLeadRate,
     managerRate: COMMISSION_RATES.managerOverrideRate,
   },
   {
-    id: "af-ravi",
-    agentId: "agent-ravi",
+    id: "af-005",
+    agentId: "agent-005",
     strategy: {
       kind: "slab",
       slabs: [
@@ -57,8 +57,8 @@ export const sharedAgentFinancials: AgentFinancials[] = [
     managerRate: COMMISSION_RATES.managerOverrideRate,
   },
   {
-    id: "af-zainab",
-    agentId: "agent-zainab",
+    id: "af-006",
+    agentId: "agent-006",
     strategy: { kind: "max", pct: 50, capAmount: 25_000 },
     teamLeadRate: COMMISSION_RATES.teamLeadRate,
     managerRate: COMMISSION_RATES.managerOverrideRate,

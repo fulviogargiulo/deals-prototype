@@ -25,39 +25,39 @@ function statusForIndex(dealStatus: string, index: number): DocumentRequirementS
   }
 }
 
-function instantiate(dealId: string, market: string, country: string, businessUnit = "rebu"): DealDocumentRequirement[] {
+function instantiate(dealId: string): DealDocumentRequirement[] {
   const deal = sharedDeals.find((d) => d.id === dealId);
-  const dealStatus = deal?.status ?? "pending-details";
+  if (!deal) return [];
   const templates = sharedDocumentRequirementTemplates.filter(
-    (t) => t.market === market && t.country === country && t.businessUnit === businessUnit
+    (t) => t.market === deal.market && t.country === deal.country && t.businessUnit === (deal.businessUnit ?? "rebu")
   );
   return templates.map((t, i) => ({
-    id:    `ddr-${dealId}-${t.id.replace(/^tmpl-[^-]+-[^-]+-/, "")}`,
+    id:       `ddr-${dealId}-${t.id.replace(/^tmpl-[^-]+-[^-]+-/, "")}`,
     dealId,
-    label: t.label,
-    required:     t.required,
-    status:       statusForIndex(dealStatus, i),
+    label:    t.label,
+    required: t.required,
+    status:   statusForIndex(deal.status, i),
   }));
 }
 
 export const sharedDealDocumentRequirements: DealDocumentRequirement[] = [
-  ...instantiate("deal-001", "primary",   "es"),  // finalized
-  ...instantiate("deal-002", "secondary", "es"),  // pending-agent-approval
-  ...instantiate("deal-003", "leasing",   "es"),  // pending-details
-  ...instantiate("deal-004", "secondary", "es"),  // pending-details
-  ...instantiate("deal-005", "primary",   "sa"),  // under-review
-  ...instantiate("deal-006", "secondary", "es"),  // pending-agent-approval
-  ...instantiate("deal-007", "primary",   "es"),  // under-review
-  ...instantiate("deal-008", "secondary", "es"),  // finalized
-  ...instantiate("deal-009", "secondary", "ae"),  // finalized
-  ...instantiate("deal-010", "primary",   "ae"),  // canceled
-  ...instantiate("deal-013", "secondary", "es"),  // pending-receivables
-  ...instantiate("deal-016", "secondary", "ae"),  // finalized
-  ...instantiate("deal-017", "secondary", "es"),  // finalized
-  ...instantiate("deal-018", "primary",   "es"),  // pending-agent-approval
-  ...instantiate("deal-019", "primary",   "es"),  // canceled
-  ...instantiate("deal-011", "primary",   "ae", "mortgage"),  // pending-details
-  ...instantiate("deal-012", "secondary", "ae", "mortgage"),  // under-review
-  ...instantiate("deal-014", "secondary", "es", "mortgage"),  // pending-receivables
-  ...instantiate("deal-015", "primary",   "sa", "mortgage"),  // pending-receivables
+  ...instantiate("deal-001"),
+  ...instantiate("deal-002"),
+  ...instantiate("deal-003"),
+  ...instantiate("deal-004"),
+  ...instantiate("deal-005"),
+  ...instantiate("deal-006"),
+  ...instantiate("deal-007"),
+  ...instantiate("deal-008"),
+  ...instantiate("deal-009"),
+  ...instantiate("deal-010"),
+  ...instantiate("deal-011"),
+  ...instantiate("deal-012"),
+  ...instantiate("deal-013"),
+  ...instantiate("deal-014"),
+  ...instantiate("deal-015"),
+  ...instantiate("deal-016"),
+  ...instantiate("deal-017"),
+  ...instantiate("deal-018"),
+  ...instantiate("deal-019"),
 ];

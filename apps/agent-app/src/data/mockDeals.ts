@@ -14,7 +14,7 @@ export const mockDeals: Deal[] = (sharedDeals as unknown as Deal[]).map(d => ({
   type: (oppTypeMap.get(d.opportunityId as string) ?? 'buy') as Deal['type'],
 }));
 
-export const CURRENT_AGENT_ID = 'agent-felicia';
+export const CURRENT_AGENT_ID = 'agent-001';
 
 // Resolve the current agent's partyId, then find all deals where they are an agent stakeholder.
 const currentAgent = sharedAgents.find((a) => a.id === CURRENT_AGENT_ID);

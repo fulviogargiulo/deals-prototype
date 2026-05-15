@@ -19,7 +19,7 @@ import { getBlueprint } from "./blueprints";
  *
  * Operates exclusively on tax-exclusive amounts. Tax is NOT deducted inside
  * the engine — it is emitted as a separate PostingLine by draftPostings using
- * blueprint.taxRate (hitting LIAB_STATUTORY_TAX_{CUR}).
+ * blueprint.taxRate (hitting LIAB_VAT_{CUR}).
  *
  * Waterfall flow:
  *   REVENUE_SOURCE stakes (or grossRevenue fallback)
@@ -64,7 +64,7 @@ export interface ProjectedPnL {
   blueprintId: string;
   currency: Currency;
   grossRevenue: number;
-  /** Always 0 — tax is routed to LIAB_STATUTORY_TAX via draftPostings, not the waterfall. */
+  /** Always 0 — tax is routed to LIAB_VAT via draftPostings, not the waterfall. */
   totalBucketA: 0;
   totalBucketC: number;
   totalBucketD: number;

@@ -9,6 +9,9 @@ import { toast } from 'sonner';
 import { createInvoice } from '@/data/earningsStore';
 import { sharedAgents } from '@huspy/shared-domain';
 
+const IVA_RATE = 21;
+const DEFAULT_IRPF_RATE = 15;
+
 interface CreateInvoiceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,6 +42,13 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
   const [agentAddress, setAgentAddress] = useState('Calle Gran Vía 28, 5º B, 28013 Madrid');
   const [agentNif, setAgentNif] = useState('12345678A');
   const [bankAccount, setBankAccount] = useState('ES91 2100 0418 4502 0005 1332');
+  const [irpfRate, setIrpfRate] = useState(DEFAULT_IRPF_RATE);
+
+  const base = statement.balance;
+  const vatAmount = Math.round(base * (IVA_RATE / 100) * 100) / 100;
+  const withholdingAmount = Math.round(base * (irpfRate / 100) * 100) / 100;
+  const grossAmount = Math.round((base + vatAmount) * 100) / 100;
+  const netPayout = Math.round((grossAmount - withholdingAmount) * 100) / 100;
 
   const credits = statement.lineItems.filter(li => li.type === 'credit');
   const debits = statement.lineItems.filter(li => li.type === 'debit');
@@ -54,14 +64,17 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
     const agentPartyId = sharedAgents.find((a) => a.id === agentId)?.partyId ?? agentId;
     createInvoice(
       {
-        id: `agent-inv-${agentId}-${Date.now()}`,
-        direction: 'inbound',
+        id: `inv-${Date.now()}`,
+        direction: 'outbound',
         partyId: agentPartyId,
         invoiceNumber,
         period: statement.period,
         status: 'issued',
         currency: 'EUR',
-        amount: statement.balance,
+        amount: base,
+        vatAmount,
+        withholdingRate: irpfRate,
+        withholdingAmount,
         issueDate,
         dueDate,
         createdAt: now,
@@ -293,18 +306,59 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
               </div>
             </div>
 
+            {/* Tax breakdown */}
+            <div className="mt-4 border-t border-border-ds-primary pt-4 space-y-2">
+              <div className="flex items-center justify-between px-3">
+                <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">Base</span>
+                <span className="text-[14px] font-semibold tabular-nums text-foreground">€{base.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between px-3">
+                <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">IVA ({IVA_RATE}%)</span>
+                <span className="text-[14px] font-semibold tabular-nums text-foreground">+€{vatAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between px-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">IRPF</span>
+                  {isCreated ? (
+                    <span className="text-[12px] font-semibold text-fg-secondary">({irpfRate}%)</span>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        value={irpfRate}
+                        onChange={(e) => setIrpfRate(Number(e.target.value))}
+                        className="h-6 text-[12px] rounded-lg w-14 text-center"
+                        min={0}
+                        max={25}
+                      />
+                      <span className="text-[12px] text-fg-secondary">%</span>
+                    </div>
+                  )}
+                </div>
+                <span className="text-[14px] font-semibold tabular-nums" style={{ color: 'hsl(var(--ds-red))' }}>
+                  −€{withholdingAmount.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
             {/* Amount Due */}
             <div
-              className="mt-4 rounded-xl px-4 py-4 flex items-center justify-between"
+              className="mt-4 rounded-xl px-4 py-4 space-y-2"
               style={{ backgroundColor: 'hsl(var(--accent-teal) / 0.1)' }}
             >
-              <div className="flex items-center gap-3">
-                <CreditCard className="w-5 h-5" style={{ color: 'hsl(var(--accent-teal))' }} />
-                <span className="text-[14px] font-semibold leading-[120%] text-foreground">Amount Due</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">Invoice Total (incl. IVA)</span>
+                <span className="text-[16px] font-semibold tabular-nums text-foreground">€{grossAmount.toLocaleString()}</span>
               </div>
-              <span className="text-[24px] font-semibold tabular-nums" style={{ color: 'hsl(var(--accent-teal))' }}>
-                €{statement.balance.toLocaleString()}
-              </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="w-5 h-5" style={{ color: 'hsl(var(--accent-teal))' }} />
+                  <span className="text-[14px] font-semibold leading-[120%] text-foreground">Net Payout to You</span>
+                </div>
+                <span className="text-[24px] font-semibold tabular-nums" style={{ color: 'hsl(var(--accent-teal))' }}>
+                  €{netPayout.toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
 

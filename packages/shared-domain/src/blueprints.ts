@@ -5,7 +5,7 @@ import type { BusinessUnit, Country } from "./enums";
  * DEFAULT_BLUEPRINTS — statutory tax configuration per (country, businessUnit).
  *
  * Tax is NOT part of the waterfall engine. At deal_close, draftPostings reads
- * blueprint.taxRate to emit LIAB_STATUTORY_TAX_{CUR} posting lines.
+ * blueprint.taxRate to emit LIAB_VAT_{CUR} posting lines.
  * All P&L amounts flowing through the engine are tax-exclusive.
  *
  * Lookup order (most specific first):
@@ -28,6 +28,8 @@ const REBU_ES: Blueprint = {
   businessUnit: "rebu",
   taxRate: 21,
   taxLabel: "IVA",
+  withholdingRate: 15,
+  withholdingLabel: "IRPF",
 };
 
 const REBU_SA: Blueprint = {
@@ -52,6 +54,8 @@ const MBU_ES: Blueprint = {
   businessUnit: "mortgage",
   taxRate: 21,
   taxLabel: "IVA",
+  withholdingRate: 15,
+  withholdingLabel: "IRPF",
 };
 
 const MBU_SA: Blueprint = {

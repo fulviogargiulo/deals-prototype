@@ -9,12 +9,12 @@ import type { Deal as BaseDeal } from "@huspy/shared-domain";
 import type { Deal, AgentEntry } from "@/data/types";
 
 const agentDisplayName: Record<string, string> = {
-  "agent-felicia": "Felicia Canovas",
-  "agent-guilherme": "Guilherme Castro",
-  "agent-omar": "Omar Al Saleem",
-  "agent-gelo": "Gelo Huspy",
-  "agent-ravi": "Ravi Nair",
-  "agent-zainab": "Zainab Al-Qadi",
+  "agent-001": "Felicia Canovas",
+  "agent-002": "Guilherme Castro",
+  "agent-003": "Omar Al Saleem",
+  "agent-004": "Gelo Huspy",
+  "agent-005": "Ravi Nair",
+  "agent-006": "Zainab Al-Qadi",
 };
 
 export function enrichDeal(deal: BaseDeal): Deal {
@@ -81,6 +81,6 @@ export function enrichDeal(deal: BaseDeal): Deal {
     externalPartners: [],
     externalPartnerShare: 0,
     payables: [],
-    statusHistory: [],
+    statusHistory: deal.statusHistory as Deal["statusHistory"] ?? [],
   };
 }

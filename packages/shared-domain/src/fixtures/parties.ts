@@ -4,42 +4,42 @@ import type { Party } from "../entities";
 export const sharedParties: Party[] = [
   // ── Agents ─────────────────────────────────────────────────────────────────
   {
-    id: "party-agent-felicia",
+    id: "party-agent-001",
     displayName: "Felicia Canovas",
     email: "felicia@huspy.io",
     phone: "+34 612 345 678",
     legalType: "individual",
   },
   {
-    id: "party-agent-guilherme",
+    id: "party-agent-002",
     displayName: "Guilherme Castro",
     email: "guilherme@huspy.io",
     phone: "+34 623 456 789",
     legalType: "individual",
   },
   {
-    id: "party-agent-omar",
+    id: "party-agent-003",
     displayName: "Omar Al Saleem",
     email: "omar@huspy.io",
     phone: "+966 55 123 4567",
     legalType: "individual",
   },
   {
-    id: "party-agent-gelo",
+    id: "party-agent-004",
     displayName: "Gelo Huspy",
     email: "gelo@huspy.io",
     phone: "+34 645 678 901",
     legalType: "individual",
   },
   {
-    id: "party-agent-ravi",
+    id: "party-agent-005",
     displayName: "Ravi Nair",
     email: "ravi@huspy.io",
     phone: "+971 50 234 5678",
     legalType: "individual",
   },
   {
-    id: "party-agent-zainab",
+    id: "party-agent-006",
     displayName: "Zainab Al-Qadi",
     email: "zainab@huspy.io",
     phone: "+971 55 876 5432",

@@ -16,6 +16,8 @@ import {
   sharedOpportunities,
   sharedPostings,
   sharedPostingLines,
+  sharedDealDocumentRequirements,
+  sharedDocumentRequirementTemplates,
   type AgentFinancials,
   type DealStakeholder,
   type Opportunity,
@@ -177,7 +179,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     const deal: Deal = {
       id,
       status: "under-review",
-      market: selectedOpp.type === "rent" || selectedOpp.type === "lease" ? "leasing" : "primary",
+      market: selectedOpp.type === "rent" || selectedOpp.type === "lease" ? "leasing" : selectedOpp.type === "sell" ? "secondary" : "primary",
       businessUnit: derived.businessUnit,
       country: derived.country,
       currency: derived.currency,
@@ -226,6 +228,19 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     sharedPostings.push(posting);
     postingLines.forEach((l) => sharedPostingLines.push(l));
 
+    const matchingTemplates = sharedDocumentRequirementTemplates.filter(
+      (t) => t.market === finalDeal.market && t.businessUnit === finalDeal.businessUnit && t.country === finalDeal.country
+    );
+    matchingTemplates.forEach((t, i) => {
+      sharedDealDocumentRequirements.push({
+        id: `ddr-${id}-${i}`,
+        dealId: id,
+        label: t.label,
+        required: t.required,
+        status: "pending",
+      });
+    });
+
     onDealCreated(finalDeal);
     setCreatedDealId(id);
     setStep("success");
@@ -242,7 +257,6 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     setSubsidyAmt("0");
     setDisbursedAmount("");
     setBankSlab("0.5");
-    setLatestNote("");
     setShowPostings(false);
     setCreatedDealId("");
   };

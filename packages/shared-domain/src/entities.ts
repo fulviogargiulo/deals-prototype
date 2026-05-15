@@ -410,7 +410,7 @@ export interface AgentFinancials {
 //
 // Tax is NOT modelled as a stakeholder or waterfall step. The Blueprint
 // service reads this at deal_close and emits the required PostingLines
-// against LIAB_STATUTORY_TAX_{CUR}. The P&L waterfall operates on
+// against LIAB_VAT_{CUR}. The P&L waterfall operates on
 // tax-exclusive amounts only.
 // ============================================================
 export interface Blueprint {
@@ -418,10 +418,14 @@ export interface Blueprint {
   country: Country;
   businessUnit: BusinessUnit;
 
-  /** Statutory tax rate applied to gross commission (e.g. 5 = VAT 5%, 21 = IVA 21%). */
+  /** VAT rate applied to gross commission (e.g. 5 = VAT 5%, 21 = IVA 21%). */
   taxRate: number;
-  /** Human-readable tax label for ledger descriptions (e.g. "VAT", "IVA"). */
+  /** Human-readable VAT label (e.g. "VAT", "IVA"). */
   taxLabel: string;
+  /** Income withholding rate deducted from agent payouts and remitted to the tax authority (e.g. 15 = IRPF 15%). Omitted in markets with no withholding obligation. */
+  withholdingRate?: number;
+  /** Human-readable withholding label (e.g. "IRPF"). */
+  withholdingLabel?: string;
 }
 
 // ============================================================
@@ -434,7 +438,9 @@ export interface DealStakeholder {
   partyId: string;
   role: StakeholderType;
   isPrimary?: boolean;
-  /** Agent's share of the commission pool (0–100). Only relevant for agent roles. */
+  /** Agent's share of the commission pool (0–100). Used only when financialAmount is not set —
+   *  the waterfall derives payout as splitPercentage% × netRevenue × agentRate.
+   *  Prefer setting financialAmount directly when the payout is fixed or pre-negotiated. */
   splitPercentage?: number;
   fixedAmount?: number;
   /** Signed financial impact on the deal P&L.
@@ -561,7 +567,14 @@ export interface Invoice {
   dealId?: string;
   invoiceNumber: string;
   status: InvoiceStatus;
+  /** Base commission amount (pre-VAT). Gross invoice total = amount + vatAmount. Net payout = amount + vatAmount − withholdingAmount. */
   amount: number;
+  /** VAT amount charged on top of the base commission (output tax for the agent, input tax for Huspy). */
+  vatAmount?: number;
+  /** Withholding rate applied (e.g. 15 = IRPF 15%). Agent-editable at invoice creation; omitted when market has no withholding. */
+  withholdingRate?: number;
+  /** Withholding amount deducted from the gross payout and remitted by Huspy to the tax authority. */
+  withholdingAmount?: number;
   currency: Currency;
   issueDate: string;
   dueDate?: string;
