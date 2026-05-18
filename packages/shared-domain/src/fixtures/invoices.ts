@@ -1,17 +1,17 @@
 import type { Invoice } from "../entities";
 
-// Invoice fixtures — unified inbound (Huspy receives from clients) and outbound (Huspy pays agents/third parties).
-// partyId links to the Party paying us (inbound) or being paid by us (outbound).
-// dealId links inbound invoices directly to the originating deal.
+// Invoice fixtures — unified outbound (Huspy invoices clients to collect) and inbound (agents/vendors invoice Huspy).
+// partyId links to the Party being billed by Huspy (outbound) or billing Huspy (inbound).
+// dealId links outbound invoices directly to the originating deal.
 // Multiple invoices per deal are intentional (e.g. seller + developer split).
 export const sharedInvoices: Invoice[] = [
-  // ── Inbound: Huspy receives from clients ────────────────────────────────────
+  // ── Outbound: Huspy invoices clients to collect commission ──────────────────
 
   // deal-001 — buy, paid, EUR 385 000 @ 3% = 11 550 − rebate 173 = 11 377
   {
     id: "inv-001",
     dealId: "deal-001",
-    direction: "inbound",
+    direction: "outbound",
     partyId: "party-client-001",
     invoiceNumber: "INV-2026-001",
     status: "paid",
@@ -32,7 +32,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-002",
     dealId: "deal-008",
-    direction: "inbound",
+    direction: "outbound",
     partyId: "party-client-002",
     invoiceNumber: "INV-2026-002",
     status: "issued",
@@ -47,7 +47,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-003",
     dealId: "deal-008",
-    direction: "inbound",
+    direction: "outbound",
     partyId: "party-third-inmobiliaria-grupo-norte",
     invoiceNumber: "INV-2026-003",
     status: "issued",
@@ -64,7 +64,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-004",
     dealId: "deal-014",
-    direction: "inbound",
+    direction: "outbound",
     partyId: "party-third-caixabank",
     invoiceNumber: "INV-2026-004",
     status: "issued",
@@ -81,7 +81,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-005",
     dealId: "deal-015",
-    direction: "inbound",
+    direction: "outbound",
     partyId: "party-third-snb",
     invoiceNumber: "INV-2026-005",
     status: "issued",
@@ -98,7 +98,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-006",
     dealId: "deal-016",
-    direction: "inbound",
+    direction: "outbound",
     partyId: "party-client-007",
     invoiceNumber: "INV-2026-006",
     status: "paid",
@@ -117,7 +117,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-007",
     dealId: "deal-016",
-    direction: "inbound",
+    direction: "outbound",
     partyId: "party-third-emaar",
     invoiceNumber: "INV-2026-007",
     status: "paid",
@@ -138,7 +138,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-008",
     dealId: "deal-018",
-    direction: "inbound",
+    direction: "outbound",
     partyId: "party-client-004",
     invoiceNumber: "INV-2026-008",
     status: "paid",
@@ -155,12 +155,12 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-04-22T00:00:00.000Z",
   },
 
-  // ── Outbound: Huspy pays agents ────────────────────────────────────────────
+  // ── Inbound: agents invoice Huspy ─────────────────────────────────────────
 
   // Felicia Canovas — Jan 2026 (base 4 080.8 + IVA 21% 856.97 = gross 4 937.77 − IRPF 15% 612.12 = net payout 4 325.65 EUR)
   {
     id: "inv-009",
-    direction: "outbound",
+    direction: "inbound",
     partyId: "party-agent-001",
     invoiceNumber: "INV-2026-009",
     status: "paid",
@@ -184,7 +184,7 @@ export const sharedInvoices: Invoice[] = [
   // Felicia Canovas — Q1 2026 bonus (base 500 + IVA 21% 105 = gross 605 − IRPF 15% 75 = net payout 530 EUR)
   {
     id: "inv-010",
-    direction: "outbound",
+    direction: "inbound",
     partyId: "party-agent-001",
     invoiceNumber: "INV-2026-010",
     status: "issued",
@@ -204,7 +204,7 @@ export const sharedInvoices: Invoice[] = [
   // Felicia Canovas — Apr 2026 (base 9 070 + IVA 21% 1 904.70 = gross 10 974.70 − IRPF 15% 1 360.50 = net payout 9 614.20 EUR)
   {
     id: "inv-011",
-    direction: "outbound",
+    direction: "inbound",
     partyId: "party-agent-001",
     invoiceNumber: "INV-2026-011",
     status: "issued",
@@ -224,7 +224,7 @@ export const sharedInvoices: Invoice[] = [
   // Gelo Huspy — May 2026 (base 17 015.4 + VAT 5% 850.77 = gross 17 866.17 AED, no withholding)
   {
     id: "inv-012",
-    direction: "outbound",
+    direction: "inbound",
     partyId: "party-agent-004",
     invoiceNumber: "INV-2026-012",
     status: "issued",
@@ -239,13 +239,13 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-05-31T09:00:00.000Z",
   },
 
-  // ── Outbound: Huspy pays conveyance firms (deal-specific) ──────────────────
+  // ── Inbound: conveyance firms invoice Huspy (deal-specific) ───────────────
 
   // deal-001 — Gestoría López & Asociados, EUR 800 (OPERATIONAL_DEDUCTION ds-deal-001-conv)
   {
     id: "inv-013",
     dealId: "deal-001",
-    direction: "outbound",
+    direction: "inbound",
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-013",
     status: "paid",
@@ -266,7 +266,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-014",
     dealId: "deal-008",
-    direction: "outbound",
+    direction: "inbound",
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-014",
     status: "issued",
@@ -283,7 +283,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-015",
     dealId: "deal-016",
-    direction: "outbound",
+    direction: "inbound",
     partyId: "party-conv-tamm-legal",
     invoiceNumber: "INV-2026-015",
     status: "paid",
@@ -304,7 +304,7 @@ export const sharedInvoices: Invoice[] = [
   {
     id: "inv-016",
     dealId: "deal-018",
-    direction: "outbound",
+    direction: "inbound",
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-016",
     status: "paid",

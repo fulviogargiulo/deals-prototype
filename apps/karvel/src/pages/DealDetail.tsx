@@ -21,6 +21,7 @@ import {
   type DealDocumentRequirement,
 } from "@huspy/shared-domain";
 import { PnLWaterfall } from "@/components/PnLWaterfall";
+import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 
 const STAGE_ORDER: { key: DealStatus; label: string }[] = [
   { key: "pending-details", label: "Pending Details" },
@@ -208,17 +209,8 @@ const DealDetail = () => {
                   <ReadRow label="Created" value={deal.createdAt ? formatDate(deal.createdAt) : "—"} />
                 </div>
                 <div>
-                  <ReadRow label="Opportunity">
-                    {deal.opportunityName ? (
-                      <button
-                        onClick={() => navigate(`/opportunities`)}
-                        className="flex items-center gap-1 text-primary hover:underline text-[13px] font-medium"
-                      >
-                        {deal.opportunityName}
-                        <ExternalLink className="h-3 w-3" />
-                      </button>
-                    ) : "—"}
-                  </ReadRow>
+                  <ReadRow label="Property" value={deal.title ?? deal.buildingName ?? "—"} />
+                  <ReadRow label="Offer ID" value={deal.offerId ?? "—"} />
                   <ReadRow label="Client" value={deal.clientName ?? "—"} />
                   <ReadRow label="Channel" value={deal.channel ?? "—"} />
                   <ReadRow label="OF / Case No.">
@@ -234,12 +226,6 @@ const DealDetail = () => {
               </div>
             </SectionCard>
 
-            {/* Invoices */}
-            <InvoicesSection dealId={deal.id} navigate={navigate} />
-
-            {/* Accounting Events */}
-            <PostingsSection dealId={deal.id} />
-
             {/* P&L */}
             <SectionCard title="P&L">
               <PnLWaterfall
@@ -250,6 +236,12 @@ const DealDetail = () => {
                 onChanged={() => setStakesVersion((v) => v + 1)}
               />
             </SectionCard>
+
+            {/* Invoices */}
+            <InvoicesSection dealId={deal.id} navigate={navigate} />
+
+            {/* Accounting Events */}
+            <PostingsSection dealId={deal.id} />
 
             {/* Ops ↔ Agent thread */}
             <CommentsSection dealId={deal.id} canAdd={canEditOps} />
@@ -308,15 +300,14 @@ export default DealDetail;
 
 
 const PROCESS_LABELS: Record<string, string> = {
-  deal_close: "Deal Close",
-  agent_invoice: "Commission",
-  conveyance_invoice: "Conveyance Fee",
+  invoice_issued: "Invoice Issued",
+  commission_accrual: "Commission",
+  external_cost_accrual: "External Cost",
   bank_statement_inbound_matched: "Payment In",
   bank_statement_outbound_matched: "Payment Out",
   payout_instructed: "Payout",
-  bonus: "Bonus",
-  incentive: "Incentive",
-  platform_fee: "Platform Fee",
+  agent_adjustment: "Adjustment",
+  huspy_fee: "Huspy Fee",
   manual_adjustment: "Adjustment",
   reversal: "Reversal",
 };
@@ -326,14 +317,14 @@ function ledgerLabel(ledgerId: number): string {
 }
 
 function PostingsSection({ dealId }: { dealId: string }) {
+  const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
+
   const { postings, linesByPosting } = useMemo(() => {
     const dealInvoiceIds = new Set(
       sharedInvoices.filter((inv) => inv.dealId === dealId).map((inv) => inv.id),
     );
     const relatedPostingIds = new Set([
-      // Direct deal FK — covers all postings attributed to this deal
       ...sharedPostings.filter((p) => p.dealId === dealId).map((p) => p.id),
-      // Via invoice lines — catches agent postings where the invoice has no dealId
       ...sharedPostingLines
         .filter((l) => l.invoiceId && dealInvoiceIds.has(l.invoiceId))
         .map((l) => l.postingId),
@@ -351,50 +342,65 @@ function PostingsSection({ dealId }: { dealId: string }) {
   if (postings.length === 0) return null;
 
   return (
-    <SectionCard title="Accounting Events">
-      <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="text-left px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Ledger</th>
-              <th className="text-right px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Debit</th>
-              <th className="text-right px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Credit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {postings.map((posting) => {
-              const lines = linesByPosting[posting.id] ?? [];
-              return (
-                <>
-                  <tr key={`hdr-${posting.id}`} className="border-t border-border bg-muted/20">
-                    <td colSpan={3} className="px-4 py-2">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-                          {PROCESS_LABELS[posting.businessProcess] ?? posting.businessProcess}
-                        </span>
-                        <span className="text-[12px] text-muted-foreground flex-1 truncate">{posting.description ?? "—"}</span>
-                        <span className="text-[12px] text-muted-foreground shrink-0">{formatDate(posting.valueDate)}</span>
-                      </div>
-                    </td>
-                  </tr>
-                  {lines.map((line) => (
-                    <tr key={line.id} className="border-t border-border/30">
-                      <td className="px-4 py-2.5 text-muted-foreground text-[12px]">{ledgerLabel(line.ledgerId)}</td>
-                      <td className="px-4 py-2.5 text-right tabular-nums font-mono font-semibold">
-                        {line.side === "DEBIT" ? fmt(line.amount, posting.currency) : <span className="text-muted-foreground/30">—</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-right tabular-nums font-mono font-semibold">
-                        {line.side === "CREDIT" ? fmt(line.amount, posting.currency) : <span className="text-muted-foreground/30">—</span>}
+    <>
+      <SectionCard title="Accounting Events">
+        <div className="rounded-lg border border-border overflow-hidden">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Ledger</th>
+                <th className="text-right px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Debit</th>
+                <th className="text-right px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {postings.map((posting) => {
+                const lines = linesByPosting[posting.id] ?? [];
+                return (
+                  <>
+                    <tr
+                      key={`hdr-${posting.id}`}
+                      onClick={() => setSelectedPostingId(posting.id)}
+                      className="border-t border-border bg-muted/20 hover:bg-muted/40 cursor-pointer transition-colors"
+                    >
+                      <td colSpan={3} className="px-4 py-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                            {PROCESS_LABELS[posting.businessProcess] ?? posting.businessProcess}
+                          </span>
+                          <span className="text-[12px] text-muted-foreground flex-1 truncate">{posting.description ?? "—"}</span>
+                          <span className="text-[12px] text-muted-foreground shrink-0">{formatDate(posting.valueDate)}</span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                        </div>
                       </td>
                     </tr>
-                  ))}
-                </>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </SectionCard>
+                    {lines.map((line) => (
+                      <tr key={line.id} className="border-t border-border/30">
+                        <td className="px-4 py-2.5 text-muted-foreground text-[12px]">{ledgerLabel(line.ledgerId)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-mono font-semibold">
+                          {line.side === "DEBIT" ? fmt(line.amount, posting.currency) : <span className="text-muted-foreground/30">—</span>}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-mono font-semibold">
+                          {line.side === "CREDIT" ? fmt(line.amount, posting.currency) : <span className="text-muted-foreground/30">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
+
+      <PostingDetailDialog
+        postingId={selectedPostingId}
+        allPostings={postings}
+        allLines={sharedPostingLines}
+        open={!!selectedPostingId}
+        onOpenChange={(open) => !open && setSelectedPostingId(null)}
+      />
+    </>
   );
 }
 

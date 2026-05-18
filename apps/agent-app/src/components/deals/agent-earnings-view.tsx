@@ -28,10 +28,9 @@ function formatAmount(amount: number, side: PostingLine['side'], currency: strin
 }
 
 const PROCESS_LABELS: Record<string, string> = {
-  agent_invoice: 'commission',
-  bonus:         'bonus',
-  incentive:     'incentive',
-  platform_fee:  'platform fee',
+  commission_accrual: 'commission',
+  agent_adjustment:   'adjustment',
+  huspy_fee:          'platform fee',
   manual_adjustment: 'adjustment',
 };
 
@@ -114,8 +113,8 @@ export function AgentEarningsView() {
       id: l.id,
       description: l.posting.description ?? 'Posting',
       type: l.side === 'CREDIT' ? 'credit' : 'debit',
-      category: l.posting.businessProcess === 'platform_fee'  ? 'support-fee'
-              : l.posting.businessProcess === 'agent_invoice' ? 'deal-commission'
+      category: l.posting.businessProcess === 'huspy_fee'          ? 'support-fee'
+              : l.posting.businessProcess === 'commission_accrual' ? 'deal-commission'
               : 'other',
       amount: l.amount,
       dealId: l.posting.dealId,

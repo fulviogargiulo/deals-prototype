@@ -61,7 +61,7 @@ export const getInvoicesForDeal = (dealId: string) => {
 export const getInvoicesForAgent = (agentId: string) => {
   const agent = sharedAgents.find((a) => a.id === agentId);
   if (!agent) return [];
-  return sharedInvoices.filter((i) => i.direction === "outbound" && i.partyId === agent.partyId);
+  return sharedInvoices.filter((i) => i.direction === "inbound" && i.partyId === agent.partyId);
 };
 
 export const getLedgerById = (id: number) => sharedLedgers.find((l) => l.id === id);

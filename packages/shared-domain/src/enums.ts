@@ -9,6 +9,19 @@ export type DealStatus =
   | "finalized"
   | "canceled";
 
+export type OfferStatus =
+  | "draft"
+  | "submitted"
+  | "under-negotiation"
+  | "accepted"
+  | "documents-pending"
+  | "documents-complete"
+  | "deal-created"
+  | "rejected"
+  | "withdrawn";
+
+export type CommissionPayer = "buyer" | "seller" | "developer" | "split";
+
 export type OpportunityType =
   | "buy"
   | "sell"
@@ -43,17 +56,16 @@ export type LedgerType = "asset" | "liability" | "revenue" | "expense";
 export type PostingSide = "DEBIT" | "CREDIT";
 
 export type BusinessProcess =
-  | "deal_close"
-  | "agent_invoice"
-  | "conveyance_invoice"
-  | "bank_statement_inbound_matched"
-  | "bank_statement_outbound_matched"
-  | "payout_instructed"
-  | "bonus"
-  | "incentive"
-  | "platform_fee"
-  | "manual_adjustment"
-  | "reversal";
+  | "invoice_issued"               // Huspy raises outbound invoice to collect commission — DR ASSET_AR / CR REV
+  | "commission_accrual"           // Huspy recognizes commission owed to agent — DR EXP_COMMISSION / CR AgentLiability
+  | "external_cost_accrual"        // Third-party vendor cost accrued (conveyance, legal, etc.) — DR EXP_COMMISSION / CR LIAB_EXTERNAL_PAYABLE
+  | "bank_statement_inbound_matched"  // Cash received from external party, matched to bank statement — DR ASSET_BANK / CR ASSET_AR
+  | "bank_statement_outbound_matched" // Cash paid to external vendor, matched to bank statement — DR LIAB_EXTERNAL_PAYABLE / CR ASSET_BANK
+  | "payout_instructed"            // Agent payout wire sent — DR AgentLiability + DR LIAB_VAT / CR LIAB_WITHHOLDING_TAX + CR ASSET_BANK
+  | "agent_adjustment"             // Standalone bonus or incentive to agent — DR EXP_COMMISSION / CR AgentLiability
+  | "huspy_fee"                    // Fee charged by Huspy to agent — DR AgentLiability / CR REV
+  | "manual_adjustment"            // Flexible standalone correction — journal varies
+  | "reversal";                    // Mirror of reversed posting with sides flipped; set reversedByPostingId
 
 /**
  * StakeholderType — semantic financial role of a party on a deal.

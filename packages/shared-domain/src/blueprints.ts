@@ -4,7 +4,7 @@ import type { BusinessUnit, Country } from "./enums";
 /**
  * DEFAULT_BLUEPRINTS — statutory tax configuration per (country, businessUnit).
  *
- * Tax is NOT part of the waterfall engine. At deal_close, draftPostings reads
+ * Tax is NOT part of the waterfall engine. At invoice_issued, draftPostings reads
  * blueprint.taxRate to emit LIAB_VAT_{CUR} posting lines.
  * All P&L amounts flowing through the engine are tax-exclusive.
  *

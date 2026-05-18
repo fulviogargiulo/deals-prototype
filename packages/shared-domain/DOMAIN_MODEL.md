@@ -539,7 +539,7 @@ Stand-ins for what a real backend query layer would do. All return from in-memor
 |---|---|
 | `getInvoiceById(id)` | Invoice by ID |
 | `getInvoicesForDeal(dealId)` | Traverses Posting → PostingLine → Invoice |
-| `getInvoicesForAgent(agentId)` | Outbound invoices where `partyId === agent.partyId` (agent invoices Huspy → direction is outbound) |
+| `getInvoicesForAgent(agentId)` | Inbound invoices where `partyId === agent.partyId` (agent invoices Huspy → direction is inbound) |
 
 **Postings / Ledger**
 

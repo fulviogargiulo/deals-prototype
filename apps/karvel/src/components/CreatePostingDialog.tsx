@@ -53,14 +53,14 @@ function emptyDraft(defaultSubledgerName = ""): PostingDraft {
 }
 
 const BUSINESS_PROCESSES = [
-  { value: "deal_close",                      label: "deal_close" },
-  { value: "agent_invoice",                   label: "agent_invoice" },
+  { value: "invoice_issued",                   label: "invoice_issued" },
+  { value: "commission_accrual",              label: "commission_accrual" },
+  { value: "external_cost_accrual",           label: "external_cost_accrual" },
   { value: "bank_statement_inbound_matched",  label: "bank_statement_inbound_matched" },
   { value: "bank_statement_outbound_matched", label: "bank_statement_outbound_matched" },
   { value: "payout_instructed",               label: "payout_instructed" },
-  { value: "bonus",                           label: "bonus" },
-  { value: "incentive",                       label: "incentive" },
-  { value: "platform_fee",                    label: "platform_fee" },
+  { value: "agent_adjustment",                label: "agent_adjustment" },
+  { value: "huspy_fee",                       label: "huspy_fee" },
   { value: "manual_adjustment",               label: "manual_adjustment" },
   { value: "reversal",                        label: "reversal" },
 ];

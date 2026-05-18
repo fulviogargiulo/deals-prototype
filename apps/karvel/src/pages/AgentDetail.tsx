@@ -27,6 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { CreatePostingDialog } from "@/components/CreatePostingDialog";
+import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -86,27 +87,17 @@ function NonEditableField({
 // ─── Line type labels ─────────────────────────────────────────────────────────
 
 const PROCESS_LABELS: Record<string, string> = {
-  deal_close: "Deal Close",
-  agent_invoice: "Commission",
+  invoice_issued: "Invoice Issued",
+  commission_accrual: "Commission",
   bank_statement_inbound_matched: "Payment In",
   bank_statement_outbound_matched: "Payment Out",
   payout_instructed: "Payout",
-  bonus: "Bonus",
-  incentive: "Incentive",
-  platform_fee: "Platform Fee",
+  agent_adjustment: "Adjustment",
+  huspy_fee: "Huspy Fee",
   manual_adjustment: "Adjustment",
   reversal: "Reversal",
 };
 
-function getLedgerDisplay(ledgerId: number): { gl: string; sub: string | null } {
-  const ledger = sharedLedgers.find((l) => l.id === ledgerId);
-  if (!ledger) return { gl: String(ledgerId), sub: null };
-  if (ledger.glId) {
-    const gl = sharedLedgers.find((l) => l.id === ledger.glId);
-    return { gl: gl?.name ?? String(ledger.glId), sub: ledger.name };
-  }
-  return { gl: ledger.name, sub: null };
-}
 
 // ─── Financials per-agent state (canonical shared fixture) ───────────────────
 // Replaces the previous in-memory `agentFinancialsStore`; reads/writes the
@@ -289,11 +280,6 @@ export default function AgentDetail() {
   const primaryCurrency = ledgerLines[0]?.posting?.currency ?? "EUR";
 
   // Posting popup data
-  const selectedPosting = selectedPostingId ? allPostings.find((p) => p.id === selectedPostingId) : null;
-  const selectedPostingAllLines = selectedPostingId
-    ? allPostingLines.filter((l) => l.postingId === selectedPostingId)
-    : [];
-
   function handleReversePosting(posting: Posting, lines: PostingLine[]) {
     const reversalId = `reversal-${posting.id}-${Date.now()}`;
     const now = new Date().toISOString();
@@ -837,124 +823,14 @@ export default function AgentDetail() {
         )}
       </div>
 
-      {/* ── Posting detail dialog ── */}
-      <Dialog open={!!selectedPostingId} onOpenChange={(open) => !open && setSelectedPostingId(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <DialogTitle className="font-mono text-[14px]">{selectedPosting?.id}</DialogTitle>
-                <DialogDescription>
-                  {selectedPosting?.businessProcess} · {selectedPosting?.valueDate} · {selectedPosting?.currency}
-                </DialogDescription>
-              </div>
-              {selectedPosting && !selectedPosting.reversedByPostingId && (
-                <button
-                  onClick={() => handleReversePosting(selectedPosting, selectedPostingAllLines)}
-                  className="shrink-0 text-[12px] font-medium text-destructive hover:opacity-80 px-2.5 py-1 rounded border border-destructive/40 hover:bg-destructive/5 transition-colors mr-8"
-                >
-                  Reverse posting
-                </button>
-              )}
-            </div>
-          </DialogHeader>
-          {selectedPosting && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px]">
-                <div>
-                  <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Reversed by</p>
-                  <p className="font-medium font-mono">{selectedPosting.reversedByPostingId ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">External Ref</p>
-                  <p className="font-medium font-mono">{selectedPosting.externalRef ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Deal</p>
-                  {selectedPosting.dealId ? (
-                    <button
-                      onClick={() => { setSelectedPostingId(null); navigate(`/deals/${selectedPosting.dealId}`); }}
-                      className="font-medium font-mono text-primary underline underline-offset-2 hover:opacity-80"
-                    >
-                      {selectedPosting.dealId}
-                    </button>
-                  ) : <p className="font-medium">—</p>}
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Business Unit</p>
-                  <p className="font-medium">
-                    {selectedPosting.businessUnit === "rebu"
-                      ? "REBU"
-                      : selectedPosting.businessUnit === "mortgage"
-                        ? "MBU (Mortgage)"
-                        : "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Created by</p>
-                  <p className="font-medium">{selectedPosting.createdBy}</p>
-                </div>
-                {selectedPosting.description && (
-                  <div className="col-span-2">
-                    <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Description</p>
-                    <p className="font-medium">{selectedPosting.description}</p>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Posting Lines</p>
-                <div className="rounded-lg border border-border overflow-hidden">
-                  <table className="w-full text-[13px]">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/30">
-                        <th className="text-left px-3 py-2 text-[12px] font-medium text-muted-foreground">GL Ledger</th>
-                        <th className="text-left px-3 py-2 text-[12px] font-medium text-muted-foreground">Subledger</th>
-                        <th className="text-left px-3 py-2 text-[12px] font-medium text-muted-foreground">Type</th>
-                        <th className="text-right px-3 py-2 text-[12px] font-medium text-muted-foreground">Debit</th>
-                        <th className="text-right px-3 py-2 text-[12px] font-medium text-muted-foreground">Credit</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedPostingAllLines.map((l) => {
-                        const { gl, sub } = getLedgerDisplay(l.ledgerId);
-                        return (
-                          <tr key={l.id} className="border-b border-border last:border-0">
-                            <td className="px-3 py-2 font-mono text-[12px] text-muted-foreground">{gl}</td>
-                            <td className={cn("px-3 py-2 font-mono text-[12px]", sub ? "text-primary font-semibold" : "text-muted-foreground/40")}>
-                              {sub ?? "—"}
-                            </td>
-                            <td className="px-3 py-2 text-muted-foreground text-[12px]">
-                              {PROCESS_LABELS[selectedPosting.businessProcess] ?? selectedPosting.businessProcess}
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                              {l.side === "DEBIT" ? fmt(l.amount, selectedPosting.currency) : <span className="text-muted-foreground/30">—</span>}
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                              {l.side === "CREDIT" ? fmt(l.amount, selectedPosting.currency) : <span className="text-muted-foreground/30">—</span>}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t border-border bg-muted/30">
-                        <td colSpan={3} className="px-3 py-2 text-[12px] font-semibold">Totals</td>
-                        <td className="px-3 py-2 text-right text-[12px] font-semibold tabular-nums">
-                          {fmt(selectedPostingAllLines.filter((l) => l.side === "DEBIT").reduce((s, l) => s + l.amount, 0), selectedPosting.currency)}
-                        </td>
-                        <td className="px-3 py-2 text-right text-[12px] font-semibold tabular-nums">
-                          {fmt(selectedPostingAllLines.filter((l) => l.side === "CREDIT").reduce((s, l) => s + l.amount, 0), selectedPosting.currency)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <PostingDetailDialog
+        postingId={selectedPostingId}
+        allPostings={allPostings}
+        allLines={allPostingLines}
+        open={!!selectedPostingId}
+        onOpenChange={(open) => !open && setSelectedPostingId(null)}
+        onReverse={(posting, lines) => handleReversePosting(posting, lines)}
+      />
 
       <CreatePostingDialog
         open={createPostingOpen}

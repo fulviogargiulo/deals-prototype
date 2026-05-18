@@ -2,14 +2,15 @@ import type {
   AgentDocumentType,
   BusinessProcess,
   BusinessUnit,
+  CommissionPayer,
   Country,
   Currency,
   DealStatus,
-
   DocumentRequirementStatus,
   InvoiceStatus,
   LedgerType,
   Market,
+  OfferStatus,
   OpportunityStatus,
   OpportunityType,
   PostingSide,
@@ -116,12 +117,73 @@ export interface Opportunity {
 }
 
 // ============================================================
+// Property — a real-estate unit that can be referenced by Offers.
+// ============================================================
+export interface Property {
+  id: string;
+  name: string;
+  country: Country;
+  currency: Currency;
+  address?: string;
+  type?: string;
+  developmentName?: string;
+}
+
+// ============================================================
+// Offer — a formal bid on a property, linking a client + agents
+// to a specific transaction. A Deal is spawned when an Offer
+// reaches the `documents-complete` state.
+// ============================================================
+export interface Offer {
+  id: string;
+  status: OfferStatus;
+
+  // First-class context — not derived from property lookup
+  country: Country;
+  currency: Currency;
+
+  // Links
+  propertyId?: string;
+  opportunityId?: string;
+  clientId?: string;
+
+  // Transaction
+  offerAmount?: number;
+  commissionPayer?: CommissionPayer;
+  totalCommissionPct?: number;
+
+  // Agent splits — feeds directly into the Waterfall Engine
+  // buyerAgentId  = the "Closer" (buyer-side agent)
+  // sellerAgentId = the "Lister" (seller-side agent)
+  buyerAgentId?: string;
+  sellerAgentId?: string;
+  /** Closer's share of the agent commission pool (0–100). */
+  buyerAgentSplitPct?: number;
+  /** Lister's share of the agent commission pool (0–100). */
+  sellerAgentSplitPct?: number;
+
+  createdAt: string;
+  updatedAt: string;
+
+  // Display caches
+  propertyName?: string;
+  clientName?: string;
+}
+
+// ============================================================
 // Deal — full operational + agent-facing schema
 // ============================================================
 
 // Karvel-specific support types (lived in apps/karvel/src/data/types.ts before flattening)
 export type ReceivableEntityType = "developer" | "buyer" | "seller" | "tenant" | "bank" | "landlord";
 export type PaymentMode = "cash" | "mortgage";
+
+export interface StatusHistoryEntry {
+  from: DealStatus;
+  to: DealStatus;
+  timestamp: string;
+  note?: string;
+}
 export interface ReceivableEntry {
   entityName: string;
   entityType: ReceivableEntityType;
@@ -269,18 +331,19 @@ export interface Deal {
   reportDate: string;
 
   // Optional canonical
-  opportunityId?: string;
+  offerId?: string;
+  propertyId?: string;
   market?: Market;
   businessUnit?: BusinessUnit;
   country?: Country;
   currency?: Currency;
   createdAt?: string;
   updatedAt?: string;
+  statusHistory?: StatusHistoryEntry[];
 
   // Display caches (used by both apps)
   clientName?: string;
   agentName?: string;
-  opportunityName?: string;
   title?: string;
 
   // ==========================================================
@@ -409,7 +472,7 @@ export interface AgentFinancials {
 // Blueprint — statutory tax configuration per (country, businessUnit).
 //
 // Tax is NOT modelled as a stakeholder or waterfall step. The Blueprint
-// service reads this at deal_close and emits the required PostingLines
+// service reads this at invoice_issued and emits the required PostingLines
 // against LIAB_VAT_{CUR}. The P&L waterfall operates on
 // tax-exclusive amounts only.
 // ============================================================

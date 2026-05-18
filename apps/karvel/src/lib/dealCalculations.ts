@@ -455,7 +455,7 @@ export function draftPostings(projection: ProjectedPnL, deal: { id: string; busi
     id: postingId,
     dealId: deal.id,
     businessUnit: deal.businessUnit as any,
-    businessProcess: "deal_close",
+    businessProcess: "invoice_issued",
     createdBy: "user-ops",
     createdAt: now,
     valueDate: now.slice(0, 10),
