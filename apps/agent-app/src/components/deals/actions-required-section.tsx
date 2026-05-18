@@ -195,15 +195,10 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, agent
                   <p className="text-xs text-fg-secondary leading-[140%] capitalize">{deal.clientName} · {deal.type}</p>
                 </div>
 
-                {/* Opportunity */}
-                <Link
-                  to={`/opportunities/${deal.opportunityId}`}
-                  className="text-sm truncate"
-                  style={{ color: 'hsl(var(--accent-indigo))' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {deal.opportunityName}
-                </Link>
+                {/* Property */}
+                <span className="text-sm truncate text-muted-foreground">
+                  {deal.title ?? deal.buildingName ?? "—"}
+                </span>
 
                 {/* Amount */}
                 <span className="text-sm font-semibold text-foreground text-right tabular-nums">

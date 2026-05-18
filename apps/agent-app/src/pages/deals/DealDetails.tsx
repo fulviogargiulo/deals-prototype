@@ -7,7 +7,7 @@ import { FileText, CheckCircle2, AlertTriangle, ChevronDown, RotateCcw } from 'l
 import { DocumentRow } from '@/components/deals/document-row';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { mockDeals, agentStakeMap } from '@/data/mockDeals';
-import { COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements, sharedDealComments, buildWaterfallInput, calculateProjectedPnL } from '@huspy/shared-domain';
+import { COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements, sharedDealComments, buildWaterfallInput, calculateProjectedPnL, dealStatusColors } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -23,14 +23,9 @@ const statusLabels: Record<DealStatus, string> = {
   canceled: 'Canceled',
 };
 
-const statusColors: Record<DealStatus, { color: string; bg: string }> = {
-  'pending-details': { color: 'hsl(var(--ds-orange))', bg: 'hsl(var(--ds-orange) / 0.1)' },
-  'under-review': { color: 'hsl(var(--accent-orchid))', bg: 'hsl(var(--accent-orchid) / 0.1)' },
-  'pending-agent-approval': { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
-  'pending-receivables': { color: 'hsl(var(--accent-terracotta))', bg: 'hsl(var(--accent-terracotta) / 0.1)' },
-  finalized: { color: 'hsl(var(--fg-secondary))', bg: 'hsl(var(--fg-secondary) / 0.1)' },
-  canceled: { color: 'hsl(var(--ds-red))', bg: 'hsl(var(--ds-red) / 0.1)' },
-};
+const statusColors: Record<DealStatus, { color: string; bg: string }> = Object.fromEntries(
+  Object.entries(dealStatusColors).map(([k, { hsl }]) => [k, { color: `hsl(${hsl})`, bg: `hsl(${hsl} / 0.1)` }])
+) as Record<DealStatus, { color: string; bg: string }>;
 
 const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = {
   buy: { icon: BuyBareIcon, color: '#008A8A' },
@@ -115,7 +110,7 @@ export function DealDetails() {
                 {viewDeal.title}
               </h1>
               <p className="text-[14px] text-[hsl(var(--fg-secondary))] leading-[140%] capitalize mt-0.5">
-                {viewDeal.type} · {viewDeal.market} · <Link to={`/opportunities/${viewDeal.opportunityId}`} className="hover:underline normal-case" style={{ color: 'hsl(var(--accent-indigo))' }}>{viewDeal.opportunityName}</Link>
+                {viewDeal.type} · {viewDeal.market}{viewDeal.offerId ? <> · <span className="font-mono text-[13px]" style={{ color: 'hsl(var(--accent-indigo))' }}>{viewDeal.offerId}</span></> : null}
               </p>
             </div>
           </div>

@@ -4,10 +4,11 @@ import type { Invoice } from "../entities";
 // partyId links to the Party being billed by Huspy (outbound) or billing Huspy (inbound).
 // dealId links outbound invoices directly to the originating deal.
 // Multiple invoices per deal are intentional (e.g. seller + developer split).
+// vatAmount on outbound invoices is derived from the Blueprint taxRate for the deal's (country, businessUnit).
 export const sharedInvoices: Invoice[] = [
   // ── Outbound: Huspy invoices clients to collect commission ──────────────────
 
-  // deal-001 — buy, paid, EUR 385 000 @ 3% = 11 550 − rebate 173 = 11 377
+  // deal-001 — buy, finalized, ES/EUR | subtotal 11 377 + IVA 21% 2 389.17 = gross 13 766.17
   {
     id: "inv-001",
     dealId: "deal-001",
@@ -15,7 +16,8 @@ export const sharedInvoices: Invoice[] = [
     partyId: "party-client-001",
     invoiceNumber: "INV-2026-001",
     status: "paid",
-    amount: 11377,
+    subtotal: 11377,
+    vatAmount: 2389.17,
     currency: "EUR",
     issueDate: "2026-01-10",
     dueDate: "2026-01-15",
@@ -28,22 +30,23 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-01-12T00:00:00.000Z",
   },
 
-  // deal-008 — sell, pending-receivables, EUR 580 000 @ 2.5% = 14 500 split seller + developer | client subsidy 5 000 → net 3 700
+  // deal-008 — sell, pending-receivables, ES/EUR split seller + developer
+  // inv-002: auto-created on deal → pending-receivables; Finance has not yet set due date or uploaded PDF
   {
     id: "inv-002",
     dealId: "deal-008",
     direction: "outbound",
     partyId: "party-client-002",
     invoiceNumber: "INV-2026-002",
-    status: "issued",
-    amount: 3700,
+    status: "draft",
+    subtotal: 3700,
+    vatAmount: 777,
     currency: "EUR",
     issueDate: "2026-03-05",
-    dueDate: "2026-03-30",
-    invoiceFileName: "INV-2026-002.pdf",
     createdAt: "2026-03-05T00:00:00.000Z",
     updatedAt: "2026-03-05T00:00:00.000Z",
   },
+  // inv-003: Finance already completed and sent to Inmobiliaria Grupo Norte
   {
     id: "inv-003",
     dealId: "deal-008",
@@ -51,7 +54,8 @@ export const sharedInvoices: Invoice[] = [
     partyId: "party-third-inmobiliaria-grupo-norte",
     invoiceNumber: "INV-2026-003",
     status: "issued",
-    amount: 5800,
+    subtotal: 5800,
+    vatAmount: 1218,
     currency: "EUR",
     issueDate: "2026-03-10",
     dueDate: "2026-04-15",
@@ -60,41 +64,41 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-03-10T00:00:00.000Z",
   },
 
-  // deal-014 — mortgage, pending-receivables, EUR 496 000 @ 0.5% = 2 480
+  // deal-014 — mortgage, pending-receivables, ES/EUR | subtotal 2 480 + IVA 21% 520.80 = gross 3 000.80
+  // inv-004: auto-created on deal → pending-receivables; Finance has not yet set due date or uploaded PDF
   {
     id: "inv-004",
     dealId: "deal-014",
     direction: "outbound",
     partyId: "party-third-caixabank",
     invoiceNumber: "INV-2026-004",
-    status: "issued",
-    amount: 2480,
+    status: "draft",
+    subtotal: 2480,
+    vatAmount: 520.8,
     currency: "EUR",
     issueDate: "2026-04-15",
-    dueDate: "2026-04-30",
-    invoiceFileName: "INV-2026-004.pdf",
     createdAt: "2026-04-15T00:00:00.000Z",
-    updatedAt: "2026-05-01T00:00:00.000Z",
+    updatedAt: "2026-04-15T00:00:00.000Z",
   },
 
-  // deal-015 — mortgage, pending-receivables, SAR 920 000 @ 0.5% = 4 600
+  // deal-015 — mortgage, pending-receivables, SA/SAR | subtotal 4 600 + VAT 15% 690 = gross 5 290
+  // inv-005: auto-created on deal → pending-receivables; Finance has not yet set due date or uploaded PDF
   {
     id: "inv-005",
     dealId: "deal-015",
     direction: "outbound",
     partyId: "party-third-snb",
     invoiceNumber: "INV-2026-005",
-    status: "issued",
-    amount: 4600,
+    status: "draft",
+    subtotal: 4600,
+    vatAmount: 690,
     currency: "SAR",
     issueDate: "2026-05-02",
-    dueDate: "2026-05-20",
-    invoiceFileName: "INV-2026-005.pdf",
     createdAt: "2026-05-02T00:00:00.000Z",
     updatedAt: "2026-05-02T00:00:00.000Z",
   },
 
-  // deal-016 — sell, finalized, AED 2 100 000 @ 2% = 42 000 split seller + developer | client rebate 630 → net 24 570
+  // deal-016 — sell, finalized, AE/AED split seller + developer
   {
     id: "inv-006",
     dealId: "deal-016",
@@ -102,7 +106,8 @@ export const sharedInvoices: Invoice[] = [
     partyId: "party-client-007",
     invoiceNumber: "INV-2026-006",
     status: "paid",
-    amount: 24570,
+    subtotal: 24570,
+    vatAmount: 1228.5,
     currency: "AED",
     issueDate: "2026-05-04",
     dueDate: "2026-05-15",
@@ -121,7 +126,8 @@ export const sharedInvoices: Invoice[] = [
     partyId: "party-third-emaar",
     invoiceNumber: "INV-2026-007",
     status: "paid",
-    amount: 16800,
+    subtotal: 16800,
+    vatAmount: 840,
     currency: "AED",
     issueDate: "2026-05-04",
     dueDate: "2026-05-15",
@@ -134,7 +140,7 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-05-05T00:00:00.000Z",
   },
 
-  // deal-018 — buy, finalized, EUR 1 250 000 @ 2.5% = 31 250 − subsidy 7 000 = 24 250
+  // deal-018 — buy, finalized, ES/EUR | subtotal 24 250 + IVA 21% 5 092.50 = gross 29 342.50
   {
     id: "inv-008",
     dealId: "deal-018",
@@ -142,7 +148,8 @@ export const sharedInvoices: Invoice[] = [
     partyId: "party-client-004",
     invoiceNumber: "INV-2026-008",
     status: "paid",
-    amount: 24250,
+    subtotal: 24250,
+    vatAmount: 5092.5,
     currency: "EUR",
     issueDate: "2026-04-15",
     dueDate: "2026-04-30",
@@ -157,16 +164,15 @@ export const sharedInvoices: Invoice[] = [
 
   // ── Inbound: agents invoice Huspy ─────────────────────────────────────────
 
-  // Felicia Canovas — Jan 2026 (base 4 080.8 + IVA 21% 856.97 = gross 4 937.77 − IRPF 15% 612.12 = net payout 4 325.65 EUR)
+  // Felicia Canovas — Jan 2026 (subtotal 4 080.8 + IVA 21% 856.97 = gross 4 937.77 − IRPF 15% 612.12 = net payout 4 325.65 EUR)
   {
     id: "inv-009",
     direction: "inbound",
     partyId: "party-agent-001",
     invoiceNumber: "INV-2026-009",
     status: "paid",
-    amount: 4080.8,
+    subtotal: 4080.8,
     vatAmount: 856.97,
-    withholdingRate: 15,
     withholdingAmount: 612.12,
     currency: "EUR",
     issueDate: "2026-01-31",
@@ -181,16 +187,15 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-02-10T00:00:00.000Z",
   },
 
-  // Felicia Canovas — Q1 2026 bonus (base 500 + IVA 21% 105 = gross 605 − IRPF 15% 75 = net payout 530 EUR)
+  // Felicia Canovas — Q1 2026 bonus (subtotal 500 + IVA 21% 105 = gross 605 − IRPF 15% 75 = net payout 530 EUR)
   {
     id: "inv-010",
     direction: "inbound",
     partyId: "party-agent-001",
     invoiceNumber: "INV-2026-010",
     status: "issued",
-    amount: 500,
+    subtotal: 500,
     vatAmount: 105,
-    withholdingRate: 15,
     withholdingAmount: 75,
     currency: "EUR",
     issueDate: "2026-04-05",
@@ -201,34 +206,14 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-04-05T09:00:00.000Z",
   },
 
-  // Felicia Canovas — Apr 2026 (base 9 070 + IVA 21% 1 904.70 = gross 10 974.70 − IRPF 15% 1 360.50 = net payout 9 614.20 EUR)
-  {
-    id: "inv-011",
-    direction: "inbound",
-    partyId: "party-agent-001",
-    invoiceNumber: "INV-2026-011",
-    status: "issued",
-    amount: 9070,
-    vatAmount: 1904.70,
-    withholdingRate: 15,
-    withholdingAmount: 1360.50,
-    currency: "EUR",
-    issueDate: "2026-04-30",
-    dueDate: "2026-05-15",
-    period: "2026-04",
-    invoiceFileName: "INV-2026-011.pdf",
-    createdAt: "2026-04-30T09:00:00.000Z",
-    updatedAt: "2026-04-30T09:00:00.000Z",
-  },
-
-  // Gelo Huspy — May 2026 (base 17 015.4 + VAT 5% 850.77 = gross 17 866.17 AED, no withholding)
+  // Gelo Huspy — May 2026 (subtotal 17 015.4 + VAT 5% 850.77 = gross 17 866.17 AED, no withholding)
   {
     id: "inv-012",
     direction: "inbound",
     partyId: "party-agent-004",
     invoiceNumber: "INV-2026-012",
     status: "issued",
-    amount: 17015.4,
+    subtotal: 17015.4,
     vatAmount: 850.77,
     currency: "AED",
     issueDate: "2026-05-31",
@@ -241,7 +226,7 @@ export const sharedInvoices: Invoice[] = [
 
   // ── Inbound: conveyance firms invoice Huspy (deal-specific) ───────────────
 
-  // deal-001 — Gestoría López & Asociados, EUR 800 (OPERATIONAL_DEDUCTION ds-deal-001-conv)
+  // deal-001 — Gestoría López & Asociados, EUR 800 + IVA 21% 168 = gross 968 (OPERATIONAL_DEDUCTION ds-deal-001-conv)
   {
     id: "inv-013",
     dealId: "deal-001",
@@ -249,7 +234,8 @@ export const sharedInvoices: Invoice[] = [
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-013",
     status: "paid",
-    amount: 800,
+    subtotal: 800,
+    vatAmount: 168,
     currency: "EUR",
     issueDate: "2026-01-10",
     dueDate: "2026-01-31",
@@ -262,24 +248,24 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-01-25T00:00:00.000Z",
   },
 
-  // deal-008 — Gestoría López & Asociados, EUR 800 (OPERATIONAL_DEDUCTION ds-deal-008-conv)
+  // deal-008 — Gestoría López & Asociados, EUR 800 + IVA 21% 168 = gross 968 (OPERATIONAL_DEDUCTION ds-deal-008-conv)
+  // inv-014: auto-created on deal → pending-receivables; vendor has not yet submitted their invoice
   {
     id: "inv-014",
     dealId: "deal-008",
     direction: "inbound",
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-014",
-    status: "issued",
-    amount: 800,
+    status: "draft",
+    subtotal: 800,
+    vatAmount: 168,
     currency: "EUR",
     issueDate: "2026-03-05",
-    dueDate: "2026-03-31",
-    invoiceFileName: "INV-2026-014.pdf",
     createdAt: "2026-03-05T10:00:00.000Z",
     updatedAt: "2026-03-05T10:00:00.000Z",
   },
 
-  // deal-016 — TAMM Legal Services, AED 3 000 (OPERATIONAL_DEDUCTION ds-deal-016-conv)
+  // deal-016 — TAMM Legal Services, AED 3 000 + VAT 5% 150 = gross 3 150 (OPERATIONAL_DEDUCTION ds-deal-016-conv)
   {
     id: "inv-015",
     dealId: "deal-016",
@@ -287,7 +273,8 @@ export const sharedInvoices: Invoice[] = [
     partyId: "party-conv-tamm-legal",
     invoiceNumber: "INV-2026-015",
     status: "paid",
-    amount: 3000,
+    subtotal: 3000,
+    vatAmount: 150,
     currency: "AED",
     issueDate: "2026-05-04",
     dueDate: "2026-05-31",
@@ -300,7 +287,7 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-05-20T00:00:00.000Z",
   },
 
-  // deal-018 — Gestoría López & Asociados, EUR 1 200 (OPERATIONAL_DEDUCTION ds-deal-018-conv)
+  // deal-018 — Gestoría López & Asociados, EUR 1 200 + IVA 21% 252 = gross 1 452 (OPERATIONAL_DEDUCTION ds-deal-018-conv)
   {
     id: "inv-016",
     dealId: "deal-018",
@@ -308,7 +295,8 @@ export const sharedInvoices: Invoice[] = [
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-016",
     status: "paid",
-    amount: 1200,
+    subtotal: 1200,
+    vatAmount: 252,
     currency: "EUR",
     issueDate: "2026-04-15",
     dueDate: "2026-04-30",

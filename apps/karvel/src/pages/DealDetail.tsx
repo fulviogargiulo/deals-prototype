@@ -126,7 +126,6 @@ const DealDetail = () => {
 
   const currency = deal.currency ?? "EUR";
   const isREBU = deal.businessUnit === "rebu";
-  const isMBU = deal.businessUnit === "mortgage";
   const allowedTransitions = [status, ...getAllowedDealTransitions(status)];
   const stageDates = getStageDates({ ...deal, status, statusHistory });
   const currentIdx = getStageIndex(status);
@@ -419,13 +418,13 @@ const STATUS_CLASSES: Record<InvoiceStatus, string> = {
 };
 
 const DIRECTION_LABEL: Record<"inbound" | "outbound", string> = {
-  inbound: "Receivable",
-  outbound: "Payable",
+  inbound: "Payable",
+  outbound: "Receivable",
 };
 
 const DIRECTION_CLASSES: Record<"inbound" | "outbound", string> = {
-  inbound: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  outbound: "bg-amber-50 text-amber-700 border border-amber-200",
+  inbound: "bg-amber-50 text-amber-700 border border-amber-200",
+  outbound: "bg-emerald-50 text-emerald-700 border border-emerald-200",
 };
 
 function InvoicesSection({ dealId, navigate }: { dealId: string; navigate: ReturnType<typeof useNavigate> }) {
@@ -475,7 +474,7 @@ function InvoicesSection({ dealId, navigate }: { dealId: string; navigate: Retur
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums">
-                    {fmt(inv.amount, inv.currency)}
+                    {fmt(inv.subtotal + (inv.vatAmount ?? 0), inv.currency)}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium inline-block ${STATUS_CLASSES[inv.status]}`}>

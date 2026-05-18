@@ -13,7 +13,7 @@ interface Props {
   onDealsCreated: (deals: Deal[]) => void;
 }
 
-const REQUIRED_HEADERS = ["opportunityId", "type", "market", "businessUnit", "country", "clientName", "agentName", "dealPrice"];
+const REQUIRED_HEADERS = ["offerId", "market", "businessUnit", "country", "propertyName", "clientName", "agentName", "dealPrice"];
 
 function makeDefaultAgent(): AgentEntry {
   return {
@@ -40,7 +40,7 @@ function csvToDeal(row: Record<string, string>, index: number): Deal {
     country: (row.country as Deal["country"]) || "ae",
     clientName: row.clientName || "Unknown Client",
     agentName: row.agentName || "Unknown Agent",
-    opportunityName: row.opportunityName || "",
+    title: row.propertyName || row.buildingName || "",
     dealAmount: dealPrice,
     reportDate: new Date().toISOString().split("T")[0],
     dealPrice,
@@ -167,10 +167,10 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
             <div className="bg-accent/50 rounded-md p-4">
               <p className="text-[12px] font-medium text-foreground mb-2">Required CSV columns:</p>
               <p className="text-[11px] text-muted-foreground font-mono">
-                <span className="text-foreground font-semibold">opportunityId</span>, {REQUIRED_HEADERS.filter(h => h !== "opportunityId").join(", ")}
+                <span className="text-foreground font-semibold">offerId</span>, {REQUIRED_HEADERS.filter(h => h !== "offerId").join(", ")}
               </p>
-              <p className="text-[11px] text-destructive/80 mt-1.5">* Opportunity ID is mandatory for each row</p>
-              <p className="text-[11px] text-muted-foreground mt-1">Optional: takeRate, buyerName, sellerName, buildingName, community, agentShare, agentCommissionRate, opportunityName</p>
+              <p className="text-[11px] text-destructive/80 mt-1.5">* offerId is mandatory for each row</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Optional: takeRate, buyerName, sellerName, buildingName, community, agentShare, agentCommissionRate</p>
             </div>
           </div>
         )}

@@ -3,7 +3,6 @@ import type {
   AgentStrategy,
   Blueprint,
   DealStakeholder,
-  Opportunity,
 } from "./entities";
 import type {
   BusinessUnit,
@@ -76,7 +75,6 @@ export interface ProjectedPnL {
 }
 
 export interface ProjectedPnLInput {
-  opportunity?: Pick<Opportunity, "id" | "country">;
   country: Country;
   businessUnit: BusinessUnit;
 

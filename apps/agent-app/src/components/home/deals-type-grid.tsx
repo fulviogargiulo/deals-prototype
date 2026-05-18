@@ -4,6 +4,7 @@ import { ArrowRight, ChevronDown, TrendingUp, Clock, CheckCircle2, Banknote } fr
 import { useNavigate, Link } from "react-router-dom";
 import { agentDeals } from "@/data/mockDeals";
 import { DealStatus } from "@/types";
+import { dealStatusColors } from "@huspy/shared-domain";
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from "@/components/opportunities/opportunity-bare-icons";
 import { cn } from "@/lib/utils";
 
@@ -23,38 +24,41 @@ interface StatusGroup {
   bgColor: string;
 }
 
+const c = (status: DealStatus) => `hsl(${dealStatusColors[status].hsl})`;
+const cb = (status: DealStatus) => `hsl(${dealStatusColors[status].hsl} / 0.1)`;
+
 const statusGroups: StatusGroup[] = [
   {
     key: 'active',
     label: 'In progress',
     statuses: ['pending-details', 'under-review'],
     icon: Clock,
-    color: 'hsl(var(--ds-orange))',
-    bgColor: 'hsl(var(--ds-orange) / 0.1)',
+    color: c('pending-details'),
+    bgColor: cb('pending-details'),
   },
   {
     key: 'approval',
     label: 'Pending Approval',
     statuses: ['pending-agent-approval'],
     icon: CheckCircle2,
-    color: 'hsl(var(--ds-green))',
-    bgColor: 'hsl(var(--ds-green) / 0.1)',
+    color: c('pending-agent-approval'),
+    bgColor: cb('pending-agent-approval'),
   },
   {
     key: 'payment',
     label: 'Payment Pending',
     statuses: ['pending-receivables'],
     icon: Banknote,
-    color: 'hsl(var(--accent-indigo))',
-    bgColor: 'hsl(var(--accent-indigo) / 0.1)',
+    color: c('pending-receivables'),
+    bgColor: cb('pending-receivables'),
   },
   {
     key: 'finalized',
     label: 'Finalized',
     statuses: ['finalized'],
     icon: TrendingUp,
-    color: 'hsl(var(--ds-green))',
-    bgColor: 'hsl(var(--ds-green) / 0.1)',
+    color: c('finalized'),
+    bgColor: cb('finalized'),
   },
 ];
 
@@ -67,14 +71,9 @@ const statusLabels: Record<DealStatus, string> = {
   'canceled': 'Canceled',
 };
 
-const statusDotColors: Record<DealStatus, string> = {
-  'pending-details': 'hsl(var(--ds-orange))',
-  'under-review': 'hsl(var(--ds-orange))',
-  'pending-agent-approval': 'hsl(var(--ds-green))',
-  'pending-receivables': 'hsl(var(--accent-indigo))',
-  'finalized': 'hsl(var(--ds-green))',
-  'canceled': 'hsl(var(--ds-red))',
-};
+const statusDotColors: Record<DealStatus, string> = Object.fromEntries(
+  Object.entries(dealStatusColors).map(([k, { hsl }]) => [k, `hsl(${hsl})`])
+) as Record<DealStatus, string>;
 
 export function DealsTypeGrid() {
   const navigate = useNavigate();
@@ -208,15 +207,10 @@ export function DealsTypeGrid() {
                       </p>
                     </div>
 
-                    {/* Opportunity */}
-                    <Link
-                      to={`/opportunities/${deal.opportunityId}`}
-                      className="text-sm truncate"
-                      style={{ color: 'hsl(var(--accent-indigo))' }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {deal.opportunityName}
-                    </Link>
+                    {/* Property */}
+                    <span className="text-sm truncate text-muted-foreground">
+                      {deal.title ?? deal.buildingName ?? "—"}
+                    </span>
 
                     {/* Amount */}
                     <span className="text-sm font-semibold text-foreground text-right tabular-nums">

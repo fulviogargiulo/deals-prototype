@@ -259,7 +259,7 @@ Today only agent subledgers (e.g. `AgentLiability_agent-felicia`) set it, becaus
 
 **Buyers and sellers** are Parties but have no subledgers. Their receivables are tracked at the `Invoice` level (`Invoice.partyId` + `direction: "outbound"`  — Huspy sends the invoice), which is sufficient for one-shot, per-deal transactions. `ASSET_AR_{CUR}` is a shared GL that absorbs all client receivables.
 
-**When to add external-party subledgers:** if a recurring external partner (referral firm, co-broker) accumulates payables across multiple deals and Huspy batch-pays them, mirror the agent pattern — add `ExternalLiability_partner-{slug}` subledgers under `LIAB_EXTERNAL_PAYABLE_{CUR}`. This is not in the current chart of accounts because no such batch-pay workflow exists yet.
+**When to add external-party subledgers:** if a recurring external partner (referral firm, co-broker) accumulates payables across multiple deals and Huspy batch-pays them, mirror the agent pattern — add `ExternalLiability_partner-{slug}` subledgers under `LIAB_PAYABLE_{CUR}`. This is not in the current chart of accounts because no such batch-pay workflow exists yet.
 
 ## Deal status state machine
 
@@ -317,6 +317,14 @@ paid   → cancelled  (cancelReason required)
 cancelled → issued  (restore — for op error recovery)
 ```
 
+**Entry point by invoice type:**
+
+| Type | Auto-created on deal → `pending-receivables`? | Entry state | Advances to `issued` when… |
+|---|---|---|---|
+| Outbound (Huspy → client/developer/bank) | Yes | `draft` | Finance completes (due date, VAT) and sends PDF |
+| Inbound — external vendor (conveyance, legal, co-broker) | Yes | `draft` | Vendor submits their invoice; Finance validates and updates details |
+| Inbound — agent | No — decoupled from deal lifecycle | `issued` | Agent submits; no draft stage |
+
 `issued → paid` requires both `proofFileName` and `paymentReference`. Neither alone is sufficient.
 
 ### Invoice ↔ deal status invariants
@@ -333,9 +341,12 @@ cancelled → issued  (restore — for op error recovery)
 
 | Invoice state | Required posting lines (tagged via `PostingLine.invoiceId`) |
 |---|---|
-| Outbound `issued` | DEBIT `ASSET_AR_{CUR}` (contra: CREDIT `REV_{CUR}`) |
-| Outbound `paid` | + CREDIT `ASSET_AR_{CUR}` (contra: DEBIT `ASSET_BANK_BankX_{CUR}`) |
-| Inbound `paid` to agent | DEBIT `AgentLiability_agent-{slug}` (contra: CREDIT `ASSET_BANK_BankX_{CUR}`) |
+| Outbound `issued` | DEBIT `ASSET_AR_{CUR}` (gross), CREDIT `REV_{CUR}` (subtotal), CREDIT `LIAB_VAT_{CUR}` (vatAmount) |
+| Outbound `paid` | + DEBIT `ASSET_BANK_BankX_{CUR}` (gross), CREDIT `ASSET_AR_{CUR}` (gross) |
+| Inbound vendor `issued` | DEBIT `EXP_COMMISSION_{CUR}` (subtotal), DEBIT `LIAB_VAT_{CUR}` (vatAmount), CREDIT `LIAB_PAYABLE_{CUR}` (gross) |
+| Inbound vendor `paid` | + DEBIT `LIAB_PAYABLE_{CUR}` (gross), CREDIT `ASSET_BANK_BankX_{CUR}` (gross) |
+| Inbound agent `issued` | DEBIT `AgentLiability_agent-{slug}` (base), DEBIT `LIAB_VAT_{CUR}` (vatAmount), CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (withholdingAmount), CREDIT `AgentLiability_agent-{slug}` (net payable) |
+| Inbound agent `paid` | + DEBIT `AgentLiability_agent-{slug}` (net payable), CREDIT `ASSET_BANK_BankX_{CUR}` (net payable) |
 
 Finalized deals must have a posting with DEBIT `EXP_COMMISSION_{CUR}` and CREDIT `AgentLiability_agent-{slug}`.
 
@@ -407,13 +418,13 @@ One set of GL accounts per currency. BU attribution is a dimension on `Posting`,
 |---|---|---|
 | `ASSET_BANK_BankX_{CUR}` | asset | Operating bank account |
 | `ASSET_AR_{CUR}` | asset | Client accounts receivable |
-| `LIAB_AGENT_PAYABLE_{CUR}` | liability | GL parent for all agent subledgers |
-| `LIAB_EXTERNAL_PAYABLE_{CUR}` | liability | External partner payables |
-| `LIAB_VAT_{CUR}` | liability | VAT liability — CREDIT on client revenue (output VAT), DEBIT on agent invoices (input VAT); net balance = VAT owed to authority |
+| `LIAB_AGENT_{CUR}` | liability | GL parent for all agent subledgers; balance = net amount owed to agents |
+| `LIAB_PAYABLE_{CUR}` | liability | External partner payables (vendors, conveyance, legal) |
+| `LIAB_VAT_{CUR}` | liability | VAT liability — CREDIT on outbound invoices (output VAT), DEBIT on inbound invoices (input VAT); net balance = VAT owed to authority |
 | `LIAB_WITHHOLDING_TAX_{CUR}` | liability | Income withholding (IRPF Spain) deducted from agent payouts and remitted to tax authority |
 | `REV_{CUR}` | revenue | All commission and fee revenue |
 | `EXP_COMMISSION_{CUR}` | expense | Agent commission expense (gross) |
-| `AgentLiability_agent-{slug}` | liability | Subledger per agent; `glId → LIAB_AGENT_PAYABLE_{CUR}`, `partyId → party-agent-{slug}` |
+| `AgentLiability_agent-{slug}` | liability | Subledger per agent; `glId → LIAB_AGENT_{CUR}`, `partyId → party-agent-{slug}` |
 
 Supported currencies: `EUR`, `AED`, `SAR`.
 
@@ -421,14 +432,14 @@ Supported currencies: `EUR`, `AED`, `SAR`.
 
 | `businessProcess` | Typical lines |
 |---|---|
-| `invoice_issued` | DEBIT `ASSET_AR_{CUR}`, CREDIT `REV_{CUR}` |
-| `bank_statement_inbound_matched` | DEBIT `Bank_Operating_{CUR}`, CREDIT `ASSET_AR_{CUR}` |
-| `commission_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (gross), CREDIT `AgentLiability_agent-{slug}` (net), CREDIT `LIAB_STATUTORY_TAX_{CUR}` (withheld) |
-| `external_cost_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (cost accrual), CREDIT `LIAB_EXTERNAL_PAYABLE_{CUR}` (tagged to invoice). Payment closing the payable uses `bank_statement_outbound_matched`. |
-| `payout_instructed` | DEBIT `AgentLiability_agent-{slug}` (base), DEBIT `LIAB_VAT_{CUR}` (input VAT — offsets output VAT), CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (IRPF, Spain only), CREDIT `Bank_Operating_{CUR}` (net payout = base + VAT − withholding) |
-| `bank_statement_outbound_matched` | Agent payout: DEBIT `AgentLiability_agent-{slug}`, CREDIT `Bank_Operating_{CUR}`. External payable (conveyance, third-party): DEBIT `LIAB_EXTERNAL_PAYABLE_{CUR}`, CREDIT `Bank_Operating_{CUR}`. Payment posting lines are **not** tagged with `invoiceId` — only the originating accrual line carries the tag. |
-| `agent_adjustment` | DEBIT `EXP_COMMISSION_{CUR}`, CREDIT `AgentLiability_agent-{slug}` |
-| `huspy_fee` | DEBIT `AgentLiability_agent-{slug}`, CREDIT `REV_{CUR}` |
+| `invoice_issued` | DEBIT `ASSET_AR_{CUR}` (gross = subtotal + vatAmount), CREDIT `REV_{CUR}` (subtotal), CREDIT `LIAB_VAT_{CUR}` (vatAmount). Triggered: outbound invoice draft → issued. |
+| `bank_statement_inbound_matched` | DEBIT `ASSET_BANK_BankX_{CUR}` (gross), CREDIT `ASSET_AR_{CUR}` (gross). Triggered: outbound invoice issued → paid. |
+| `commission_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (gross base), CREDIT `AgentLiability_agent-{slug}` (gross base). Triggered: deal → finalized. No invoice exists yet — do not set `invoiceId`. |
+| `agent_invoice_accrual` | DEBIT `AgentLiability_agent-{slug}` (base — clears commission accrual), DEBIT `LIAB_VAT_{CUR}` (input VAT), CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (IRPF, Spain only), CREDIT `AgentLiability_agent-{slug}` (net payable = base + VAT − withholding). Triggered: agent invoice → issued. All lines tagged with `invoiceId`. |
+| `external_cost_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (subtotal), DEBIT `LIAB_VAT_{CUR}` (vatAmount — input VAT reduces net VAT owed), CREDIT `LIAB_PAYABLE_{CUR}` (gross). Triggered: inbound vendor invoice draft → issued. All lines tagged with `invoiceId`. |
+| `bank_statement_outbound_matched` | DEBIT `AgentLiability_agent-{slug}` or `LIAB_PAYABLE_{CUR}` (net payable), CREDIT `ASSET_BANK_BankX_{CUR}`. Triggered: inbound invoice issued → paid (agents and vendors use the same shape). Bank line is **not** tagged with `invoiceId`; payable-clearing line is tagged. |
+| `agent_adjustment` | DEBIT `EXP_COMMISSION_{CUR}`, CREDIT `AgentLiability_agent-{slug}`. Triggered: manually created by Finance for bonus or incentive. |
+| `huspy_fee` | DEBIT `AgentLiability_agent-{slug}`, CREDIT `REV_{CUR}`. Triggered: manually created by Finance to charge a platform fee. |
 | `manual_adjustment` | Flexible — use for standalone corrections |
 | `reversal` | Mirror of reversed posting with sides flipped; set `reversedByPostingId` |
 
@@ -444,19 +455,25 @@ Applied by `draftPostings` at deal close. Rate comes from `blueprints.ts`. Lines
 | UAE (`ae`) | VAT | 5% |
 | Saudi Arabia (`sa`) | VAT | 15% |
 
-**2. VAT + withholding on agent invoices (added at invoice creation, posted at payout)**
+**2. VAT + withholding on agent and vendor invoices (posted when invoice → issued)**
 
-When an agent creates an invoice, VAT is added on top of the base commission. For Spain, IRPF withholding is also applied (agent-editable rate). These are posted at `payout_instructed` time.
+All input VAT — whether from agent invoices or external vendor invoices — is recognized when the invoice moves to `issued`. This is consistent with output VAT (recognized at outbound `invoice_issued`).
 
-| Country | VAT on agent invoice | Withholding (IRPF) |
+| Invoice type | Event | VAT line | Withholding line |
+|---|---|---|---|
+| Outbound (Huspy → client) | `invoice_issued` (draft→issued) | CREDIT `LIAB_VAT_{CUR}` (output VAT) | — |
+| Inbound vendor | `external_cost_accrual` (draft→issued) | DEBIT `LIAB_VAT_{CUR}` (input VAT) | — |
+| Inbound agent | `agent_invoice_accrual` (→issued) | DEBIT `LIAB_VAT_{CUR}` (input VAT) | CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (IRPF, Spain only) |
+
+| Country | VAT rate on inbound invoices | Withholding (IRPF) |
 |---|---|---|
-| Spain (`es`) | IVA 21% — DEBIT `LIAB_VAT_{CUR}` (reduces VAT owed to authority) | 15% — CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (Huspy remits to Hacienda) |
-| UAE (`ae`) | VAT 5% — DEBIT `LIAB_VAT_{CUR}` | None |
-| Saudi Arabia (`sa`) | VAT 15% — DEBIT `LIAB_VAT_{CUR}` | None |
+| Spain (`es`) | IVA 21% | 15% |
+| UAE (`ae`) | VAT 5% | None |
+| Saudi Arabia (`sa`) | VAT 15% | None |
 
-`Invoice.amount` = base commission (pre-VAT). Gross invoice = `amount + vatAmount`. Net payout to agent = `amount + vatAmount − withholdingAmount`.
+`Invoice.subtotal` = base (pre-VAT). Gross = `subtotal + vatAmount`. Net payout to agent = `subtotal + vatAmount − withholdingAmount`.
 
-Agent subledger is credited the **base** amount at `commission_accrual` time. VAT and withholding are posted separately at `payout_instructed`.
+Agent subledger is credited the **base** at `commission_accrual` time. At `agent_invoice_accrual` the subledger is debited (base) and re-credited (net payable), transforming the balance in-place to the exact wire amount.
 
 ## Waterfall engine (`src/waterfall.ts`)
 

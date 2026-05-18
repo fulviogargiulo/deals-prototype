@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Deal, DealStatus, OpportunityType } from '@/types';
-import { type DealStakeholder, computeAgentCommission, buildWaterfallInput, calculateProjectedPnL } from '@huspy/shared-domain';
+import { type DealStakeholder, computeAgentCommission, buildWaterfallInput, calculateProjectedPnL, dealStatusColors } from '@huspy/shared-domain';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { OpportunityIcon } from '@/components/opportunities/opportunity-icon';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
@@ -20,14 +20,9 @@ const statusLabels: Record<DealStatus, string> = {
   canceled: 'Canceled',
 };
 
-const statusColors: Record<DealStatus, { color: string; bg: string }> = {
-  'pending-details': { color: 'hsl(var(--ds-orange))', bg: 'hsl(var(--ds-orange) / 0.1)' },
-  'under-review': { color: 'hsl(var(--accent-orchid))', bg: 'hsl(var(--accent-orchid) / 0.1)' },
-  'pending-agent-approval': { color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' },
-  'pending-receivables': { color: 'hsl(var(--accent-terracotta))', bg: 'hsl(var(--accent-terracotta) / 0.1)' },
-  finalized: { color: 'hsl(var(--fg-secondary))', bg: 'hsl(var(--fg-secondary) / 0.1)' },
-  canceled: { color: 'hsl(var(--ds-red))', bg: 'hsl(var(--ds-red) / 0.1)' },
-};
+const statusColors: Record<DealStatus, { color: string; bg: string }> = Object.fromEntries(
+  Object.entries(dealStatusColors).map(([k, { hsl }]) => [k, { color: `hsl(${hsl})`, bg: `hsl(${hsl} / 0.1)` }])
+) as Record<DealStatus, { color: string; bg: string }>;
 
 const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = {
   buy: { icon: BuyBareIcon, color: '#008A8A' },

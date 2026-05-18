@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useRef, useMemo } from "react";
-import { sharedInvoices, sharedParties, sharedDeals, sharedLedgers, sharedPostings, getPostingLinesForInvoice } from "@huspy/shared-domain";
+import { sharedInvoices, sharedParties, sharedDeals, sharedLedgers, sharedPostings, sharedPostingLines, getPostingLinesForInvoice } from "@huspy/shared-domain";
 import type { Invoice } from "@huspy/shared-domain";
+import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { ArrowLeft, Upload, X, AlertTriangle, Check, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,73 +42,95 @@ function resolveLedger(ledgerId: number): string {
 }
 
 function PostingsSection({ invoiceId }: { invoiceId: string }) {
+  const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
   const postingLines = useMemo(() => getPostingLinesForInvoice(invoiceId), [invoiceId]);
 
   if (postingLines.length === 0) {
     return null;
   }
 
-  // Map posting lines for the invoice
-  const postingsByLine = postingLines.map((line) => {
-    const posting = sharedPostings.find((p) => p.id === line.postingId);
-    return { line, posting };
-  });
+  const postingsByLine = postingLines
+    .map((line) => {
+      const posting = sharedPostings.find((p) => p.id === line.postingId);
+      return { line, posting };
+    })
+    .sort((a, b) => (a.posting?.valueDate ?? "").localeCompare(b.posting?.valueDate ?? ""));
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-      <h2 className="text-[14px] font-semibold text-foreground">Accounting Entries</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
-                ID
-              </th>
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
-                Date
-              </th>
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
-                Process
-              </th>
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
-                Account
-              </th>
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
-                Side
-              </th>
-              <th className="text-right px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
-                Amount
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {postingsByLine.map(({ line, posting }) => (
-              <tr key={line.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
-                <td className="px-3 py-2 text-muted-foreground font-mono text-[11px]">{line.id}</td>
-                <td className="px-3 py-2 text-muted-foreground">{posting?.valueDate ?? "—"}</td>
-                <td className="px-3 py-2 text-foreground capitalize text-[11px] font-medium">
-                  {posting?.businessProcess?.replace(/_/g, " ") ?? "—"}
-                </td>
-                <td className="px-3 py-2 text-foreground font-mono text-[11px]">{resolveLedger(line.ledgerId)}</td>
-                <td className="px-3 py-2">
-                  <span
-                    className={cn("px-2 py-0.5 rounded text-[10px] font-semibold", {
-                      "bg-blue-50 text-blue-700": line.side === "DEBIT",
-                      "bg-amber-50 text-amber-700": line.side === "CREDIT",
-                    })}
-                  >
-                    {line.side}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums">
-                  {fmt(line.amount, posting?.currency ?? "EUR")}
-                </td>
+    <>
+      <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+        <h2 className="text-[14px] font-semibold text-foreground">Accounting Entries</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
+                  Posting
+                </th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
+                  Line ID
+                </th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
+                  Date
+                </th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
+                  Process
+                </th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
+                  Account
+                </th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
+                  Side
+                </th>
+                <th className="text-right px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-wide">
+                  Amount
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {postingsByLine.map(({ line, posting }) => (
+                <tr key={line.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
+                  <td className="px-3 py-2">
+                    <button
+                      onClick={() => setSelectedPostingId(line.postingId)}
+                      className="font-mono text-[11px] text-primary hover:underline underline-offset-2"
+                    >
+                      {line.postingId}
+                    </button>
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground font-mono text-[11px]">{line.id}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{posting?.valueDate ?? "—"}</td>
+                  <td className="px-3 py-2 text-foreground capitalize text-[11px] font-medium">
+                    {posting?.businessProcess?.replace(/_/g, " ") ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 text-foreground font-mono text-[11px]">{resolveLedger(line.ledgerId)}</td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={cn("px-2 py-0.5 rounded text-[10px] font-semibold", {
+                        "bg-blue-50 text-blue-700": line.side === "DEBIT",
+                        "bg-amber-50 text-amber-700": line.side === "CREDIT",
+                      })}
+                    >
+                      {line.side}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums">
+                    {fmt(line.amount, posting?.currency ?? "EUR")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+      <PostingDetailDialog
+        postingId={selectedPostingId}
+        allPostings={sharedPostings}
+        allLines={sharedPostingLines}
+        open={!!selectedPostingId}
+        onOpenChange={(open) => !open && setSelectedPostingId(null)}
+      />
+    </>
   );
 }
 
@@ -130,6 +153,13 @@ export default function InvoiceDetail() {
   const [cancelReason, setCancelReason] = useState("");
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Draft edit state (outbound only)
+  const [draftDueDate, setDraftDueDate] = useState(invoice.dueDate || "");
+  const [draftVatAmount, setDraftVatAmount] = useState(
+    invoice.vatAmount != null ? String(invoice.vatAmount) : ""
+  );
+  const [draftInvoiceNumber, setDraftInvoiceNumber] = useState(invoice.invoiceNumber);
 
   const handleFileSelect = (file: File) => {
     setProofFile(file);
@@ -168,6 +198,21 @@ export default function InvoiceDetail() {
     setIsSaving(false);
   };
 
+  const handleMarkAsIssued = async () => {
+    if (!draftDueDate) {
+      alert("Please set a due date before issuing.");
+      return;
+    }
+    setIsSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    invoice.status = "issued";
+    invoice.invoiceNumber = draftInvoiceNumber;
+    invoice.dueDate = draftDueDate;
+    invoice.vatAmount = draftVatAmount ? parseFloat(draftVatAmount) : undefined;
+    invoice.updatedAt = new Date().toISOString();
+    setIsSaving(false);
+  };
+
   const handleConfirmCancel = async () => {
     if (!cancelReason.trim()) {
       alert("Please provide a reason for cancellation.");
@@ -187,6 +232,11 @@ export default function InvoiceDetail() {
   };
 
   const dealId = resolveDeal(invoice.dealId);
+
+  const gross = invoice.subtotal + (invoice.vatAmount ?? 0);
+  const netPayout = invoice.withholdingAmount != null
+    ? gross - invoice.withholdingAmount
+    : undefined;
 
   return (
     <div className="flex-1 min-w-0 flex flex-col min-h-screen bg-background">
@@ -228,8 +278,12 @@ export default function InvoiceDetail() {
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Amount</p>
-                <p className="text-[20px] font-bold text-foreground">{fmt(invoice.amount, invoice.currency)}</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">
+                  {netPayout != null ? "Net Payout" : "Gross Amount"}
+                </p>
+                <p className="text-[20px] font-bold text-foreground">
+                  {fmt(netPayout ?? gross, invoice.currency)}
+                </p>
               </div>
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Direction</p>
@@ -237,6 +291,24 @@ export default function InvoiceDetail() {
                   {invoice.direction === "outbound" ? "Outbound" : "Inbound"}
                 </p>
               </div>
+              {invoice.vatAmount != null && (
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Subtotal</p>
+                  <p className="text-[14px] text-foreground">{fmt(invoice.subtotal, invoice.currency)}</p>
+                </div>
+              )}
+              {invoice.vatAmount != null && (
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">VAT</p>
+                  <p className="text-[14px] text-foreground">{fmt(invoice.vatAmount, invoice.currency)}</p>
+                </div>
+              )}
+              {invoice.withholdingAmount != null && (
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Withholding</p>
+                  <p className="text-[14px] text-foreground">−{fmt(invoice.withholdingAmount, invoice.currency)}</p>
+                </div>
+              )}
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Issue Date</p>
                 <p className="text-[14px] text-foreground">{invoice.issueDate}</p>
@@ -264,6 +336,88 @@ export default function InvoiceDetail() {
               )}
             </div>
           </div>
+
+          {/* Draft — complete before issuing */}
+          {invoice.status === "draft" && (
+            <div className="bg-card border border-amber-200 rounded-lg p-6 space-y-5">
+              <div>
+                <h2 className="text-[14px] font-semibold text-foreground">Complete &amp; Issue</h2>
+                <p className="text-[12px] text-muted-foreground mt-1">
+                  Review the pre-filled values, set the due date, then download the PDF and send it to the party before marking as Issued.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[12px] text-muted-foreground mb-1.5 block">Invoice Number</label>
+                  <input
+                    type="text"
+                    value={draftInvoiceNumber}
+                    onChange={(e) => setDraftInvoiceNumber(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-[12px] text-muted-foreground mb-1.5 block">
+                    Due Date <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={draftDueDate}
+                    onChange={(e) => setDraftDueDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+                <div>
+                  <label className="text-[12px] text-muted-foreground mb-1.5 block">
+                    VAT Amount ({invoice.currency})
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={draftVatAmount}
+                    onChange={(e) => setDraftVatAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 border border-border rounded-lg text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Gross summary */}
+              <div className="bg-muted/40 rounded-lg p-4 space-y-2 text-[13px]">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span className="font-mono">{fmt(invoice.subtotal, invoice.currency)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>VAT</span>
+                  <span className="font-mono">{fmt(parseFloat(draftVatAmount) || 0, invoice.currency)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-foreground border-t border-border pt-2 mt-1">
+                  <span>Total to collect</span>
+                  <span className="font-mono">{fmt(invoice.subtotal + (parseFloat(draftVatAmount) || 0), invoice.currency)}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => {}}
+                  className="flex items-center gap-1.5 px-4 py-2.5 border border-border rounded-lg text-[13px] font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download PDF
+                </button>
+                <button
+                  onClick={handleMarkAsIssued}
+                  disabled={isSaving || !draftDueDate}
+                  className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
+                >
+                  {isSaving ? "Saving…" : "Mark as Issued"}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Postings */}
           <PostingsSection invoiceId={invoiceId!} />

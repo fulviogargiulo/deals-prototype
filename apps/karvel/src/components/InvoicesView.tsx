@@ -71,6 +71,7 @@ export function InvoicesView() {
   }, [direction, statusFilter, currencyFilter]);
 
   // Tiles — always based on full dataset (unfiltered), split by direction + status
+  const outboundDraft = sharedInvoices.filter((i) => i.direction === "outbound" && i.status === "draft");
   const outboundIssued = sharedInvoices.filter((i) => i.direction === "outbound" && i.status === "issued");
   const outboundPaid = sharedInvoices.filter((i) => i.direction === "outbound" && i.status === "paid");
   const inboundIssued = sharedInvoices.filter((i) => i.direction === "inbound" && i.status === "issued");
@@ -80,13 +81,20 @@ export function InvoicesView() {
   const singleCurrency = currencyFilter !== "all" ? currencyFilter : undefined;
   const sumFor = (list: typeof sharedInvoices) =>
     singleCurrency
-      ? list.filter((i) => i.currency === singleCurrency).reduce((s, i) => s + i.amount, 0)
+      ? list.filter((i) => i.currency === singleCurrency).reduce((s, i) => s + i.subtotal + (i.vatAmount ?? 0), 0)
       : undefined;
 
   return (
     <div className="space-y-6">
       {/* KPI tiles */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
+        <Tile
+          label="Outbound — Draft"
+          count={outboundDraft.length}
+          amount={sumFor(outboundDraft)}
+          currency={singleCurrency}
+          colorClass="text-muted-foreground"
+        />
         <Tile
           label="Outbound — Awaiting payment"
           count={outboundIssued.length}
@@ -249,7 +257,7 @@ export function InvoicesView() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums">
-                  {fmt(inv.amount, inv.currency)}
+                  {fmt(inv.subtotal + (inv.vatAmount ?? 0), inv.currency)}
                 </td>
                 <td className="px-4 py-3">
                   <span

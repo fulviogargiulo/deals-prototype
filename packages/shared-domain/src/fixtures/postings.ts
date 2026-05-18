@@ -36,6 +36,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-003",
+    dealId: "deal-001",
     businessUnit: "rebu",
     externalRef: "AGINV-001",
     businessProcess: "commission_accrual",
@@ -43,7 +44,7 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-01-20T11:00:00.000Z",
     valueDate: "2026-01-20",
     currency: "EUR",
-    description: "Agent invoice — Felicia Canovas, Jan 2026",
+    description: "Commission accrual — deal-001 (Felicia Canovas, EUR 4 230.80)",
   },
   {
     id: "posting-004",
@@ -118,6 +119,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-011",
+    dealId: "deal-016",
     businessUnit: "rebu",
     externalRef: "AGINV-016",
     businessProcess: "commission_accrual",
@@ -125,7 +127,7 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-05-10T11:00:00.000Z",
     valueDate: "2026-05-10",
     currency: "AED",
-    description: "Agent invoice — Gelo Huspy, May 2026",
+    description: "Commission accrual — deal-016 (Gelo Huspy, AED 16 115.40)",
   },
 
   // ── Standalone — Q2 2026 incentive + platform fee, agent-004 (REBU, AED) ─
@@ -174,6 +176,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-015",
+    dealId: "deal-018",
     businessUnit: "rebu",
     externalRef: "AGINV-018",
     businessProcess: "commission_accrual",
@@ -181,7 +184,7 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-04-25T11:00:00.000Z",
     valueDate: "2026-04-25",
     currency: "EUR",
-    description: "Agent invoice — Felicia Canovas, Apr 2026",
+    description: "Commission accrual — deal-018 (Felicia Canovas, EUR 9 220.00)",
   },
 
   // ── Standalone — Apr 2026 platform fee, agent-001 (REBU, EUR) ─────────

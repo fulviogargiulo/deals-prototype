@@ -5,9 +5,67 @@ import { PageContainer } from '@/components/layout/page-container';
 import { TrackedTitle } from '@/components/ui/tracked-title';
 import { ExpectedPayoutSection } from '@/components/deals/expected-payout-section';
 import { PaidInvoicesModal } from '@/components/modals/paid-invoices-modal';
-import { agentDeals, agentStakeMap, mockStatement } from '@/data/mockDeals';
-import { buildWaterfallInput, calculateProjectedPnL, computeAgentCommission } from '@huspy/shared-domain';
-import type { Deal } from '@/types';
+import { agentDeals, agentStakeMap, CURRENT_AGENT_ID } from '@/data/mockDeals';
+import { getInvoices, getPostingLines } from '@/data/earningsStore';
+import { buildWaterfallInput, calculateProjectedPnL, computeAgentCommission, sharedPostings, sharedAgents, sharedLedgers } from '@huspy/shared-domain';
+import type { Deal, StatementOfAccount, StatementLineItem } from '@/types';
+
+const AGENT_PARTY_ID = sharedAgents.find(a => a.id === CURRENT_AGENT_ID)?.partyId ?? '';
+const AGENT_LEDGER_ID = sharedLedgers.find(l => l.name === `AgentLiability_${CURRENT_AGENT_ID}`)?.id;
+
+function formatPeriodLabel(period: string): string {
+  if (/^\d{4}-Q\d$/.test(period)) {
+    const [year, q] = period.split('-');
+    return `${q} ${year}`;
+  }
+  if (/^\d{4}-\d{2}$/.test(period)) {
+    return new Date(period + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  }
+  return period;
+}
+
+function buildExpectedStatement(): StatementOfAccount | null {
+  const issuedInvoices = getInvoices().filter(
+    i => i.direction === 'inbound' && i.partyId === AGENT_PARTY_ID && i.status === 'issued'
+  );
+  if (issuedInvoices.length === 0) return null;
+
+  const issuedIds = new Set(issuedInvoices.map(i => i.id));
+  const taggedLines = getPostingLines()
+    .filter(l => l.invoiceId && issuedIds.has(l.invoiceId) && l.ledgerId === AGENT_LEDGER_ID)
+    .map(l => ({ ...l, posting: sharedPostings.find(p => p.id === l.postingId)! }))
+    .filter(l => !!l.posting);
+
+  const lineItems: StatementLineItem[] = taggedLines.map(l => ({
+    id: l.id,
+    description: l.posting.description ?? 'Posting',
+    type: l.side === 'CREDIT' ? 'credit' : 'debit',
+    category: l.posting.businessProcess === 'commission_accrual' ? 'deal-commission'
+            : l.posting.businessProcess === 'huspy_fee' ? 'support-fee'
+            : 'other',
+    amount: l.amount,
+    dealId: l.posting.dealId,
+  }));
+
+  const totalCredit = lineItems.filter(li => li.type === 'credit').reduce((s, li) => s + li.amount, 0);
+  const totalDebit  = lineItems.filter(li => li.type === 'debit').reduce((s, li) => s + li.amount, 0);
+  const mostRecent  = [...issuedInvoices].sort((a, b) => b.issueDate.localeCompare(a.issueDate))[0];
+
+  return {
+    id: 'expected-stmt',
+    cycleLabel: formatPeriodLabel(mostRecent.period ?? mostRecent.issueDate.slice(0, 7)),
+    period: mostRecent.period ?? mostRecent.issueDate.slice(0, 7),
+    lineItems,
+    totalCredit,
+    totalDebit,
+    balance: totalCredit - totalDebit,
+    status: 'confirmed',
+    generatedAt: mostRecent.issueDate + 'T00:00:00.000Z',
+    expiresAt: mostRecent.dueDate
+      ? new Date(mostRecent.dueDate).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
 
 function resolvedCommission(d: Deal): number {
   const stake = agentStakeMap.get(d.id);
@@ -26,6 +84,7 @@ export function PaymentHistory() {
   const closedDeals = agentDeals.filter(d => CLOSED_STATUSES.includes(d.status));
   const pipelineDeals = agentDeals.filter(d => PIPELINE_STATUSES.includes(d.status));
 
+  const expectedStatement = buildExpectedStatement();
   const totalClosedDeals = closedDeals.length;
   const totalIncome = closedDeals.reduce((sum, d) => sum + resolvedCommission(d), 0);
   const potentialIncome = pipelineDeals.reduce((sum, d) => sum + resolvedCommission(d), 0);
@@ -93,7 +152,7 @@ export function PaymentHistory() {
         </div>
 
         {/* Expected Income This Cycle */}
-        <ExpectedPayoutSection statement={mockStatement} title="Expected Income" />
+        {expectedStatement && <ExpectedPayoutSection statement={expectedStatement} title="Expected Income" />}
 
         {/* Potential Income from Pipeline */}
         <div>

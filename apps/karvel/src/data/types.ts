@@ -2,6 +2,7 @@ import type {
   Deal as BaseDeal,
   DealStatus,
   PayableStatus,
+  StatusHistoryEntry,
 } from "@huspy/shared-domain";
 
 // ─── Karvel operational types (not in shared domain model) ───────────────────
@@ -49,13 +50,6 @@ export interface ExternalPartnerEntry {
   partnerAmount: number;
   partnerBank?: string;
   partnerBankAccount?: string;
-}
-
-export interface StatusHistoryEntry {
-  from: DealStatus;
-  to: DealStatus;
-  timestamp: string;
-  note?: string;
 }
 
 // ─── Karvel Deal = shared Deal + Karvel operational fields ───────────────────
@@ -106,8 +100,6 @@ export type Deal = BaseDeal & {
   payableRefNumber?: string;
   payableStatus?: PayableStatus;
 
-  // Status history (written by DealDetail on status changes)
-  statusHistory?: StatusHistoryEntry[];
 };
 
 // ─── Re-exports from shared domain ──────────────────────────────────────────
@@ -119,6 +111,7 @@ export type {
   ReceivableEntry,
   ReceivableEntityType,
   PaymentMode,
+  StatusHistoryEntry,
 
   InvoiceStatus,
   BusinessUnit,

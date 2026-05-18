@@ -1,5 +1,7 @@
 export { sharedClients } from "./clients";
 export { sharedOpportunities } from "./opportunities";
+export { sharedProperties } from "./properties";
+export { sharedOffers } from "./offers";
 export { sharedDeals } from "./deals";
 export { sharedInvoices } from "./invoices";
 export { sharedLedgers } from "./ledgers";

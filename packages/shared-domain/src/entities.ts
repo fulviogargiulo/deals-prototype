@@ -630,13 +630,11 @@ export interface Invoice {
   dealId?: string;
   invoiceNumber: string;
   status: InvoiceStatus;
-  /** Base commission amount (pre-VAT). Gross invoice total = amount + vatAmount. Net payout = amount + vatAmount − withholdingAmount. */
-  amount: number;
-  /** VAT amount charged on top of the base commission (output tax for the agent, input tax for Huspy). */
+  /** Pre-VAT base amount. For invoices without a VAT breakdown this is the full face value. */
+  subtotal: number;
+  /** VAT on top of subtotal. Gross (invoice face value) = subtotal + vatAmount. */
   vatAmount?: number;
-  /** Withholding rate applied (e.g. 15 = IRPF 15%). Agent-editable at invoice creation; omitted when market has no withholding. */
-  withholdingRate?: number;
-  /** Withholding amount deducted from the gross payout and remitted by Huspy to the tax authority. */
+  /** Withholding deducted at payment (e.g. IRPF 15%). Net payout = subtotal + vatAmount − withholdingAmount. */
   withholdingAmount?: number;
   currency: Currency;
   issueDate: string;

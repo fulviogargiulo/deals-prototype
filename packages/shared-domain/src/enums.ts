@@ -56,14 +56,14 @@ export type LedgerType = "asset" | "liability" | "revenue" | "expense";
 export type PostingSide = "DEBIT" | "CREDIT";
 
 export type BusinessProcess =
-  | "invoice_issued"               // Huspy raises outbound invoice to collect commission — DR ASSET_AR / CR REV
-  | "commission_accrual"           // Huspy recognizes commission owed to agent — DR EXP_COMMISSION / CR AgentLiability
-  | "external_cost_accrual"        // Third-party vendor cost accrued (conveyance, legal, etc.) — DR EXP_COMMISSION / CR LIAB_EXTERNAL_PAYABLE
+  | "invoice_issued"               // Huspy raises outbound invoice — DR ASSET_AR (gross) / CR REV (subtotal) / CR LIAB_VAT (vatAmount)
+  | "commission_accrual"           // Huspy recognizes commission owed to agent — DR EXP_COMMISSION / CR LIAB_AGENT (gross base)
+  | "agent_invoice_accrual"        // Agent invoice received and validated (→ issued) — DR LIAB_AGENT (base) + DR LIAB_VAT / CR LIAB_WITHHOLDING + CR LIAB_AGENT (net payable)
+  | "external_cost_accrual"        // Third-party vendor invoice received and validated (→ issued) — DR EXP_COMMISSION / DR LIAB_VAT / CR LIAB_PAYABLE (gross)
   | "bank_statement_inbound_matched"  // Cash received from external party, matched to bank statement — DR ASSET_BANK / CR ASSET_AR
-  | "bank_statement_outbound_matched" // Cash paid to external vendor, matched to bank statement — DR LIAB_EXTERNAL_PAYABLE / CR ASSET_BANK
-  | "payout_instructed"            // Agent payout wire sent — DR AgentLiability + DR LIAB_VAT / CR LIAB_WITHHOLDING_TAX + CR ASSET_BANK
-  | "agent_adjustment"             // Standalone bonus or incentive to agent — DR EXP_COMMISSION / CR AgentLiability
-  | "huspy_fee"                    // Fee charged by Huspy to agent — DR AgentLiability / CR REV
+  | "bank_statement_outbound_matched" // Cash paid to agent or vendor, matched to bank statement — DR LIAB_AGENT or LIAB_PAYABLE / CR ASSET_BANK
+  | "agent_adjustment"             // Standalone bonus or incentive to agent — DR EXP_COMMISSION / CR LIAB_AGENT
+  | "huspy_fee"                    // Fee charged by Huspy to agent — DR LIAB_AGENT / CR REV
   | "manual_adjustment"            // Flexible standalone correction — journal varies
   | "reversal";                    // Mirror of reversed posting with sides flipped; set reversedByPostingId
 

@@ -30,7 +30,7 @@ function formatAmount(amount: number, side: PostingLine['side'], currency: strin
 const PROCESS_LABELS: Record<string, string> = {
   commission_accrual: 'commission',
   agent_adjustment:   'adjustment',
-  huspy_fee:          'platform fee',
+  huspy_fee:          'fee',
   manual_adjustment: 'adjustment',
 };
 
@@ -74,7 +74,7 @@ export function AgentEarningsView() {
       : 'bg-surface-ds-raised text-fg-secondary hover:bg-surface-ds-raised/80'
   );
 
-  const allAgentInvoices = getInvoices().filter(i => i.direction === "outbound" && i.partyId === AGENT_PARTY_ID);
+  const allAgentInvoices = getInvoices().filter(i => i.direction === "inbound" && i.partyId === AGENT_PARTY_ID);
   // Map invoiceId → invoiceNumber for the Invoice column in the ledger table.
   const invoiceNumberMap = new Map(allAgentInvoices.map(i => [i.id, i.invoiceNumber]));
 
@@ -95,8 +95,8 @@ export function AgentEarningsView() {
     ? allAgentInvoices.filter(i => isWithinInterval(parseISO(i.issueDate), { start: dateRange.from, end: dateRange.to }))
     : allAgentInvoices;
 
-  // Lines eligible for statement generation: uninvoiced (no invoiceId)
-  const statementEligibleLines = filteredLines.filter(l => !l.invoiceId);
+  const STATEMENT_ELIGIBLE_PROCESSES = new Set(['commission_accrual', 'agent_adjustment', 'huspy_fee']);
+  const statementEligibleLines = filteredLines.filter(l => !l.invoiceId && STATEMENT_ELIGIBLE_PROCESSES.has(l.posting.businessProcess));
   const canGenerateStatement = statementEligibleLines.length > 0;
 
   const periodNet = filteredLines.reduce((s, l) => l.side === 'CREDIT' ? s + l.amount : s - l.amount, 0);
@@ -294,7 +294,7 @@ export function AgentEarningsView() {
                       className="text-[15px] font-semibold tabular-nums"
                       style={{ color: 'hsl(var(--accent-teal))' }}
                     >
-                      {symbol}{inv.amount.toLocaleString()}
+                      {symbol}{(inv.subtotal + (inv.vatAmount ?? 0)).toLocaleString()}
                     </span>
                     <span
                       className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize"
