@@ -1,7 +1,7 @@
 import type { Deal, ReceivableEntry, ReceivableEntityType } from "../entities";
 import { sharedClients } from "./clients";
 import { sharedParties } from "./parties";
-import { sharedOpportunities } from "./opportunities";
+import { sharedOffers } from "./offers";
 import { sharedDealStakeholders } from "./dealStakeholders";
 import { sharedAgents } from "./agents";
 import { sharedInvoices } from "./invoices";
@@ -19,8 +19,8 @@ const agentDisplayName: Record<string, string> = {
 
 const CLIENT_ROLES = new Set<string>(["REVENUE_SOURCE"]);
 
-function findOpp(id: string) {
-  return sharedOpportunities.find((o) => o.id === id);
+function findOffer(id: string) {
+  return sharedOffers.find((o) => o.id === id);
 }
 
 function deriveReceivableEntityType(partyId: string, market: Deal["market"]): ReceivableEntityType {
@@ -33,7 +33,7 @@ function deriveReceivableEntityType(partyId: string, market: Deal["market"]): Re
 
 interface BaseInput {
   id: string;
-  opportunityId: string;
+  offerId: string;
   status: Deal["status"];
   market: Deal["market"];
   country: Deal["country"];
@@ -53,7 +53,7 @@ interface BaseInput {
 }
 
 function expand(b: BaseInput): Deal {
-  const opp = findOpp(b.opportunityId);
+  const offer = findOffer(b.offerId);
   const f = computeDealFinancials(b.dealAmount, b.conveyanceFee ?? 0, { takeRate: b.commissionPercentage });
   const businessUnit = b.businessUnit ?? "rebu";
   // rebateAmount and subsidyAmount are stored as reference fields on the deal.
@@ -74,8 +74,8 @@ function expand(b: BaseInput): Deal {
   const client = clientStake ? sharedClients.find((c) => c.partyId === clientStake.partyId) : undefined;
   const clientParty = client ? sharedParties.find((p) => p.id === client.partyId) : undefined;
 
-  // Derive receivables from inbound invoices linked to this deal.
-  const dealInvoices = sharedInvoices.filter((i) => i.dealId === b.id && i.direction === "inbound");
+  // Derive receivables from outbound invoices linked to this deal.
+  const dealInvoices = sharedInvoices.filter((i) => i.dealId === b.id && i.direction === "outbound");
   const receivables: ReceivableEntry[] = dealInvoices.map((inv) => {
     const party = sharedParties.find((p) => p.id === inv.partyId);
     return {
@@ -90,10 +90,13 @@ function expand(b: BaseInput): Deal {
     };
   });
 
+  const propertyTitle = offer?.propertyName ?? b.id;
+
   return {
     // Canonical core
     id: b.id,
-    opportunityId: b.opportunityId,
+    offerId: b.offerId,
+    propertyId: offer?.propertyId,
     status: b.status,
     market: b.market,
     businessUnit,
@@ -111,15 +114,12 @@ function expand(b: BaseInput): Deal {
     // Display caches — derived from DealStakeholder chain, not embedded FKs
     clientName: clientParty?.displayName ?? "Unknown",
     agentName,
-    opportunityName: opp?.title ?? "Unknown",
-    title: opp?.title ?? b.id,
+    title: propertyTitle,
 
     // Karvel — operational
     channel: b.channel,
     ofCaseNumber: `OF-${b.id.toUpperCase()}`,
-    buildingName: opp?.title,
-    community: opp?.neighborhoods[0],
-    propertyType: opp?.propertyTypes?.[0],
+    buildingName: propertyTitle,
     buyerName: b.market !== "leasing" ? clientParty?.displayName : undefined,
     buyerEmail: b.market !== "leasing" ? clientParty?.email : undefined,
     buyerPhone: b.market !== "leasing" ? clientParty?.phone : undefined,
@@ -156,13 +156,12 @@ function expand(b: BaseInput): Deal {
 
 export const sharedDeals: Deal[] = [
   expand({
-    id: "deal-001", opportunityId: "opp-001",
+    id: "deal-001", offerId: "offer-001",
     status: "finalized", market: "primary", country: "es", currency: "EUR",
     dealAmount: 385000, reportDate: "2026-01-06",
     createdAt: "2026-01-06T09:00:00.000Z", updatedAt: "2026-01-12T14:30:00.000Z",
     commissionPercentage: 3, paymentDate: "2026-01-12",
     rebatePercentage: 1.5,
-    // Anchored: invoice issued 2026-01-10, paid 2026-01-12; posting deal_close 2026-01-10T09:00, payment_in 2026-01-12T14:00
     statusHistory: [
       { from: "pending-details",         to: "under-review",            timestamp: "2026-01-07T10:00:00.000Z", note: "Ops review started" },
       { from: "under-review",            to: "pending-agent-approval",  timestamp: "2026-01-09T15:00:00.000Z", note: "Documents approved" },
@@ -171,7 +170,7 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-002", opportunityId: "opp-002",
+    id: "deal-002", offerId: "offer-002",
     status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 720000, reportDate: "2026-02-08",
     createdAt: "2026-02-08T00:00:00.000Z", updatedAt: "2026-02-13T14:00:00.000Z",
@@ -183,14 +182,14 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-003", opportunityId: "opp-003",
+    id: "deal-003", offerId: "offer-003",
     status: "pending-details", market: "leasing", country: "es", currency: "EUR",
     dealAmount: 14400, reportDate: "2026-02-22",
     createdAt: "2026-02-22T00:00:00.000Z", updatedAt: "2026-02-22T00:00:00.000Z",
     commissionPercentage: 8,
   }),
   expand({
-    id: "deal-004", opportunityId: "opp-004",
+    id: "deal-004", offerId: "offer-004",
     status: "pending-details", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 1250000, reportDate: "2026-03-03",
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-03T00:00:00.000Z",
@@ -198,7 +197,7 @@ export const sharedDeals: Deal[] = [
     subsidyAmount: 6000,
   }),
   expand({
-    id: "deal-005", opportunityId: "opp-005",
+    id: "deal-005", offerId: "offer-005",
     status: "under-review", market: "primary", country: "sa", currency: "SAR",
     dealAmount: 540000, reportDate: "2026-02-15",
     createdAt: "2026-02-15T00:00:00.000Z", updatedAt: "2026-02-17T10:00:00.000Z",
@@ -209,7 +208,7 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-006", opportunityId: "opp-006",
+    id: "deal-006", offerId: "offer-006",
     status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 320000, reportDate: "2026-02-20",
     createdAt: "2026-02-20T00:00:00.000Z", updatedAt: "2026-02-26T14:00:00.000Z",
@@ -221,7 +220,7 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-007", opportunityId: "opp-001",
+    id: "deal-007", offerId: "offer-007",
     status: "under-review", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 475000, reportDate: "2026-03-05",
     createdAt: "2026-03-05T00:00:00.000Z", updatedAt: "2026-03-07T09:00:00.000Z",
@@ -232,13 +231,12 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-008", opportunityId: "opp-002",
+    id: "deal-008", offerId: "offer-008",
     status: "pending-receivables", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 580000, reportDate: "2026-03-03",
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-05T10:00:00.000Z",
     commissionPercentage: 2.5,
     subsidyAmount: 5000,
-    // Anchored: invoice 1 issued 2026-03-05 (posting-017), invoice 2 issued 2026-03-10 (posting-018)
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-03-04T10:00:00.000Z" },
       { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-03-04T16:00:00.000Z" },
@@ -246,7 +244,7 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-009", opportunityId: "opp-007",
+    id: "deal-009", offerId: "offer-009",
     status: "under-review", market: "primary", country: "ae", currency: "AED",
     dealAmount: 1850000, reportDate: "2026-05-01",
     createdAt: "2026-05-01T00:00:00.000Z", updatedAt: "2026-05-03T09:00:00.000Z",
@@ -258,7 +256,7 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-010", opportunityId: "opp-008",
+    id: "deal-010", offerId: "offer-010",
     status: "canceled", market: "secondary", country: "ae", currency: "AED",
     dealAmount: 4200000, reportDate: "2026-03-18",
     createdAt: "2026-03-18T00:00:00.000Z", updatedAt: "2026-03-25T11:00:00.000Z",
@@ -270,7 +268,7 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-011", opportunityId: "opp-009",
+    id: "deal-011", offerId: "offer-011",
     status: "pending-details", market: "primary", country: "ae", currency: "AED",
     businessUnit: "mortgage",
     dealAmount: 1400000, reportDate: "2026-04-20",
@@ -279,7 +277,7 @@ export const sharedDeals: Deal[] = [
     channel: "MA/Broker",
   }),
   expand({
-    id: "deal-012", opportunityId: "opp-010",
+    id: "deal-012", offerId: "offer-012",
     status: "under-review", market: "secondary", country: "ae", currency: "AED",
     businessUnit: "mortgage",
     dealAmount: 3200000, reportDate: "2026-04-28",
@@ -291,7 +289,7 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-013", opportunityId: "opp-011",
+    id: "deal-013", offerId: "offer-013",
     status: "pending-agent-approval", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 620000, reportDate: "2026-04-10",
     createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-15T14:00:00.000Z",
@@ -303,13 +301,12 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-014", opportunityId: "opp-011",
+    id: "deal-014", offerId: "offer-014",
     status: "pending-receivables", market: "secondary", country: "es", currency: "EUR",
     businessUnit: "mortgage",
     dealAmount: 496000, reportDate: "2026-04-10",
     createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-15T10:00:00.000Z",
     commissionPercentage: 0.5,
-    // Anchored: invoice issued 2026-04-15, posting-019 deal_close 2026-04-15T10:00
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-04-11T09:00:00.000Z" },
       { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-04-13T15:00:00.000Z" },
@@ -317,13 +314,12 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-015", opportunityId: "opp-012",
+    id: "deal-015", offerId: "offer-015",
     status: "pending-receivables", market: "primary", country: "sa", currency: "SAR",
     businessUnit: "mortgage",
     dealAmount: 920000, reportDate: "2026-04-28",
     createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-05-02T09:00:00.000Z",
     commissionPercentage: 0.5,
-    // Anchored: invoice issued 2026-05-02, posting-020 deal_close 2026-05-02T10:00
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-04-29T09:00:00.000Z" },
       { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-05-01T14:00:00.000Z" },
@@ -331,14 +327,13 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-016", opportunityId: "opp-007",
+    id: "deal-016", offerId: "offer-016",
     status: "finalized", market: "primary", country: "ae", currency: "AED",
     dealAmount: 2100000, reportDate: "2026-05-01",
     createdAt: "2026-05-01T00:00:00.000Z", updatedAt: "2026-05-05T11:00:00.000Z",
     commissionPercentage: 2, paymentDate: "2026-05-04",
     channel: "REA",
     rebatePercentage: 1.5,
-    // Anchored: invoices issued 2026-05-04, paid 2026-05-04 / 2026-05-05; posting-007 deal_close 2026-05-04T09:00
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-05-02T09:00:00.000Z" },
       { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-05-03T15:00:00.000Z" },
@@ -347,7 +342,7 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-017", opportunityId: "opp-013",
+    id: "deal-017", offerId: "offer-017",
     status: "under-review", market: "primary", country: "es", currency: "EUR",
     dealAmount: 530000, reportDate: "2026-04-28",
     createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-04-30T09:00:00.000Z",
@@ -358,13 +353,12 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-018", opportunityId: "opp-004",
+    id: "deal-018", offerId: "offer-018",
     status: "finalized", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 1250000, reportDate: "2026-04-12",
     createdAt: "2026-04-12T00:00:00.000Z", updatedAt: "2026-04-22T15:30:00.000Z",
     commissionPercentage: 2.5,
     subsidyAmount: 7000,
-    // Anchored: invoice issued 2026-04-15, paid 2026-04-22; posting-021 deal_close 2026-04-15T09:00, posting-022 payment_in 2026-04-22T15:00
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-04-13T09:00:00.000Z" },
       { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-04-14T15:00:00.000Z" },
@@ -373,7 +367,7 @@ export const sharedDeals: Deal[] = [
     ],
   }),
   expand({
-    id: "deal-019", opportunityId: "opp-003",
+    id: "deal-019", offerId: "offer-019",
     status: "canceled", market: "secondary", country: "es", currency: "EUR",
     dealAmount: 260000, reportDate: "2026-03-20",
     createdAt: "2026-03-20T00:00:00.000Z", updatedAt: "2026-04-01T11:00:00.000Z",

@@ -50,9 +50,35 @@ erDiagram
         OpportunityStatus status
         string country
     }
+    Property {
+        string id
+        string name
+        Country country
+        Currency currency
+        string address "optional"
+        string type "optional"
+        string developmentName "optional"
+    }
+    Offer {
+        string id
+        OfferStatus status
+        Country country
+        Currency currency
+        string propertyId FK "optional"
+        string opportunityId FK "optional"
+        string clientId FK "optional"
+        number offerAmount "optional"
+        CommissionPayer commissionPayer "optional"
+        number totalCommissionPct "optional"
+        string buyerAgentId FK "optional — Closer"
+        string sellerAgentId FK "optional — Lister"
+        number buyerAgentSplitPct "optional"
+        number sellerAgentSplitPct "optional"
+    }
     Deal {
         string id
-        string opportunityId FK
+        string offerId FK "optional"
+        string propertyId FK "optional"
         DealType type
         DealStatus status
         number dealAmount
@@ -138,10 +164,10 @@ erDiagram
         string createdAt
     }
     Ledger {
-        string id
-        string code
+        number id
+        string name
         LedgerType type
-        string glId "optional FK"
+        number glId "optional FK"
         string partyId "optional FK - agent subledgers only"
         Currency currency
     }
@@ -158,7 +184,7 @@ erDiagram
     PostingLine {
         string id
         string postingId FK
-        string ledgerId FK
+        number ledgerId FK
         string invoiceId FK
         PostingSide side
         number amount
@@ -169,7 +195,9 @@ erDiagram
     Agent           ||--o{ AgentFinancials              : "has strategy"
     Agent           ||--o{ AgentDocument                : "has compliance docs"
     Client          ||--o{ Opportunity                  : "has"
-    Opportunity     ||--o{ Deal                         : "produces"
+    Opportunity     ||--o{ Offer                        : "produces"
+    Property        ||--o{ Offer                        : "subject of"
+    Offer           ||--o| Deal                         : "spawns"
     Deal            ||--|{ DealStakeholder               : "involves"
     Deal            ||--o{ DealDocumentRequirement       : "requires"
     Deal            ||--o{ DealComment                    : "has thread"
@@ -210,7 +238,7 @@ Steps at deal creation or during ops review:
 ### DealStakeholder
 Replaces the `agentId`/`clientId` FKs that used to be embedded on `Deal`. Each deal now has one or more stakeholder records, each linking a Party to a **financial role** (`StakeholderType`). This naturally supports multi-agent commission splits and mixed revenue/cost structures.
 
-> **Note:** Agent split percentages live on `DealStakeholder.splitPercentage` as the interim source of truth. These will migrate to a dedicated `Offer` entity linked from the deal. `[TO BE DETERMINED]`
+> **Note:** Agent split percentages are sourced from the `Offer` entity (`buyerAgentSplitPct`, `sellerAgentSplitPct`). `DealStakeholder.splitPercentage` is the runtime-resolved copy used by the waterfall engine.
 
 ### Posting.dealId (direct FK)
 `Posting` carries a direct `dealId` FK. Standalone postings (bonuses, adjustments, platform fees not tied to a deal) leave `dealId` undefined — they remain first-class.
@@ -229,7 +257,7 @@ A reversed posting sets `reversedByPostingId` pointing to the correcting entry. 
 
 Today only agent subledgers (e.g. `AgentLiability_agent-felicia`) set it, because Huspy carries an ongoing liability to agents across multiple deals — the subledger balance matters between payout runs.
 
-**Buyers and sellers** are Parties but have no subledgers. Their receivables are tracked at the `Invoice` level (`Invoice.partyId` + `direction: "outbound"`), which is sufficient for one-shot, per-deal transactions. `ASSET_AR_{CUR}` is a shared GL that absorbs all client receivables.
+**Buyers and sellers** are Parties but have no subledgers. Their receivables are tracked at the `Invoice` level (`Invoice.partyId` + `direction: "outbound"`  — Huspy sends the invoice), which is sufficient for one-shot, per-deal transactions. `ASSET_AR_{CUR}` is a shared GL that absorbs all client receivables.
 
 **When to add external-party subledgers:** if a recurring external partner (referral firm, co-broker) accumulates payables across multiple deals and Huspy batch-pays them, mirror the agent pattern — add `ExternalLiability_partner-{slug}` subledgers under `LIAB_EXTERNAL_PAYABLE_{CUR}`. This is not in the current chart of accounts because no such batch-pay workflow exists yet.
 
@@ -262,7 +290,7 @@ Allowed transitions (from `dealWorkflow.ts`):
 | `under-review` | Ops verifying deal details |
 | `pending-agent-approval` | Ops has finalised commission terms; agent must confirm before invoicing begins |
 | `pending-receivables` | Invoice sent to client; waiting for payment |
-| `finalized` | Client payment confirmed; `deal_close` posting created, agent liability subledger credited |
+| `finalized` | Client payment confirmed; `invoice_issued` posting created, agent liability subledger credited |
 | `canceled` | Deal voided — reachable from any state |
 
 > **`isDisputed`** (`boolean`) is a cross-cutting flag, NOT a state. A dispute reverts the deal to `under-review` + sets `isDisputed = true`. Ops resolves in Karvel, then moves to `pending-details` (if more agent input needed) or back to `pending-agent-approval`.
@@ -275,10 +303,10 @@ Allowed transitions (from `dealWorkflow.ts`):
 
 | Direction | Meaning | Typical party |
 |---|---|---|
-| `inbound` | Huspy receives money | Client (buyer, seller, tenant, bank) |
-| `outbound` | Huspy pays money | Agent, referral, third party, authority |
+| `inbound` | Invoice received by Huspy; Huspy pays | Agent, vendor, authority |
+| `outbound` | Invoice sent by Huspy; Huspy receives | Client (buyer, seller, tenant, bank) |
 
-Agent invoices (agents billing Huspy for commission) are always `outbound`. Client invoices (Huspy billing the client for the commission fee) are always `inbound`.
+Agent invoices (agents billing Huspy for commission) are always `inbound`. Client invoices (Huspy billing the client for the commission fee) are always `outbound`.
 
 ### Status machine
 
@@ -293,21 +321,21 @@ cancelled → issued  (restore — for op error recovery)
 
 ### Invoice ↔ deal status invariants
 
-| Deal status | Inbound invoice constraint |
+| Deal status | Outbound invoice constraint |
 |---|---|
-| `finalized` | ALL inbound invoices linked to the deal must be `paid` |
-| `pending-receivables` | At least 1 inbound invoice must be `issued` |
-| Any other status | No inbound invoice should be in `paid`, `issued`, or `draft` |
+| `finalized` | ALL outbound invoices linked to the deal must be `paid` |
+| `pending-receivables` | At least 1 outbound invoice must be `issued` |
+| Any other status | No outbound invoice should be in `paid`, `issued`, or `draft` |
 
-`pending-receivables → finalized` is gated on all inbound invoices being `paid`. Outbound invoice payment is never a gating condition for deal status.
+`pending-receivables → finalized` is gated on all outbound invoices being `paid`. Inbound invoice payment is never a gating condition for deal status.
 
 ### Invoice ↔ PostingLines accounting invariants
 
 | Invoice state | Required posting lines (tagged via `PostingLine.invoiceId`) |
 |---|---|
-| Inbound `issued` | DEBIT `ASSET_AR_{CUR}` (contra: CREDIT `REV_{CUR}`) |
-| Inbound `paid` | + CREDIT `ASSET_AR_{CUR}` (contra: DEBIT `ASSET_BANK_BankX_{CUR}`) |
-| Outbound `paid` to agent | DEBIT `AgentLiability_agent-{slug}` (contra: CREDIT `ASSET_BANK_BankX_{CUR}`) |
+| Outbound `issued` | DEBIT `ASSET_AR_{CUR}` (contra: CREDIT `REV_{CUR}`) |
+| Outbound `paid` | + CREDIT `ASSET_AR_{CUR}` (contra: DEBIT `ASSET_BANK_BankX_{CUR}`) |
+| Inbound `paid` to agent | DEBIT `AgentLiability_agent-{slug}` (contra: CREDIT `ASSET_BANK_BankX_{CUR}`) |
 
 Finalized deals must have a posting with DEBIT `EXP_COMMISSION_{CUR}` and CREDIT `AgentLiability_agent-{slug}`.
 
@@ -345,7 +373,7 @@ Gross profit = Gross revenue − A − B − C − D.
 
 ## Blueprint — tax configuration
 
-One `Blueprint` per `(country, businessUnit)` pair (optionally further scoped to a `dealType`). The engine reads the matching Blueprint at `deal_close` and emits `PostingLine` entries against `LIAB_STATUTORY_TAX_{CUR}`.
+One `Blueprint` per `(country, businessUnit)` pair (optionally further scoped to a `dealType`). The engine reads the matching Blueprint at `invoice_issued` and emits `PostingLine` entries against `LIAB_STATUTORY_TAX_{CUR}`.
 
 The P&L waterfall always operates on **tax-exclusive** amounts. Tax is handled entirely by the Blueprint service, not by stakeholder declarations.
 
@@ -393,20 +421,20 @@ Supported currencies: `EUR`, `AED`, `SAR`.
 
 | `businessProcess` | Typical lines |
 |---|---|
-| `deal_close` | DEBIT `ASSET_AR_{CUR}`, CREDIT `REV_{CUR}` |
+| `invoice_issued` | DEBIT `ASSET_AR_{CUR}`, CREDIT `REV_{CUR}` |
 | `bank_statement_inbound_matched` | DEBIT `Bank_Operating_{CUR}`, CREDIT `ASSET_AR_{CUR}` |
-| `agent_invoice` | DEBIT `EXP_COMMISSION_{CUR}` (gross), CREDIT `AgentLiability_agent-{slug}` (net), CREDIT `LIAB_STATUTORY_TAX_{CUR}` (withheld) |
-| `conveyance_invoice` | DEBIT `EXP_COMMISSION_{CUR}` (cost accrual), CREDIT `LIAB_EXTERNAL_PAYABLE_{CUR}` (tagged to invoice). Payment closing the payable uses `bank_statement_outbound_matched`. |
+| `commission_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (gross), CREDIT `AgentLiability_agent-{slug}` (net), CREDIT `LIAB_STATUTORY_TAX_{CUR}` (withheld) |
+| `external_cost_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (cost accrual), CREDIT `LIAB_EXTERNAL_PAYABLE_{CUR}` (tagged to invoice). Payment closing the payable uses `bank_statement_outbound_matched`. |
 | `payout_instructed` | DEBIT `AgentLiability_agent-{slug}` (base), DEBIT `LIAB_VAT_{CUR}` (input VAT — offsets output VAT), CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (IRPF, Spain only), CREDIT `Bank_Operating_{CUR}` (net payout = base + VAT − withholding) |
 | `bank_statement_outbound_matched` | Agent payout: DEBIT `AgentLiability_agent-{slug}`, CREDIT `Bank_Operating_{CUR}`. External payable (conveyance, third-party): DEBIT `LIAB_EXTERNAL_PAYABLE_{CUR}`, CREDIT `Bank_Operating_{CUR}`. Payment posting lines are **not** tagged with `invoiceId` — only the originating accrual line carries the tag. |
-| `bonus` / `incentive` | DEBIT `EXP_COMMISSION_{CUR}`, CREDIT `AgentLiability_agent-{slug}` |
-| `platform_fee` | DEBIT `AgentLiability_agent-{slug}`, CREDIT `REV_{CUR}` |
+| `agent_adjustment` | DEBIT `EXP_COMMISSION_{CUR}`, CREDIT `AgentLiability_agent-{slug}` |
+| `huspy_fee` | DEBIT `AgentLiability_agent-{slug}`, CREDIT `REV_{CUR}` |
 | `manual_adjustment` | Flexible — use for standalone corrections |
 | `reversal` | Mirror of reversed posting with sides flipped; set `reversedByPostingId` |
 
 ### Tax conventions — two distinct mechanisms
 
-**1. Blueprint tax (deal_close posting — charged to client)**
+**1. Blueprint tax (invoice_issued posting — charged to client)**
 
 Applied by `draftPostings` at deal close. Rate comes from `blueprints.ts`. Lines: DEBIT `REV_{CUR}`, CREDIT `LIAB_VAT_{CUR}`.
 
@@ -428,7 +456,7 @@ When an agent creates an invoice, VAT is added on top of the base commission. Fo
 
 `Invoice.amount` = base commission (pre-VAT). Gross invoice = `amount + vatAmount`. Net payout to agent = `amount + vatAmount − withholdingAmount`.
 
-Agent subledger is credited the **base** amount at `agent_invoice` time. VAT and withholding are posted separately at `payout_instructed`.
+Agent subledger is credited the **base** amount at `commission_accrual` time. VAT and withholding are posted separately at `payout_instructed`.
 
 ## Waterfall engine (`src/waterfall.ts`)
 
@@ -450,7 +478,7 @@ Key output types:
 - `ProjectedAgentSplit` — per-agent: `allocatedNet`, `agentPayout`, `teamLeadPayout`, `managerPayout`
 - `LedgerEntry` — each waterfall line with `bucket`, `side`, `amount`, `partyId`
 
-> **`[TO BE DETERMINED]`** Agent split percentages (`DealStakeholder.splitPercentage`) will migrate to an `Offer` entity. The engine will read from `Offer` once it exists.
+> Agent split percentages are read from `Offer.buyerAgentSplitPct` / `Offer.sellerAgentSplitPct`. The waterfall engine receives them via `DealStakeholder.splitPercentage`, which is populated at deal-spawn time from the originating Offer.
 
 > **`@deprecated`** `ProjectedPnLInput.reductions` — pass rebates/subsidies as `ACQUISITION_DEDUCTION` stakeholders instead. Kept for deal creation wizard backward compatibility.
 
