@@ -9,14 +9,50 @@ import { toast } from 'sonner';
 import { createInvoice } from '@/data/earningsStore';
 import { sharedAgents } from '@huspy/shared-domain';
 
-const IVA_RATE = 21;
-const DEFAULT_IRPF_RATE = 15;
+const MARKET_CONFIG = {
+  es: {
+    vatLabel: 'IVA', vatRate: 21,
+    hasWithholding: true, withholdingLabel: 'IRPF', defaultWithholdingRate: 15,
+    currency: 'EUR', symbol: '€',
+    paymentMethod: 'Bank Transfer (SEPA)',
+    taxIdLabel: 'NIF',
+    agentAddressPlaceholder: 'Calle Gran Vía 28, 5º B, 28013 Madrid',
+    agentTaxIdPlaceholder: '12345678A',
+    bankPlaceholder: 'ES91 2100 0418 4502 0005 1332',
+    huspy: { name: 'huspy Technologies S.L.', address: 'Calle de Serrano 41, 3ª Planta', city: '28001 Madrid, Spain', taxId: 'CIF: B-12345678' },
+  },
+  ae: {
+    vatLabel: 'VAT', vatRate: 5,
+    hasWithholding: false, withholdingLabel: '', defaultWithholdingRate: 0,
+    currency: 'AED', symbol: 'د.إ',
+    paymentMethod: 'Bank Transfer (Wire)',
+    taxIdLabel: 'TRN',
+    agentAddressPlaceholder: 'DIFC, Gate Building, Dubai, UAE',
+    agentTaxIdPlaceholder: '100XXXXXXXXX003',
+    bankPlaceholder: 'AE07 0331 2345 6789 0123 456',
+    huspy: { name: 'Huspy Real Estate L.L.C.', address: 'DIFC, Gate Building, Level 1', city: 'Dubai, UAE', taxId: 'TRN: 100123456789003' },
+  },
+  sa: {
+    vatLabel: 'VAT', vatRate: 15,
+    hasWithholding: false, withholdingLabel: '', defaultWithholdingRate: 0,
+    currency: 'SAR', symbol: '﷼',
+    paymentMethod: 'Bank Transfer (Wire)',
+    taxIdLabel: 'VAT No.',
+    agentAddressPlaceholder: 'King Fahd Road, Olaya, Riyadh',
+    agentTaxIdPlaceholder: '310XXXXXXXXX003',
+    bankPlaceholder: 'SA03 8000 0000 6080 1016 7519',
+    huspy: { name: 'Huspy Real Estate Co.', address: 'King Fahd Road', city: 'Riyadh 12214, Saudi Arabia', taxId: 'VAT: 310123456789003' },
+  },
+} as const;
+
+type MarketKey = keyof typeof MARKET_CONFIG;
 
 interface CreateInvoiceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   statement: StatementOfAccount;
   agentId: string;
+  country?: string;
   onInvoiceCreated?: () => void;
 }
 
@@ -28,7 +64,9 @@ const categoryLabels: Record<string, string> = {
   'other': 'Other',
 };
 
-export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onInvoiceCreated }: CreateInvoiceModalProps) {
+export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, country, onInvoiceCreated }: CreateInvoiceModalProps) {
+  const cfg = MARKET_CONFIG[(country as MarketKey) ?? 'ae'] ?? MARKET_CONFIG.ae;
+
   const [isCreated, setIsCreated] = useState(false);
 
   const defaultInvoiceNumber = `INV-${statement.id.replace('stmt-', '').toUpperCase()}-${statement.cycleLabel.replace(/\s/g, '').toUpperCase()}`;
@@ -38,20 +76,21 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
   const [invoiceNumber, setInvoiceNumber] = useState(defaultInvoiceNumber);
   const [issueDate, setIssueDate] = useState(defaultIssueDate);
   const [dueDate, setDueDate] = useState(defaultDueDate);
-  const [agentName, setAgentName] = useState('Alejandro Reyes Inmobiliaria');
-  const [agentAddress, setAgentAddress] = useState('Calle Gran Vía 28, 5º B, 28013 Madrid');
-  const [agentNif, setAgentNif] = useState('12345678A');
-  const [bankAccount, setBankAccount] = useState('ES91 2100 0418 4502 0005 1332');
-  const [irpfRate, setIrpfRate] = useState(DEFAULT_IRPF_RATE);
+  const [agentName, setAgentName] = useState('');
+  const [agentAddress, setAgentAddress] = useState('');
+  const [agentTaxId, setAgentTaxId] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [withholdingRate, setWithholdingRate] = useState(cfg.defaultWithholdingRate);
 
   const base = statement.balance;
-  const vatAmount = Math.round(base * (IVA_RATE / 100) * 100) / 100;
-  const withholdingAmount = Math.round(base * (irpfRate / 100) * 100) / 100;
+  const vatAmount = Math.round(base * (cfg.vatRate / 100) * 100) / 100;
+  const withholdingAmount = cfg.hasWithholding ? Math.round(base * (withholdingRate / 100) * 100) / 100 : 0;
   const grossAmount = Math.round((base + vatAmount) * 100) / 100;
   const netPayout = Math.round((grossAmount - withholdingAmount) * 100) / 100;
 
+  const sym = cfg.symbol;
   const credits = statement.lineItems.filter(li => li.type === 'credit');
-  const debits = statement.lineItems.filter(li => li.type === 'debit');
+  const debits  = statement.lineItems.filter(li => li.type === 'debit');
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -65,15 +104,15 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
     createInvoice(
       {
         id: `inv-${Date.now()}`,
-        direction: 'outbound',
+        direction: 'inbound',
         partyId: agentPartyId,
         invoiceNumber,
         period: statement.period,
         status: 'issued',
-        currency: 'EUR',
+        currency: cfg.currency,
         subtotal: base,
         vatAmount,
-        withholdingAmount,
+        withholdingAmount: cfg.hasWithholding ? withholdingAmount : undefined,
         issueDate,
         dueDate,
         createdAt: now,
@@ -87,18 +126,11 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
   };
 
   const handleClose = (openState: boolean) => {
-    if (!openState) {
-      // Reset state when closing
-      setTimeout(() => setIsCreated(false), 300);
-    }
+    if (!openState) setTimeout(() => setIsCreated(false), 300);
     onOpenChange(openState);
   };
 
-  const statusConfig = {
-    label: 'In Review',
-    color: 'hsl(var(--ds-orange))',
-    bg: 'hsl(var(--ds-orange) / 0.1)',
-  };
+  const statusConfig = { label: 'In Review', color: 'hsl(var(--ds-orange))', bg: 'hsl(var(--ds-orange) / 0.1)' };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -107,21 +139,17 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
           {isCreated ? 'Invoice Details' : 'Please create your invoice'}
         </DialogTitle>
 
-        {/* Scrollable content */}
         <div className="overflow-y-auto flex-1">
           {/* Header */}
           <div className="px-6 pt-6 pb-4 border-b border-border-ds-primary">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: 'hsl(var(--accent-teal) / 0.1)' }}
-                >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--accent-teal) / 0.1)' }}>
                   <FileText className="w-5 h-5" style={{ color: 'hsl(var(--accent-teal))' }} />
                 </div>
                 <div>
                   <h2 className="text-[20px] font-semibold leading-[120%] text-foreground">
-                    {isCreated ? 'Invoice' : 'Please create your invoice'}
+                    {isCreated ? 'Invoice' : 'Generate Statement'}
                   </h2>
                   <p className="text-[12px] font-semibold leading-[140%] text-fg-secondary">
                     {isCreated ? invoiceNumber : `Statement: ${statement.cycleLabel}`}
@@ -129,10 +157,7 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
                 </div>
               </div>
               {isCreated && (
-                <Badge
-                  className="rounded-full px-3 py-1 text-[12px] font-semibold border-0"
-                  style={{ backgroundColor: statusConfig.bg, color: statusConfig.color }}
-                >
+                <Badge className="rounded-full px-3 py-1 text-[12px] font-semibold border-0" style={{ backgroundColor: statusConfig.bg, color: statusConfig.color }}>
                   {statusConfig.label}
                 </Badge>
               )}
@@ -149,30 +174,15 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
               </div>
               {isCreated ? (
                 <div>
-                  <p className="text-[14px] font-semibold leading-[120%] text-foreground">{agentName}</p>
+                  <p className="text-[14px] font-semibold leading-[120%] text-foreground">{agentName || '—'}</p>
                   <p className="text-[12px] leading-[140%] text-fg-secondary">{agentAddress}</p>
-                  <p className="text-[12px] leading-[140%] text-fg-secondary">NIF: {agentNif}</p>
+                  <p className="text-[12px] leading-[140%] text-fg-secondary">{cfg.taxIdLabel}: {agentTaxId}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Input
-                    value={agentName}
-                    onChange={(e) => setAgentName(e.target.value)}
-                    className="h-8 text-[14px] rounded-lg"
-                    placeholder="Business name"
-                  />
-                  <Input
-                    value={agentAddress}
-                    onChange={(e) => setAgentAddress(e.target.value)}
-                    className="h-8 text-[12px] rounded-lg"
-                    placeholder="Address"
-                  />
-                  <Input
-                    value={agentNif}
-                    onChange={(e) => setAgentNif(e.target.value)}
-                    className="h-8 text-[12px] rounded-lg"
-                    placeholder="NIF / Tax ID"
-                  />
+                  <Input value={agentName} onChange={(e) => setAgentName(e.target.value)} className="h-8 text-[14px] rounded-lg" placeholder="Business / legal name" />
+                  <Input value={agentAddress} onChange={(e) => setAgentAddress(e.target.value)} className="h-8 text-[12px] rounded-lg" placeholder={cfg.agentAddressPlaceholder} />
+                  <Input value={agentTaxId} onChange={(e) => setAgentTaxId(e.target.value)} className="h-8 text-[12px] rounded-lg" placeholder={`${cfg.taxIdLabel}: ${cfg.agentTaxIdPlaceholder}`} />
                 </div>
               )}
             </div>
@@ -184,10 +194,10 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
                 <span className="text-[12px] font-semibold leading-[140%] uppercase tracking-wide">Invoice To</span>
               </div>
               <div>
-                <p className="text-[14px] font-semibold leading-[120%] text-foreground">huspy Technologies S.L.</p>
-                <p className="text-[12px] leading-[140%] text-fg-secondary">Calle de Serrano 41, 3ª Planta</p>
-                <p className="text-[12px] leading-[140%] text-fg-secondary">28001 Madrid, Spain</p>
-                <p className="text-[12px] leading-[140%] text-fg-secondary">CIF: B-12345678</p>
+                <p className="text-[14px] font-semibold leading-[120%] text-foreground">{cfg.huspy.name}</p>
+                <p className="text-[12px] leading-[140%] text-fg-secondary">{cfg.huspy.address}</p>
+                <p className="text-[12px] leading-[140%] text-fg-secondary">{cfg.huspy.city}</p>
+                <p className="text-[12px] leading-[140%] text-fg-secondary">{cfg.huspy.taxId}</p>
               </div>
             </div>
           </div>
@@ -217,31 +227,17 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
                 <div className="flex items-center gap-2 text-[12px] leading-[140%]">
                   <Hash className="w-3.5 h-3.5 text-fg-secondary" />
                   <span className="text-fg-secondary whitespace-nowrap">Invoice #</span>
-                  <Input
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    className="h-7 text-[12px] rounded-lg w-48"
-                  />
+                  <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} className="h-7 text-[12px] rounded-lg w-48" />
                 </div>
                 <div className="flex items-center gap-2 text-[12px] leading-[140%]">
                   <Calendar className="w-3.5 h-3.5 text-fg-secondary" />
                   <span className="text-fg-secondary whitespace-nowrap">Issue</span>
-                  <Input
-                    type="date"
-                    value={issueDate}
-                    onChange={(e) => setIssueDate(e.target.value)}
-                    className="h-7 text-[12px] rounded-lg w-36"
-                  />
+                  <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="h-7 text-[12px] rounded-lg w-36" />
                 </div>
                 <div className="flex items-center gap-2 text-[12px] leading-[140%]">
                   <Calendar className="w-3.5 h-3.5 text-fg-secondary" />
                   <span className="text-fg-secondary whitespace-nowrap">Due</span>
-                  <Input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="h-7 text-[12px] rounded-lg w-36"
-                  />
+                  <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-7 text-[12px] rounded-lg w-36" />
                 </div>
               </>
             )}
@@ -265,7 +261,7 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
                     </div>
                     <span className="text-[12px] font-semibold text-right" style={{ color: 'hsl(var(--ds-green))' }}>Credit</span>
                     <span className="text-[14px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>
-                      +€{item.amount.toLocaleString()}
+                      +{sym}{item.amount.toLocaleString()}
                     </span>
                   </div>
                 ))}
@@ -282,7 +278,7 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
                     </div>
                     <span className="text-[12px] font-semibold text-right" style={{ color: 'hsl(var(--ds-red))' }}>Debit</span>
                     <span className="text-[14px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-red))' }}>
-                      −€{item.amount.toLocaleString()}
+                      −{sym}{item.amount.toLocaleString()}
                     </span>
                   </div>
                 ))}
@@ -294,13 +290,13 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
               <div className="flex items-center justify-between px-3">
                 <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">Total Credits</span>
                 <span className="text-[14px] font-semibold tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>
-                  +€{statement.totalCredit.toLocaleString()}
+                  +{sym}{statement.totalCredit.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between px-3">
                 <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">Total Debits</span>
                 <span className="text-[14px] font-semibold tabular-nums" style={{ color: 'hsl(var(--ds-red))' }}>
-                  −€{statement.totalDebit.toLocaleString()}
+                  −{sym}{statement.totalDebit.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -309,45 +305,37 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
             <div className="mt-4 border-t border-border-ds-primary pt-4 space-y-2">
               <div className="flex items-center justify-between px-3">
                 <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">Base</span>
-                <span className="text-[14px] font-semibold tabular-nums text-foreground">€{base.toLocaleString()}</span>
+                <span className="text-[14px] font-semibold tabular-nums text-foreground">{sym}{base.toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between px-3">
-                <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">IVA ({IVA_RATE}%)</span>
-                <span className="text-[14px] font-semibold tabular-nums text-foreground">+€{vatAmount.toLocaleString()}</span>
+                <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">{cfg.vatLabel} ({cfg.vatRate}%)</span>
+                <span className="text-[14px] font-semibold tabular-nums text-foreground">+{sym}{vatAmount.toLocaleString()}</span>
               </div>
-              <div className="flex items-center justify-between px-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">IRPF</span>
-                  {isCreated ? (
-                    <span className="text-[12px] font-semibold text-fg-secondary">({irpfRate}%)</span>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <Input
-                        type="number"
-                        value={irpfRate}
-                        onChange={(e) => setIrpfRate(Number(e.target.value))}
-                        className="h-6 text-[12px] rounded-lg w-14 text-center"
-                        min={0}
-                        max={25}
-                      />
-                      <span className="text-[12px] text-fg-secondary">%</span>
-                    </div>
-                  )}
+              {cfg.hasWithholding && (
+                <div className="flex items-center justify-between px-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">{cfg.withholdingLabel}</span>
+                    {isCreated ? (
+                      <span className="text-[12px] font-semibold text-fg-secondary">({withholdingRate}%)</span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Input type="number" value={withholdingRate} onChange={(e) => setWithholdingRate(Number(e.target.value))} className="h-6 text-[12px] rounded-lg w-14 text-center" min={0} max={25} />
+                        <span className="text-[12px] text-fg-secondary">%</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[14px] font-semibold tabular-nums" style={{ color: 'hsl(var(--ds-red))' }}>
+                    −{sym}{withholdingAmount.toLocaleString()}
+                  </span>
                 </div>
-                <span className="text-[14px] font-semibold tabular-nums" style={{ color: 'hsl(var(--ds-red))' }}>
-                  −€{withholdingAmount.toLocaleString()}
-                </span>
-              </div>
+              )}
             </div>
 
             {/* Amount Due */}
-            <div
-              className="mt-4 rounded-xl px-4 py-4 space-y-2"
-              style={{ backgroundColor: 'hsl(var(--accent-teal) / 0.1)' }}
-            >
+            <div className="mt-4 rounded-xl px-4 py-4 space-y-2" style={{ backgroundColor: 'hsl(var(--accent-teal) / 0.1)' }}>
               <div className="flex items-center justify-between">
-                <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">Invoice Total (incl. IVA)</span>
-                <span className="text-[16px] font-semibold tabular-nums text-foreground">€{grossAmount.toLocaleString()}</span>
+                <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">Invoice Total (incl. {cfg.vatLabel})</span>
+                <span className="text-[16px] font-semibold tabular-nums text-foreground">{sym}{grossAmount.toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -355,7 +343,7 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
                   <span className="text-[14px] font-semibold leading-[120%] text-foreground">Net Payout to You</span>
                 </div>
                 <span className="text-[24px] font-semibold tabular-nums" style={{ color: 'hsl(var(--accent-teal))' }}>
-                  €{netPayout.toLocaleString()}
+                  {sym}{netPayout.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -366,19 +354,14 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
             <div className="grid grid-cols-3 gap-4 text-[12px] leading-[140%]">
               <div>
                 <p className="font-semibold text-fg-secondary uppercase tracking-wide mb-1">Payment Method</p>
-                <p className="text-foreground">Bank Transfer (SEPA)</p>
+                <p className="text-foreground">{cfg.paymentMethod}</p>
               </div>
               <div>
                 <p className="font-semibold text-fg-secondary uppercase tracking-wide mb-1">Bank Account</p>
                 {isCreated ? (
-                  <p className="text-foreground">{bankAccount}</p>
+                  <p className="text-foreground">{bankAccount || '—'}</p>
                 ) : (
-                  <Input
-                    value={bankAccount}
-                    onChange={(e) => setBankAccount(e.target.value)}
-                    className="h-7 text-[12px] rounded-lg mt-0.5"
-                    placeholder="IBAN"
-                  />
+                  <Input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="h-7 text-[12px] rounded-lg mt-0.5" placeholder={cfg.bankPlaceholder} />
                 )}
               </div>
               <div>
@@ -389,7 +372,7 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, onI
           </div>
         </div>
 
-        {/* Sticky floating CTA */}
+        {/* Sticky CTA */}
         {!isCreated && (
           <div className="sticky bottom-0 px-6 py-4 border-t border-border-ds-primary bg-card">
             <Button

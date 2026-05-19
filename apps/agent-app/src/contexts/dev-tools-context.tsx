@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { sharedAgents } from "@huspy/shared-domain";
 
 export type SortMode = 'button' | 'header';
 export type NewMatchesDisplayMode = 'tag' | 'dot';
@@ -117,6 +118,8 @@ interface DevToolsContextType {
   setNewMatchesDisplay: (mode: NewMatchesDisplayMode) => void;
   headerTitleMode: HeaderTitleMode;
   setHeaderTitleMode: (mode: HeaderTitleMode) => void;
+  activeAgentId: string;
+  setActiveAgentId: (id: string) => void;
 }
 
 const DevToolsContext = createContext<DevToolsContextType | undefined>(undefined);
@@ -133,6 +136,12 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
   const [sortMode, setSortMode] = useState<SortMode>(() => getStoredDefaults().sortMode);
   const [newMatchesDisplay, setNewMatchesDisplay] = useState<NewMatchesDisplayMode>(() => getStoredDefaults().newMatchesDisplay);
   const [headerTitleMode, setHeaderTitleMode] = useState<HeaderTitleMode>(() => getStoredDefaults().headerTitleMode);
+  const [activeAgentId, setActiveAgentIdState] = useState<string>(() => localStorage.getItem('dev-active-agent') ?? sharedAgents[0].id);
+
+  const setActiveAgentId = (id: string) => {
+    localStorage.setItem('dev-active-agent', id);
+    setActiveAgentIdState(id);
+  };
 
   const triggerSplash = () => {
     setShowSplash(true);
@@ -200,7 +209,9 @@ export function DevToolsProvider({ children }: { children: ReactNode }) {
       newMatchesDisplay,
       setNewMatchesDisplay,
       headerTitleMode,
-      setHeaderTitleMode
+      setHeaderTitleMode,
+      activeAgentId,
+      setActiveAgentId,
     }}>
       {children}
     </DevToolsContext.Provider>

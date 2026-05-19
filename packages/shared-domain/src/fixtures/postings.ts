@@ -44,18 +44,29 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-01-20T11:00:00.000Z",
     valueDate: "2026-01-20",
     currency: "EUR",
-    description: "Commission accrual — deal-001 (Felicia Canovas, EUR 4 230.80)",
+    description: "Commission accrual — deal-001 (Felicia Canovas EUR 4 230.80)",
   },
   {
     id: "posting-004",
     businessUnit: "rebu",
-    externalRef: "PAY-001",
-    businessProcess: "payout_instructed",
+    externalRef: "AGINV-ACCRUAL-001",
+    businessProcess: "agent_invoice_accrual",
     createdBy: "user-ops-finance",
-    createdAt: "2026-01-25T10:00:00.000Z",
-    valueDate: "2026-01-25",
+    createdAt: "2026-01-31T09:00:00.000Z",
+    valueDate: "2026-01-31",
     currency: "EUR",
-    description: "Agent payout — Felicia Canovas",
+    description: "Agent invoice accrual — Felicia Canovas, Jan 2026 (INV-2026-009)",
+  },
+  {
+    id: "posting-030",
+    businessUnit: "rebu",
+    externalRef: "PAY-AGINV-001",
+    businessProcess: "bank_statement_outbound_matched",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-02-10T11:00:00.000Z",
+    valueDate: "2026-02-10",
+    currency: "EUR",
+    description: "Agent payout — Felicia Canovas, Jan 2026 (INV-2026-009)",
   },
 
   // ── deal-016 — AED, split receivable, fully paid (REBU) ───────────────────
@@ -70,8 +81,19 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-05-04T09:00:00.000Z",
     valueDate: "2026-05-04",
     currency: "AED",
-
-    description: "Commission earned — deal-016 (Fatima Al Mansouri, Sell, AED 2.1M, split receivable)",
+    description: "Commission earned — deal-016 (Fatima Al Mansouri, Sell, AED 2.1M — client split, inv-006)",
+  },
+  {
+    id: "posting-007b",
+    dealId: "deal-016",
+    businessUnit: "rebu",
+    externalRef: "P0007B",
+    businessProcess: "invoice_issued",
+    createdBy: "system",
+    createdAt: "2026-05-04T09:00:00.000Z",
+    valueDate: "2026-05-04",
+    currency: "AED",
+    description: "Commission earned — deal-016 (Fatima Al Mansouri, Sell, AED 2.1M — developer split, inv-007)",
   },
   {
     id: "posting-008",
@@ -114,6 +136,43 @@ export const sharedPostings: Posting[] = [
 
     description: "Q1 2026 performance bonus — Felicia Canovas",
   },
+  {
+    id: "posting-031",
+    businessUnit: "rebu",
+    externalRef: "AGINV-ACCRUAL-Q1-001",
+    businessProcess: "agent_invoice_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-04-05T09:00:00.000Z",
+    valueDate: "2026-04-05",
+    currency: "EUR",
+    description: "Agent invoice accrual — Felicia Canovas, Q1 2026 bonus (INV-2026-010)",
+  },
+
+  // ── deal-001 — TL + Mgr commission accrual (REBU, EUR) ─────────────────
+  {
+    id: "posting-040",
+    dealId: "deal-001",
+    businessUnit: "rebu",
+    externalRef: "AGINV-001-TL",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-01-20T11:00:00.000Z",
+    valueDate: "2026-01-20",
+    currency: "EUR",
+    description: "Commission accrual — Santiago Vega / TL for Felicia Canovas (deal-001)",
+  },
+  {
+    id: "posting-041",
+    dealId: "deal-001",
+    businessUnit: "rebu",
+    externalRef: "AGINV-001-MGR",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-01-20T11:00:00.000Z",
+    valueDate: "2026-01-20",
+    currency: "EUR",
+    description: "Commission accrual — Isabel Torres / Mgr for Felicia Canovas (deal-001)",
+  },
 
   // ── deal-016 — agent invoice, agent-004 (REBU, AED) ─────────────────────
 
@@ -127,7 +186,33 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-05-10T11:00:00.000Z",
     valueDate: "2026-05-10",
     currency: "AED",
-    description: "Commission accrual — deal-016 (Gelo Huspy, AED 16 115.40)",
+    description: "Commission accrual — deal-016 (Gelo Huspy AED 16 115.40)",
+  },
+
+  // ── deal-016 — TL + Mgr commission accrual (REBU, AED) ─────────────────
+  {
+    id: "posting-042",
+    dealId: "deal-016",
+    businessUnit: "rebu",
+    externalRef: "AGINV-016-TL",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-10T11:00:00.000Z",
+    valueDate: "2026-05-10",
+    currency: "AED",
+    description: "Commission accrual — Santiago Vega / TL for Gelo Huspy (deal-016)",
+  },
+  {
+    id: "posting-043",
+    dealId: "deal-016",
+    businessUnit: "rebu",
+    externalRef: "AGINV-016-MGR",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-10T11:00:00.000Z",
+    valueDate: "2026-05-10",
+    currency: "AED",
+    description: "Commission accrual — Isabel Torres / Mgr for Gelo Huspy (deal-016)",
   },
 
   // ── Standalone — Q2 2026 incentive + platform fee, agent-004 (REBU, AED) ─
@@ -143,6 +228,17 @@ export const sharedPostings: Posting[] = [
     currency: "AED",
 
     description: "Q2 2026 incentive — Gelo Huspy",
+  },
+  {
+    id: "posting-032",
+    businessUnit: "rebu",
+    externalRef: "AGINV-ACCRUAL-GELO-MAY",
+    businessProcess: "agent_invoice_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-31T09:00:00.000Z",
+    valueDate: "2026-05-31",
+    currency: "AED",
+    description: "Agent invoice accrual — Gelo Huspy, May 2026 (INV-2026-012)",
   },
   {
     id: "posting-013",
@@ -172,6 +268,32 @@ export const sharedPostings: Posting[] = [
     description: "Jan 2026 platform support fee — Felicia Canovas",
   },
 
+  // ── deal-018 — TL + Mgr commission accrual (REBU, EUR) ─────────────────
+  {
+    id: "posting-044",
+    dealId: "deal-018",
+    businessUnit: "rebu",
+    externalRef: "AGINV-018-TL",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-04-25T11:00:00.000Z",
+    valueDate: "2026-04-25",
+    currency: "EUR",
+    description: "Commission accrual — Santiago Vega / TL for Felicia Canovas (deal-018)",
+  },
+  {
+    id: "posting-045",
+    dealId: "deal-018",
+    businessUnit: "rebu",
+    externalRef: "AGINV-018-MGR",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-04-25T11:00:00.000Z",
+    valueDate: "2026-04-25",
+    currency: "EUR",
+    description: "Commission accrual — Isabel Torres / Mgr for Felicia Canovas (deal-018)",
+  },
+
   // ── deal-018 — agent-001, UNALLOCATED (REBU, EUR) ────────────────────
 
   {
@@ -184,7 +306,7 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-04-25T11:00:00.000Z",
     valueDate: "2026-04-25",
     currency: "EUR",
-    description: "Commission accrual — deal-018 (Felicia Canovas, EUR 9 220.00)",
+    description: "Commission accrual — deal-018 (Felicia Canovas EUR 9 220.00)",
   },
 
   // ── Standalone — Apr 2026 platform fee, agent-001 (REBU, EUR) ─────────
@@ -286,8 +408,8 @@ export const sharedPostings: Posting[] = [
     externalRef: "PAY-CONV-2026-001",
     businessProcess: "bank_statement_outbound_matched",
     createdBy: "user-ops-finance",
-    createdAt: "2026-01-25T10:00:00.000Z",
-    valueDate: "2026-01-25",
+    createdAt: "2026-01-10T10:00:00.000Z",
+    valueDate: "2026-01-10",
     currency: "EUR",
     description: "Payment — Gestoría López & Asociados, deal-001",
   },
@@ -387,4 +509,81 @@ export const sharedPostings: Posting[] = [
 
     description: "Payment received — deal-018 (EUR 24 250)",
   },
+
+  // ── inv-012 — bank disbursement (Gelo Huspy, May 2026) ─────────────────
+  {
+    id: "posting-055",
+    businessUnit: "rebu",
+    externalRef: "PAY-2026-GELO-MAY",
+    businessProcess: "bank_statement_outbound_matched",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-06-10T11:00:00.000Z",
+    valueDate: "2026-06-10",
+    currency: "AED",
+    description: "Payment disbursed — Gelo Huspy (INV-2026-012, AED 17 866.17)",
+  },
+
+  // ── deal-020 — AED primary, pending-receivables, agent-004 ───────────────
+
+  {
+    id: "posting-050",
+    dealId: "deal-020",
+    businessUnit: "rebu",
+    externalRef: "P0050",
+    businessProcess: "invoice_issued",
+    createdBy: "system",
+    createdAt: "2026-05-14T09:00:00.000Z",
+    valueDate: "2026-05-14",
+    currency: "AED",
+    description: "Invoice to Emaar — deal-020 (AED 24 000 + VAT 5% 1 200)",
+  },
+  {
+    id: "posting-054",
+    dealId: "deal-020",
+    businessUnit: "rebu",
+    externalRef: "P0054",
+    businessProcess: "bank_statement_inbound_matched",
+    createdBy: "system",
+    createdAt: "2026-05-17T14:00:00.000Z",
+    valueDate: "2026-05-17",
+    currency: "AED",
+    description: "Payment received — deal-020 (Emaar AED 25 200)",
+  },
+  {
+    id: "posting-051",
+    dealId: "deal-020",
+    businessUnit: "rebu",
+    externalRef: "AGINV-020",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-14T10:00:00.000Z",
+    valueDate: "2026-05-14",
+    currency: "AED",
+    description: "Commission accrual — deal-020 (Gelo Huspy AED 10 080)",
+  },
+  {
+    id: "posting-052",
+    dealId: "deal-020",
+    businessUnit: "rebu",
+    externalRef: "AGINV-020-TL",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-14T10:00:00.000Z",
+    valueDate: "2026-05-14",
+    currency: "AED",
+    description: "Commission accrual — Santiago Vega / TL for Gelo Huspy (deal-020)",
+  },
+  {
+    id: "posting-053",
+    dealId: "deal-020",
+    businessUnit: "rebu",
+    externalRef: "AGINV-020-MGR",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-14T10:00:00.000Z",
+    valueDate: "2026-05-14",
+    currency: "AED",
+    description: "Commission accrual — Isabel Torres / Mgr for Gelo Huspy (deal-020)",
+  },
+
 ];

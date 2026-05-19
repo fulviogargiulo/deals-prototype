@@ -12,15 +12,20 @@ import { DealsFilterBar } from '@/components/deals/deals-filter-bar';
 import { ActionsRequiredSection } from '@/components/deals/actions-required-section';
 import { DealsTable } from '@/components/deals/deals-table';
 import { AgentEarningsView } from '@/components/deals/agent-earnings-view';
-import { agentDeals, agentStakeMap } from '@/data/mockDeals';
+import { getAgentDeals, getAgentStakeMap } from '@/data/mockDeals';
+import { useDevTools } from '@/contexts/dev-tools-context';
 
 export function DealsList() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") ?? "deals";
+  const { activeAgentId } = useDevTools();
 
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [search, setSearch] = useState('');
+
+  const agentDeals = getAgentDeals(activeAgentId);
+  const agentStakeMap = getAgentStakeMap(activeAgentId);
 
   const pendingConfirmation = agentDeals.filter(d => d.status === 'pending-agent-approval');
   const pendingInfo = agentDeals.filter(d => d.status === 'pending-details');
@@ -34,7 +39,7 @@ export function DealsList() {
       result = result.filter(d => d.title.toLowerCase().includes(q) || d.clientName.toLowerCase().includes(q));
     }
     return result;
-  }, [dateRange, search]);
+  }, [activeAgentId, dateRange, search]);
 
   useEffect(() => {
     if (location.hash) {

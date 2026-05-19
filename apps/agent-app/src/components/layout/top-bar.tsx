@@ -30,6 +30,7 @@ import { EditProfilePictureModal } from "@/components/modals/edit-profile-pictur
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useDevTools } from "@/contexts/dev-tools-context";
 import { usePageTitle } from "@/contexts/page-title-context";
+import { sharedAgents } from "@huspy/shared-domain";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScheduleSideMenu } from "@/components/schedule/schedule-side-menu";
@@ -38,7 +39,9 @@ import { useLanguage } from "@/contexts/language-context";
 
 export function TopBar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
-  const { headerVisibility, headerTitleMode } = useDevTools();
+  const { headerVisibility, headerTitleMode, activeAgentId, setActiveAgentId } = useDevTools();
+  const activeAgent = sharedAgents.find(a => a.id === activeAgentId) ?? sharedAgents[0];
+  const countryFlag: Record<string, string> = { es: '🇪🇸', ae: '🇦🇪', sa: '🇸🇦' };
   const { pageTitle, pageTitleContent, isTitleVisible, transparentHeader } = usePageTitle();
   const navigate = useNavigate();
   const [newClientModalOpen, setNewClientModalOpen] = useState(false);
@@ -215,6 +218,35 @@ export function TopBar() {
 
           {/* Theme Toggle */}
           {headerVisibility.showThemeToggle && <ThemeToggle />}
+
+          {/* Dev: Agent selector */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 rounded-full px-3 text-xs font-semibold bg-surface-ds-raised border-0"
+              >
+                <span>{countryFlag[activeAgent.country ?? ''] ?? '🌍'}</span>
+                <span className="hidden sm:inline text-fg-secondary">{activeAgent.id}</span>
+                <ChevronDown className="w-3 h-3 text-fg-secondary" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {sharedAgents.map(agent => (
+                <DropdownMenuItem
+                  key={agent.id}
+                  onClick={() => setActiveAgentId(agent.id)}
+                  className="flex items-center gap-2 text-xs"
+                >
+                  <span>{countryFlag[agent.country ?? ''] ?? '🌍'}</span>
+                  <span className="flex-1">{agent.id}</span>
+                  <span className="text-fg-secondary uppercase">{agent.country}</span>
+                  {agent.id === activeAgentId && <Check className="w-3.5 h-3.5" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Schedule Side Menu */}
           <ScheduleSideMenu transparentHeader={transparentHeader && !isScrolled} />

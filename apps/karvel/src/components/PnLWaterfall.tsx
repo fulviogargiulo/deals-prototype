@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import { X, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -654,20 +654,41 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
           <SectionLabel>Agent Commissions</SectionLabel>
           {agentStakes.map((s) => {
             const agentId = agentIdForParty(s.partyId);
-            const totalPayout = getAgentTotalPayout(s.partyId, s.fixedAmount);
+            const split = pnl?.splits.find((sp) => sp.partyId === s.partyId);
+            const agentRecord = agentId ? sharedAgents.find((a) => a.id === agentId) : undefined;
             const isFixed = s.fixedAmount != null;
             const splitLabel = !isFixed && s.splitPercentage != null ? `${s.splitPercentage}% pool` : isFixed ? "fixed" : undefined;
+            const agentOwnPayout = split ? split.agentPayout : (s.fixedAmount ?? undefined);
             return (
-              <WaterfallRow
-                key={s.id}
-                name={resolvePartyName(s.partyId)}
-                identifier={agentId}
-                amount={totalPayout}
-                currency={currency}
-                badge={s.isPrimary ? "Primary" : splitLabel}
-                onClick={agentId ? () => navigate(`/agents/${agentId}`) : undefined}
-                onRemove={canEdit && !s.isPrimary ? () => removeStake(s.id) : undefined}
-              />
+              <Fragment key={s.id}>
+                <WaterfallRow
+                  name={resolvePartyName(s.partyId)}
+                  identifier={agentId}
+                  amount={agentOwnPayout}
+                  currency={currency}
+                  badge={s.isPrimary ? "Primary" : splitLabel}
+                  onClick={agentId ? () => navigate(`/agents/${agentId}`) : undefined}
+                  onRemove={canEdit && !s.isPrimary ? () => removeStake(s.id) : undefined}
+                />
+                {split && split.teamLeadPayout > 0 && (
+                  <WaterfallRow
+                    name={agentRecord?.teamLeadName ?? "Team Lead"}
+                    amount={split.teamLeadPayout}
+                    currency={currency}
+                    badge="TL"
+                    indent
+                  />
+                )}
+                {split && split.managerPayout > 0 && (
+                  <WaterfallRow
+                    name={agentRecord?.managerName ?? "Manager"}
+                    amount={split.managerPayout}
+                    currency={currency}
+                    badge="Mgr"
+                    indent
+                  />
+                )}
+              </Fragment>
             );
           })}
 

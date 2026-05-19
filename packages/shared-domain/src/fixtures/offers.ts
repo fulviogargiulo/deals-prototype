@@ -196,4 +196,14 @@ export const sharedOffers: Offer[] = [
     buyerAgentId: "agent-001", buyerAgentSplitPct: 100,
     createdAt: "2026-03-17T10:00:00.000Z", updatedAt: "2026-03-20T00:00:00.000Z",
   },
+  // offer-020 → deal-020 (ae/AED, primary/buy, agent-004/Gelo 100%, Dubai Heights Residence)
+  {
+    id: "offer-020", status: "deal-created",
+    country: "ae", currency: "AED",
+    propertyId: "prop-007", propertyName: "Dubai Heights Residence",
+    opportunityId: "opp-007", clientId: "client-008",
+    offerAmount: 1200000, commissionPayer: "developer", totalCommissionPct: 2,
+    buyerAgentId: "agent-004", buyerAgentSplitPct: 100,
+    createdAt: "2026-05-10T10:00:00.000Z", updatedAt: "2026-05-12T00:00:00.000Z",
+  },
 ];

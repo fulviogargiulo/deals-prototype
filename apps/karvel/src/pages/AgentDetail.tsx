@@ -9,7 +9,6 @@ import {
   sharedLedgers,
   sharedAgentFinancials,
   sharedAgentDocuments,
-  COMMISSION_RATES,
 } from "@huspy/shared-domain";
 import type {
   AgentDocument,
@@ -107,13 +106,12 @@ const PROCESS_LABELS: Record<string, string> = {
 function findOrSeedAgentFinancials(agentId: string): SharedAgentFinancials {
   const existing = sharedAgentFinancials.find((af) => af.agentId === agentId);
   if (existing) return existing;
-  // Seed an entry with the global defaults so the editor always has a record.
   const seeded: SharedAgentFinancials = {
     id: `af-${agentId}`,
     agentId,
-    strategy: { kind: "flat", pct: COMMISSION_RATES.agentGrossRate },
-    teamLeadRate: COMMISSION_RATES.teamLeadRate,
-    managerRate: COMMISSION_RATES.managerOverrideRate,
+    strategy: { kind: "flat", pct: 40 },
+    teamLeadRate: 10,
+    managerRate: 5,
   };
   sharedAgentFinancials.push(seeded);
   return seeded;

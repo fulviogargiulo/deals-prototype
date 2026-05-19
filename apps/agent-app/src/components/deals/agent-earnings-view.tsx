@@ -8,14 +8,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { FileText, TrendingUp, ArrowDownLeft, ArrowUpRight, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CreateInvoiceModal } from '@/components/modals/create-invoice-modal';
+import { UploadInvoiceModal } from '@/components/modals/upload-invoice-modal';
 import { getPostingLines, getInvoices } from '@/data/earningsStore';
+import { useDevTools } from '@/contexts/dev-tools-context';
 import type { StatementOfAccount } from '@/types';
-
-// Prototype: hardcoded to the current agent. In production this comes from auth context.
-const AGENT_ID = 'agent-001';
-const AGENT_PARTY_ID = sharedAgents.find((a) => a.id === AGENT_ID)?.partyId ?? AGENT_ID;
-const AGENT_LEDGER_NAME = `AgentLiability_${AGENT_ID}`;
-const AGENT_LEDGER_ID = sharedLedgers.find((l) => l.name === AGENT_LEDGER_NAME)?.id;
 
 
 const CURRENCY_SYMBOLS: Record<string, string> = { EUR: '€', AED: 'د.إ', SAR: '﷼' };
@@ -51,6 +47,12 @@ function invoiceStatusStyle(status: string) {
 type EarningsMode = 'all' | 'custom';
 
 export function AgentEarningsView() {
+  const { activeAgentId } = useDevTools();
+  const activeAgent = sharedAgents.find(a => a.id === activeAgentId) ?? sharedAgents[0];
+  const agentPartyId = activeAgent.partyId;
+  const agentLedgerId = sharedLedgers.find(l => l.name === `AgentLiability_${activeAgent.id}`)?.id;
+  const isSpain = activeAgent.country === 'es';
+
   const [mode, setMode] = useState<EarningsMode>('all');
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
   const [customTo, setCustomTo] = useState<Date | undefined>();
@@ -74,7 +76,7 @@ export function AgentEarningsView() {
       : 'bg-surface-ds-raised text-fg-secondary hover:bg-surface-ds-raised/80'
   );
 
-  const allAgentInvoices = getInvoices().filter(i => i.direction === "inbound" && i.partyId === AGENT_PARTY_ID);
+  const allAgentInvoices = getInvoices().filter(i => i.direction === "inbound" && i.partyId === agentPartyId);
   // Map invoiceId → invoiceNumber for the Invoice column in the ledger table.
   const invoiceNumberMap = new Map(allAgentInvoices.map(i => [i.id, i.invoiceNumber]));
 
@@ -82,7 +84,7 @@ export function AgentEarningsView() {
   // Settlement entries are excluded — they are internal bookkeeping (payout cash movement)
   // and have no meaning for the agent's earnings view.
   const agentLines = getPostingLines()
-    .filter(l => l.ledgerId === AGENT_LEDGER_ID)
+    .filter(l => l.ledgerId === agentLedgerId)
     .map(l => ({ ...l, posting: sharedPostings.find(p => p.id === l.postingId)! }))
     .filter(l => !!l.posting)
     .sort((a, b) => a.posting.valueDate.localeCompare(b.posting.valueDate));
@@ -185,7 +187,7 @@ export function AgentEarningsView() {
               onClick={() => setShowGenerateStatement(true)}
             >
               <FileText className="w-3.5 h-3.5 mr-1" />
-              Generate Statement
+              {isSpain ? 'Upload Invoice' : 'Generate Statement'}
             </Button>
           )}
         </div>
@@ -316,16 +318,30 @@ export function AgentEarningsView() {
         </div>
       )}
 
-      <CreateInvoiceModal
-        open={showGenerateStatement}
-        onOpenChange={setShowGenerateStatement}
-        statement={pendingStatement}
-        agentId={AGENT_ID}
-        onInvoiceCreated={() => {
-          setShowGenerateStatement(false);
-          setRefreshKey(k => k + 1);
-        }}
-      />
+      {isSpain ? (
+        <UploadInvoiceModal
+          open={showGenerateStatement}
+          onOpenChange={setShowGenerateStatement}
+          statement={pendingStatement}
+          agentId={activeAgent.id}
+          onInvoiceCreated={() => {
+            setShowGenerateStatement(false);
+            setRefreshKey(k => k + 1);
+          }}
+        />
+      ) : (
+        <CreateInvoiceModal
+          open={showGenerateStatement}
+          onOpenChange={setShowGenerateStatement}
+          statement={pendingStatement}
+          agentId={activeAgent.id}
+          country={activeAgent.country}
+          onInvoiceCreated={() => {
+            setShowGenerateStatement(false);
+            setRefreshKey(k => k + 1);
+          }}
+        />
+      )}
     </div>
   );
 }

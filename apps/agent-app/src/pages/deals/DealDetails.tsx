@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { FileText, CheckCircle2, AlertTriangle, ChevronDown, RotateCcw } from 'lucide-react';
 import { DocumentRow } from '@/components/deals/document-row';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { mockDeals, agentStakeMap } from '@/data/mockDeals';
-import { COMMISSION_RATES, getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements, sharedDealComments, buildWaterfallInput, calculateProjectedPnL, dealStatusColors } from '@huspy/shared-domain';
+import { mockDeals, getAgentStakeMap } from '@/data/mockDeals';
+import { useDevTools } from '@/contexts/dev-tools-context';
+import { getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements, sharedDealComments, buildWaterfallInput, calculateProjectedPnL, dealStatusColors } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -42,6 +43,8 @@ function getDocumentsForDeal(dealId: string) {
 
 export function DealDetails() {
   const { id } = useParams<{ id: string }>();
+  const { activeAgentId } = useDevTools();
+  const agentStakeMap = getAgentStakeMap(activeAgentId);
   const initialDeal = mockDeals.find(d => d.id === id);
   const [uploadedDocs, setUploadedDocs] = useState<Set<number>>(new Set());
   const [dealState, setDealState] = useState(initialDeal);
@@ -228,7 +231,7 @@ export function DealDetails() {
                   <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">
                     {agentSplit?.strategyKind === "flat" && agentSplit.allocatedNet > 0
                       ? `${Math.round((agentSplit.agentPayout / agentSplit.allocatedNet) * 100)}%`
-                      : `${COMMISSION_RATES.agentGrossRate}%`}
+                      : "—"}
                   </span>
                 </div>
               </div>

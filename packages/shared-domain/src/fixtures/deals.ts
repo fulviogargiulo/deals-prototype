@@ -5,7 +5,7 @@ import { sharedOffers } from "./offers";
 import { sharedDealStakeholders } from "./dealStakeholders";
 import { sharedAgents } from "./agents";
 import { sharedInvoices } from "./invoices";
-import { computeDealFinancials, COMMISSION_RATES } from "../commissionCalc";
+
 import { getBlueprint } from "../blueprints";
 
 const agentDisplayName: Record<string, string> = {
@@ -54,7 +54,7 @@ interface BaseInput {
 
 function expand(b: BaseInput): Deal {
   const offer = findOffer(b.offerId);
-  const f = computeDealFinancials(b.dealAmount, b.conveyanceFee ?? 0, { takeRate: b.commissionPercentage });
+  const huspyRevenue = Math.round(b.dealAmount * (b.commissionPercentage / 100));
   const businessUnit = b.businessUnit ?? "rebu";
   // rebateAmount and subsidyAmount are stored as reference fields on the deal.
   // The actual net amounts are already baked into each REVENUE_SOURCE stakeholder's financialAmount.
@@ -108,7 +108,7 @@ function expand(b: BaseInput): Deal {
     updatedAt: b.updatedAt,
 
     // Lean waterfall fields
-    grossRevenue: f.huspyRevenue,
+    grossRevenue: huspyRevenue,
     blueprintId: blueprint.id,
 
     // Display caches — derived from DealStakeholder chain, not embedded FKs
@@ -125,8 +125,8 @@ function expand(b: BaseInput): Deal {
     buyerPhone: b.market !== "leasing" ? clientParty?.phone : undefined,
     paymentMode: "cash",
     dealPrice: b.dealAmount,
-    takeRate: COMMISSION_RATES.takeRate,
-    huspyRevenue: f.huspyRevenue,
+    takeRate: b.commissionPercentage,
+    huspyRevenue,
     conveyanceRevenue: b.conveyanceFee ?? 0,
     receivables,
     rebatePercentage: b.rebatePercentage ?? 0,
@@ -148,7 +148,7 @@ function expand(b: BaseInput): Deal {
     // Agent-app — agent-facing
     marketType: b.market,
     commissionPercentage: b.commissionPercentage,
-    commissionAmount: Math.round((f.huspyRevenue - (b.subsidyAmount ?? 0)) * (COMMISSION_RATES.agentGrossRate / 100)),
+    commissionAmount: Math.round((huspyRevenue - (b.subsidyAmount ?? 0)) * 0.40),
     paymentDate: b.paymentDate,
     statusHistory: b.statusHistory,
   };
@@ -375,6 +375,21 @@ export const sharedDeals: Deal[] = [
     statusHistory: [
       { from: "pending-details", to: "under-review", timestamp: "2026-03-22T09:00:00.000Z" },
       { from: "under-review",    to: "canceled",     timestamp: "2026-04-01T11:00:00.000Z", note: "Client withdrew" },
+    ],
+  }),
+  expand({
+    id: "deal-020", offerId: "offer-020",
+    status: "finalized", market: "primary", country: "ae", currency: "AED",
+    dealAmount: 1200000, reportDate: "2026-05-12",
+    createdAt: "2026-05-12T00:00:00.000Z", updatedAt: "2026-05-17T14:00:00.000Z",
+    commissionPercentage: 2,
+    channel: "REA",
+    paymentDate: "2026-05-17",
+    statusHistory: [
+      { from: "pending-details",        to: "under-review",           timestamp: "2026-05-12T10:00:00.000Z" },
+      { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-05-13T14:00:00.000Z" },
+      { from: "pending-agent-approval", to: "pending-receivables",    timestamp: "2026-05-14T09:00:00.000Z", note: "Invoice issued to Emaar" },
+      { from: "pending-receivables",    to: "finalized",              timestamp: "2026-05-17T14:00:00.000Z", note: "Emaar payment received" },
     ],
   }),
 ];

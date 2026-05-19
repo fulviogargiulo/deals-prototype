@@ -154,6 +154,56 @@ export const sharedParties: Party[] = [
     taxId: "AE100000001",
   },
 
+  // ── Connected agents (team leads / managers) — one entry per currency ─────
+  {
+    id: "party-ca-santiago-eur",
+    displayName: "Santiago Vega",
+    email: "santiago.vega@huspy.io",
+    legalType: "individual",
+  },
+  {
+    id: "party-ca-santiago-aed",
+    displayName: "Santiago Vega",
+    email: "santiago.vega@huspy.io",
+    legalType: "individual",
+  },
+  {
+    id: "party-ca-isabel-eur",
+    displayName: "Isabel Torres",
+    email: "isabel.torres@huspy.io",
+    legalType: "individual",
+  },
+  {
+    id: "party-ca-isabel-aed",
+    displayName: "Isabel Torres",
+    email: "isabel.torres@huspy.io",
+    legalType: "individual",
+  },
+  {
+    id: "party-ca-leila-aed",
+    displayName: "Leila Ahmadi",
+    email: "leila.ahmadi@huspy.io",
+    legalType: "individual",
+  },
+  {
+    id: "party-ca-karim-aed",
+    displayName: "Karim Mourad",
+    email: "karim.mourad@huspy.io",
+    legalType: "individual",
+  },
+  {
+    id: "party-ca-karim-sar",
+    displayName: "Karim Mourad",
+    email: "karim.mourad@huspy.io",
+    legalType: "individual",
+  },
+  {
+    id: "party-ca-majid-sar",
+    displayName: "Majid Al Harbi",
+    email: "majid.alharbi@huspy.io",
+    legalType: "individual",
+  },
+
   // ── Conveyance firms ───────────────────────────────────────────────────────
   {
     id: "party-conv-gestoria-lopez",

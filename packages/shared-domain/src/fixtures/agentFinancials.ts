@@ -1,46 +1,33 @@
 import type { AgentFinancials } from "../entities";
-import { COMMISSION_RATES } from "../commissionCalc";
 
-/**
- * Per-agent commission strategy and rate overrides.
- *
- * Promoted from the in-memory `agentFinancialsStore` previously living in
- * apps/karvel/src/pages/AgentDetail.tsx. Every internal split for an agent
- * on a deal is derived from this record via the waterfall engine.
- *
- * Defaults align with COMMISSION_RATES (40% / 10% / 5%). Two agents below
- * use non-flat strategies to exercise the engine:
- *   - agent-005: slab strategy (per-deal tiers)
- *   - agent-006: max strategy (flat % capped at an absolute amount)
- */
 export const sharedAgentFinancials: AgentFinancials[] = [
   {
     id: "af-001",
     agentId: "agent-001",
-    strategy: { kind: "flat", pct: COMMISSION_RATES.agentGrossRate },
-    teamLeadRate: COMMISSION_RATES.teamLeadRate,
-    managerRate: COMMISSION_RATES.managerOverrideRate,
+    strategy: { kind: "flat", pct: 40 },
+    teamLeadRate: 10,   managerRate: 5,
+    teamLeadLedgerId: 31, managerLedgerId: 32, // Santiago Vega / Isabel Torres (EUR)
   },
   {
     id: "af-002",
     agentId: "agent-002",
     strategy: { kind: "flat", pct: 45 },
-    teamLeadRate: COMMISSION_RATES.teamLeadRate,
-    managerRate: COMMISSION_RATES.managerOverrideRate,
+    teamLeadRate: 10,   managerRate: 5,
+    teamLeadLedgerId: 31, managerLedgerId: 32, // Santiago Vega / Isabel Torres (EUR)
   },
   {
     id: "af-003",
     agentId: "agent-003",
-    strategy: { kind: "flat", pct: COMMISSION_RATES.agentGrossRate },
-    teamLeadRate: COMMISSION_RATES.teamLeadRate,
-    managerRate: COMMISSION_RATES.managerOverrideRate,
+    strategy: { kind: "flat", pct: 40 },
+    teamLeadRate: 10,   managerRate: 5,
+    teamLeadLedgerId: 37, managerLedgerId: 38, // Majid Al Harbi / Karim Mourad (SAR)
   },
   {
     id: "af-004",
     agentId: "agent-004",
     strategy: { kind: "flat", pct: 42 },
-    teamLeadRate: COMMISSION_RATES.teamLeadRate,
-    managerRate: COMMISSION_RATES.managerOverrideRate,
+    teamLeadRate: 10,   managerRate: 5,
+    teamLeadLedgerId: 33, managerLedgerId: 34, // Santiago Vega / Isabel Torres (AED)
   },
   {
     id: "af-005",
@@ -53,15 +40,15 @@ export const sharedAgentFinancials: AgentFinancials[] = [
         { upTo: null, pct: 55 },
       ],
     },
-    teamLeadRate: COMMISSION_RATES.teamLeadRate,
-    managerRate: COMMISSION_RATES.managerOverrideRate,
+    teamLeadRate: 10,   managerRate: 5,
+    teamLeadLedgerId: 35, managerLedgerId: 36, // Leila Ahmadi / Karim Mourad (AED)
   },
   {
     id: "af-006",
     agentId: "agent-006",
     strategy: { kind: "max", pct: 50, capAmount: 25_000 },
-    teamLeadRate: COMMISSION_RATES.teamLeadRate,
-    managerRate: COMMISSION_RATES.managerOverrideRate,
+    teamLeadRate: 10,   managerRate: 5,
+    teamLeadLedgerId: 35, managerLedgerId: 36, // Leila Ahmadi / Karim Mourad (AED)
   },
 ];
 

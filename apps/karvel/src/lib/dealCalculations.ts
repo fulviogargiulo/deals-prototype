@@ -7,6 +7,8 @@ import {
   sharedAgents,
   sharedParties,
   sharedLedgers,
+  sharedPostings,
+  sharedPostingLines,
   type AgentFinancials,
   type Blueprint,
   type DealStakeholder,
@@ -508,6 +510,68 @@ export function draftPostings(projection: ProjectedPnL, deal: { id: string; busi
   }
 
   return { posting, lines };
+}
+
+function assertNotControlAccount(ledgerId: number, context: string): void {
+  const ledger = sharedLedgers.find((l) => l.id === ledgerId);
+  if (ledger?.isControlAccount) {
+    throw new Error(`Cannot post directly to control account "${ledger.name}" (id ${ledgerId}) in ${context}. Specify a subledger.`);
+  }
+}
+
+export function createCommissionAccrualPosting(deal: Deal): void {
+  const pnl = computeDealPnL(deal);
+  if (!pnl || pnl.totalBucketB <= 0) return;
+
+  const currency = (deal.currency ?? "EUR") as "EUR" | "AED" | "SAR";
+  const ids = LEDGER_IDS[currency] ?? LEDGER_IDS.EUR;
+  const now = new Date().toISOString();
+  const ts = Date.now();
+
+  const pushPosting = (pid: string, description: string) => {
+    sharedPostings.push({
+      id: pid, dealId: deal.id, businessUnit: deal.businessUnit as any,
+      businessProcess: "commission_accrual" as any, createdBy: "system",
+      createdAt: now, valueDate: now.slice(0, 10), currency, description,
+    });
+  };
+
+  const push2Lines = (pid: string, subledgerId: number, amount: number) => {
+    assertNotControlAccount(subledgerId, `commission_accrual ${pid}`);
+    sharedPostingLines.push({ id: `${pid}-L1`, postingId: pid, ledgerId: ids.exp,     side: "DEBIT",  amount });
+    sharedPostingLines.push({ id: `${pid}-L2`, postingId: pid, ledgerId: subledgerId, side: "CREDIT", amount });
+  };
+
+  for (const split of pnl.splits) {
+    const af = sharedAgentFinancials.find((x) => x.agentId === split.agentId);
+    const agentName = sharedParties.find((p) => p.id === split.partyId)?.displayName ?? split.agentId;
+
+    if (split.agentPayout > 0) {
+      const subledger = sharedLedgers.find((l) => l.name === `AgentLiability_${split.agentId}`);
+      if (!subledger) throw new Error(`No subledger for agent ${split.agentId}`);
+      const pid = `posting-finalize-${deal.id}-${split.agentId}-${ts}`;
+      pushPosting(pid, `Commission accrual — ${agentName} (${deal.id})`);
+      push2Lines(pid, subledger.id, Math.round(split.agentPayout * 100) / 100);
+    }
+
+    if (split.teamLeadPayout > 0 && af?.teamLeadLedgerId) {
+      const subledger = sharedLedgers.find((l) => l.id === af.teamLeadLedgerId);
+      if (!subledger) throw new Error(`No TL subledger for agent ${split.agentId}`);
+      const tlName = sharedParties.find((p) => p.id === subledger.partyId)?.displayName ?? "Team Lead";
+      const pid = `posting-finalize-${deal.id}-tl-${split.agentId}-${ts}`;
+      pushPosting(pid, `Commission accrual — ${tlName} / TL for ${agentName} (${deal.id})`);
+      push2Lines(pid, subledger.id, Math.round(split.teamLeadPayout * 100) / 100);
+    }
+
+    if (split.managerPayout > 0 && af?.managerLedgerId) {
+      const subledger = sharedLedgers.find((l) => l.id === af.managerLedgerId);
+      if (!subledger) throw new Error(`No Mgr subledger for agent ${split.agentId}`);
+      const mgrName = sharedParties.find((p) => p.id === subledger.partyId)?.displayName ?? "Manager";
+      const pid = `posting-finalize-${deal.id}-mgr-${split.agentId}-${ts}`;
+      pushPosting(pid, `Commission accrual — ${mgrName} / Mgr for ${agentName} (${deal.id})`);
+      push2Lines(pid, subledger.id, Math.round(split.managerPayout * 100) / 100);
+    }
+  }
 }
 
 export function createEmptyAgent(index: number): AgentEntry {

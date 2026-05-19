@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileText, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { Deal, AgentEntry, PayableEntry, ReceivableEntry, ExternalPartnerEntry } from "@/data/types";
 import { toast } from "@/hooks/use-toast";
-import { COMMISSION_RATES } from "@huspy/shared-domain";
 import { recalculateDeal } from "@/lib/dealCalculations";
 
 interface Props {
@@ -27,7 +26,7 @@ function makeDefaultAgent(): AgentEntry {
 function csvToDeal(row: Record<string, string>, index: number): Deal {
   const id = `DEAL-${String(Date.now()).slice(-6)}-${String(index + 1).padStart(3, "0")}`;
   const dealPrice = parseFloat(row.dealPrice) || 0;
-  const takeRate = parseFloat(row.takeRate) || COMMISSION_RATES.takeRate;
+  const takeRate = parseFloat(row.takeRate) || 3;
   const huspyRevenue = dealPrice * (takeRate / 100);
   const conveyanceFee = parseFloat(row.conveyanceFee) || 0;
 
@@ -48,7 +47,7 @@ function csvToDeal(row: Record<string, string>, index: number): Deal {
     huspyRevenue,
     conveyanceRevenue: conveyanceFee,
     agentShare: parseFloat(row.agentShare || "50"),
-    agentCommissionRate: parseFloat(row.agentCommissionRate) || COMMISSION_RATES.agentGrossRate,
+    agentCommissionRate: parseFloat(row.agentCommissionRate) || 0,
     agentCommissionPayout: 0,
     teamLeadRate: 0, teamLeadShare: 0,
     managerOverrideRate: 0, managerOverride: 0,

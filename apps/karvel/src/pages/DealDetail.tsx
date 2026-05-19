@@ -1,18 +1,21 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { findDeal, updateDeal } from "@/data/dealStore";
+import { saveDocumentRequirements } from "@/data/sharedEntityStore";
 import { Deal, DealStatus } from "@/data/types";
 import { DealStatusBadge } from "@/components/DealBadges";
 import { ArrowLeft, CheckCircle2, Circle, ExternalLink, Download } from "lucide-react";
-import { computeDealPnL } from "@/lib/dealCalculations";
+import { computeDealPnL, createCommissionAccrualPosting } from "@/lib/dealCalculations";
 import { toast } from "sonner";
 import {
   canTransitionDealStatus,
   getAllowedDealTransitions,
+  getBlueprint,
   sharedInvoices,
   sharedParties,
   sharedDealComments,
   sharedDealDocumentRequirements,
+  sharedDealStakeholders,
   sharedPostings,
   sharedPostingLines,
   sharedLedgers,
@@ -91,8 +94,8 @@ const DealDetail = () => {
   const pnl = useMemo(() => (deal ? computeDealPnL(deal) : null), [deal, stakesVersion]);
 
   const [status, setStatus] = useState<DealStatus>(deal?.status ?? "pending-details");
-  const [ofCaseNumber, setOfCaseNumber] = useState(deal?.ofCaseNumber ?? "");
   const [statusHistory, setStatusHistory] = useState(deal?.statusHistory ?? []);
+  const [invoicesVersion, setInvoicesVersion] = useState(0);
   const [docs, setDocs] = useState<DealDocumentRequirement[]>(() =>
     sharedDealDocumentRequirements.filter((r) => r.dealId === (deal?.id ?? ""))
   );
@@ -100,15 +103,14 @@ const DealDetail = () => {
   useEffect(() => {
     if (!deal) return;
     setStatus(deal.status);
-    setOfCaseNumber(deal.ofCaseNumber ?? "");
     setStatusHistory(deal.statusHistory ?? []);
     setDocs(sharedDealDocumentRequirements.filter((r) => r.dealId === deal.id));
   }, [deal]);
 
   const hasChanges = useMemo(() => {
     if (!deal) return false;
-    return status !== deal.status || ofCaseNumber !== (deal.ofCaseNumber ?? "");
-  }, [deal, status, ofCaseNumber]);
+    return status !== deal.status;
+  }, [deal, status]);
 
   if (!deal) {
     return (
@@ -138,12 +140,42 @@ const DealDetail = () => {
       return;
     }
     if (status === "under-review" && to === "pending-agent-approval") {
-      const docs = sharedDealDocumentRequirements.filter((r) => r.dealId === deal.id);
       const allClear = docs.every((r) => r.status === "approved" || r.status === "waived");
       if (!allClear) {
         toast.error("Cannot move to Agent Approval: all documents must be approved or waived first.");
         return;
       }
+    }
+    if (to === "pending-receivables") {
+      const blueprint = getBlueprint(deal.country, deal.businessUnit);
+      const billableStakes = sharedDealStakeholders.filter(
+        (s) => s.dealId === deal.id && s.role !== "INTERNAL_PAYOUT" && s.financialAmount != null && s.financialAmount !== 0,
+      );
+      const now = new Date().toISOString();
+      const today = now.slice(0, 10);
+      const dueDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+      billableStakes.forEach((s, idx) => {
+        const isRevenue = s.role === "REVENUE_SOURCE";
+        const subtotal = Math.abs(s.financialAmount!);
+        const vatAmount = blueprint.taxRate ? Math.round(subtotal * blueprint.taxRate) / 100 : undefined;
+        const inv = {
+          id: `inv-auto-${deal.id}-${idx}-${Date.now()}`,
+          direction: isRevenue ? ("outbound" as const) : ("inbound" as const),
+          partyId: s.partyId,
+          dealId: deal.id,
+          invoiceNumber: `INV-${(deal.country ?? "XX").toUpperCase()}-${String(sharedInvoices.length + idx + 1).padStart(3, "0")}`,
+          status: "draft" as const,
+          subtotal,
+          vatAmount,
+          currency: deal.currency ?? "EUR",
+          issueDate: today,
+          dueDate,
+          createdAt: now,
+          updatedAt: now,
+        };
+        sharedInvoices.push(inv);
+      });
+      if (billableStakes.length > 0) setInvoicesVersion((v) => v + 1);
     }
     const entry = { from: status, to, timestamp: new Date().toISOString(), note: "Manual transition" };
     setStatus(to);
@@ -151,7 +183,10 @@ const DealDetail = () => {
   };
 
   const handleSave = () => {
-    const updated: Deal = { ...deal, status, ofCaseNumber, statusHistory };
+    const updated: Deal = { ...deal, status, statusHistory };
+    if (status === "finalized" && deal.status !== "finalized") {
+      createCommissionAccrualPosting(updated);
+    }
     updateDeal(updated);
     toast.success("Deal saved");
   };
@@ -198,31 +233,36 @@ const DealDetail = () => {
 
             {/* Deal Overview */}
             <SectionCard title="Deal Overview">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
-                <div>
-                  <ReadRow label="Deal ID" value={deal.id} />
-                  <ReadRow label="Market" value={deal.market} />
-                  <ReadRow label="Country" value={deal.country?.toUpperCase()} />
-                  <ReadRow label="Currency" value={deal.currency} />
-                  <ReadRow label="Report Date" value={deal.reportDate ? formatDate(deal.reportDate) : "—"} />
-                  <ReadRow label="Created" value={deal.createdAt ? formatDate(deal.createdAt) : "—"} />
-                </div>
-                <div>
-                  <ReadRow label="Property" value={deal.title ?? deal.buildingName ?? "—"} />
-                  <ReadRow label="Offer ID" value={deal.offerId ?? "—"} />
-                  <ReadRow label="Client" value={deal.clientName ?? "—"} />
-                  <ReadRow label="Channel" value={deal.channel ?? "—"} />
-                  <ReadRow label="OF / Case No.">
-                    <input
-                      type="text"
-                      value={ofCaseNumber}
-                      onChange={(e) => setOfCaseNumber(e.target.value)}
-                      placeholder="Enter case number"
-                      className="w-full px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                  </ReadRow>
-                </div>
-              </div>
+              {(() => {
+                const revenueParties = sharedDealStakeholders
+                  .filter((s) => s.dealId === deal.id && s.role === "REVENUE_SOURCE")
+                  .map((s) => sharedParties.find((p) => p.id === s.partyId)?.displayName)
+                  .filter(Boolean)
+                  .join(", ");
+                const clientDisplay = revenueParties || deal.clientName || "—";
+                const dealAmountValue = deal.dealAmount ?? deal.dealPrice;
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
+                    <div>
+                      <ReadRow label="Deal ID" value={deal.id} />
+                      <ReadRow label="Market" value={deal.market} />
+                      <ReadRow label="Country" value={deal.country?.toUpperCase()} />
+                      <ReadRow label="Currency" value={deal.currency} />
+                      {dealAmountValue != null && dealAmountValue > 0 && (
+                        <ReadRow label="Deal Amount" value={fmt(dealAmountValue, currency)} />
+                      )}
+                      <ReadRow label="Report Date" value={deal.reportDate ? formatDate(deal.reportDate) : "—"} />
+                      <ReadRow label="Created" value={deal.createdAt ? formatDate(deal.createdAt) : "—"} />
+                    </div>
+                    <div>
+                      <ReadRow label="Property" value={deal.title ?? deal.buildingName ?? "—"} />
+                      <ReadRow label="Offer ID" value={deal.offerId ?? "—"} />
+                      <ReadRow label="Client" value={clientDisplay} />
+                      <ReadRow label="Channel" value={deal.channel ?? "—"} />
+                    </div>
+                  </div>
+                );
+              })()}
             </SectionCard>
 
             {/* P&L */}
@@ -237,7 +277,7 @@ const DealDetail = () => {
             </SectionCard>
 
             {/* Invoices */}
-            <InvoicesSection dealId={deal.id} navigate={navigate} />
+            <InvoicesSection dealId={deal.id} navigate={navigate} invoicesVersion={invoicesVersion} />
 
             {/* Accounting Events */}
             <PostingsSection dealId={deal.id} />
@@ -249,12 +289,21 @@ const DealDetail = () => {
             <DocumentsSection
               docs={docs}
               canEdit={canEditOps}
-              onUpdateStatus={(id, newStatus) =>
-                setDocs((prev) => prev.map((r) => r.id === id ? { ...r, status: newStatus } : r))
-              }
-              onAddDoc={(label) =>
-                setDocs((prev) => [...prev, { id: `ddr-local-${Date.now()}`, dealId: deal.id, label, required: false, status: "pending" }])
-              }
+              onUpdateStatus={(id, newStatus) => {
+                const entry = sharedDealDocumentRequirements.find((r) => r.id === id);
+                if (entry) { entry.status = newStatus; saveDocumentRequirements(); }
+                setDocs((prev) => prev.map((r) => r.id === id ? { ...r, status: newStatus } : r));
+              }}
+              onAddDoc={(label) => {
+                const newDoc = { id: `ddr-local-${Date.now()}`, dealId: deal.id, label, required: false, status: "pending" as const };
+                sharedDealDocumentRequirements.push(newDoc);
+                setDocs((prev) => [...prev, newDoc]);
+              }}
+              onUploadDoc={(id, fileName) => {
+                const entry = sharedDealDocumentRequirements.find((r) => r.id === id);
+                if (entry) { entry.status = "uploaded"; entry.documentId = fileName; saveDocumentRequirements(); }
+                setDocs((prev) => prev.map((r) => r.id === id ? { ...r, status: "uploaded", documentId: fileName } : r));
+              }}
             />
           </div>
 
@@ -427,12 +476,12 @@ const DIRECTION_CLASSES: Record<"inbound" | "outbound", string> = {
   outbound: "bg-emerald-50 text-emerald-700 border border-emerald-200",
 };
 
-function InvoicesSection({ dealId, navigate }: { dealId: string; navigate: ReturnType<typeof useNavigate> }) {
+function InvoicesSection({ dealId, navigate, invoicesVersion }: { dealId: string; navigate: ReturnType<typeof useNavigate>; invoicesVersion: number }) {
   const invoices = useMemo(() => {
     return sharedInvoices
       .filter((inv) => inv.dealId === dealId)
       .sort((a, b) => a.issueDate.localeCompare(b.issueDate));
-  }, [dealId]);
+  }, [dealId, invoicesVersion]);
 
   if (invoices.length === 0) {
     return (
@@ -582,11 +631,13 @@ function DocumentsSection({
   canEdit,
   onUpdateStatus,
   onAddDoc,
+  onUploadDoc,
 }: {
   docs: DealDocumentRequirement[];
   canEdit: boolean;
   onUpdateStatus: (id: string, status: DocumentRequirementStatus) => void;
   onAddDoc: (label: string) => void;
+  onUploadDoc: (id: string, fileName: string) => void;
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [addingLabel, setAddingLabel] = useState("");
@@ -608,6 +659,12 @@ function DocumentsSection({
                   <button onClick={() => downloadDoc(r.label)} title="Download" className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                     <Download className="h-3.5 w-3.5" />
                   </button>
+                )}
+                {canEdit && r.status === "pending" && (
+                  <label className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer">
+                    Upload
+                    <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadDoc(r.id, f.name); e.target.value = ""; }} />
+                  </label>
                 )}
                 {canEdit && r.status === "uploaded" && (
                   <button onClick={() => onUpdateStatus(r.id, "approved")} className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors">

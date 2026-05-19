@@ -5,13 +5,12 @@ import { PageContainer } from '@/components/layout/page-container';
 import { TrackedTitle } from '@/components/ui/tracked-title';
 import { ExpectedPayoutSection } from '@/components/deals/expected-payout-section';
 import { PaidInvoicesModal } from '@/components/modals/paid-invoices-modal';
-import { agentDeals, agentStakeMap, CURRENT_AGENT_ID } from '@/data/mockDeals';
+import { getAgentDeals, getAgentStakeMap } from '@/data/mockDeals';
 import { getInvoices, getPostingLines } from '@/data/earningsStore';
 import { buildWaterfallInput, calculateProjectedPnL, computeAgentCommission, sharedPostings, sharedAgents, sharedLedgers } from '@huspy/shared-domain';
+import { useDevTools } from '@/contexts/dev-tools-context';
 import type { Deal, StatementOfAccount, StatementLineItem } from '@/types';
-
-const AGENT_PARTY_ID = sharedAgents.find(a => a.id === CURRENT_AGENT_ID)?.partyId ?? '';
-const AGENT_LEDGER_ID = sharedLedgers.find(l => l.name === `AgentLiability_${CURRENT_AGENT_ID}`)?.id;
+import type { DealStakeholder } from '@huspy/shared-domain';
 
 function formatPeriodLabel(period: string): string {
   if (/^\d{4}-Q\d$/.test(period)) {
@@ -24,15 +23,15 @@ function formatPeriodLabel(period: string): string {
   return period;
 }
 
-function buildExpectedStatement(): StatementOfAccount | null {
+function buildExpectedStatement(agentPartyId: string, agentLedgerId: string | undefined): StatementOfAccount | null {
   const issuedInvoices = getInvoices().filter(
-    i => i.direction === 'inbound' && i.partyId === AGENT_PARTY_ID && i.status === 'issued'
+    i => i.direction === 'inbound' && i.partyId === agentPartyId && i.status === 'issued'
   );
   if (issuedInvoices.length === 0) return null;
 
   const issuedIds = new Set(issuedInvoices.map(i => i.id));
   const taggedLines = getPostingLines()
-    .filter(l => l.invoiceId && issuedIds.has(l.invoiceId) && l.ledgerId === AGENT_LEDGER_ID)
+    .filter(l => l.invoiceId && issuedIds.has(l.invoiceId) && l.ledgerId === agentLedgerId)
     .map(l => ({ ...l, posting: sharedPostings.find(p => p.id === l.postingId)! }))
     .filter(l => !!l.posting);
 
@@ -67,7 +66,7 @@ function buildExpectedStatement(): StatementOfAccount | null {
   };
 }
 
-function resolvedCommission(d: Deal): number {
+function resolvedCommission(d: Deal, agentStakeMap: Map<string, DealStakeholder>): number {
   const stake = agentStakeMap.get(d.id);
   const input = buildWaterfallInput(d);
   const projection = input ? calculateProjectedPnL(input) : null;
@@ -80,14 +79,21 @@ const CLOSED_STATUSES = ['finalized'];
 
 export function PaymentHistory() {
   const navigate = useNavigate();
+  const { activeAgentId } = useDevTools();
   const [showPaidInvoices, setShowPaidInvoices] = useState(false);
+
+  const agentDeals = getAgentDeals(activeAgentId);
+  const agentStakeMap = getAgentStakeMap(activeAgentId);
+  const agentPartyId = sharedAgents.find(a => a.id === activeAgentId)?.partyId ?? '';
+  const agentLedgerId = sharedLedgers.find(l => l.name === `AgentLiability_${activeAgentId}`)?.id;
+
   const closedDeals = agentDeals.filter(d => CLOSED_STATUSES.includes(d.status));
   const pipelineDeals = agentDeals.filter(d => PIPELINE_STATUSES.includes(d.status));
 
-  const expectedStatement = buildExpectedStatement();
+  const expectedStatement = buildExpectedStatement(agentPartyId, agentLedgerId);
   const totalClosedDeals = closedDeals.length;
-  const totalIncome = closedDeals.reduce((sum, d) => sum + resolvedCommission(d), 0);
-  const potentialIncome = pipelineDeals.reduce((sum, d) => sum + resolvedCommission(d), 0);
+  const totalIncome = closedDeals.reduce((sum, d) => sum + resolvedCommission(d, agentStakeMap), 0);
+  const potentialIncome = pipelineDeals.reduce((sum, d) => sum + resolvedCommission(d, agentStakeMap), 0);
 
   return (
     <PageContainer>
@@ -199,7 +205,7 @@ export function PaymentHistory() {
                     <p className="text-[12px] font-normal leading-[140%] text-fg-secondary">{deal.clientName}</p>
                   </div>
                   <p className="text-[14px] font-semibold leading-[140%] tabular-nums text-foreground">
-                    €{resolvedCommission(deal).toLocaleString()}
+                    €{resolvedCommission(deal, agentStakeMap).toLocaleString()}
                   </p>
                 </div>
               ))}

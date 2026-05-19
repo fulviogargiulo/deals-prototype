@@ -239,6 +239,7 @@ export interface Document {
 export interface Agent {
   id: string;
   partyId: string;
+  country?: Country;
   uid?: number;
   employmentStatus?: string;
   teamLeadName?: string;
@@ -464,6 +465,10 @@ export interface AgentFinancials {
   teamLeadRate?: number;
   /** % of agent payout passed to the manager (Huspy-borne overhead, additive on top). */
   managerRate?: number;
+  /** Subledger ID where the team lead's portion is credited on commission_accrual. */
+  teamLeadLedgerId?: number;
+  /** Subledger ID where the manager's portion is credited on commission_accrual. */
+  managerLedgerId?: number;
   /** ISO date the policy became effective. Used when multiple records exist for one agent. */
   effectiveFrom?: string;
 }
@@ -589,6 +594,8 @@ export interface Ledger {
   name: string;
   description?: string;
   type: LedgerType;
+  /** True for GL parent accounts that have subledgers — direct posting is forbidden; always post to a subledger. */
+  isControlAccount?: boolean;
   glId?: number;
   partyId?: string;
   currency?: Currency;
@@ -615,6 +622,8 @@ export interface PostingLine {
   ledgerId: number;
   side: PostingSide;
   amount: number;
+  /** Set on open-item lines only: AR, AP, and agent subledger (ledgers 22/24).
+   *  VAT and P&L lines (REV, EXP) are excluded. */
   invoiceId?: string;
 }
 

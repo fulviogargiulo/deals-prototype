@@ -125,6 +125,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       grossRevenue,
       dealPrice: businessUnit === "mortgage" ? parseFloat(disbursedAmount) || 0 : parseFloat(dealPrice) || 0,
       takeRate: businessUnit === "mortgage" ? parseFloat(bankSlab) || 0 : parseFloat(takeRate) || 0,
+      commissionPercentage: businessUnit === "mortgage" ? parseFloat(bankSlab) || 0 : parseFloat(takeRate) || 0,
       reportDate: new Date().toISOString().split("T")[0],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

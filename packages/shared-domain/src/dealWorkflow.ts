@@ -6,7 +6,7 @@ export const DEAL_WORKFLOW_TRANSITIONS: Record<DealStatus, DealStatus[]> = {
   "pending-details": ["under-review", "canceled"],
   "under-review": ["pending-details", "pending-agent-approval", "canceled"],
   "pending-agent-approval": ["under-review", "pending-receivables", "canceled"],
-  "pending-receivables": ["finalized", "canceled"],
+  "pending-receivables": ["canceled"],
   finalized: [],
   canceled: [],
 };

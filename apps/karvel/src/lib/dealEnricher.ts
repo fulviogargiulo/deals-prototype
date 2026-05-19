@@ -2,8 +2,6 @@ import {
   sharedDealStakeholders,
   sharedAgents,
   sharedParties,
-  computeDealFinancials,
-  COMMISSION_RATES,
 } from "@huspy/shared-domain";
 import type { Deal as BaseDeal } from "@huspy/shared-domain";
 import type { Deal, AgentEntry } from "@/data/types";
@@ -18,28 +16,25 @@ const agentDisplayName: Record<string, string> = {
 };
 
 export function enrichDeal(deal: BaseDeal): Deal {
-  const f = computeDealFinancials(deal.dealAmount, deal.conveyanceRevenue ?? 0);
-
   const agentStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id && s.role === "INTERNAL_PAYOUT");
   const agents: AgentEntry[] = agentStakes.map((stake) => {
     const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
     const name = agent ? (agentDisplayName[agent.id] ?? agent.id) : stake.partyId;
-    const split = (stake.splitPercentage ?? 100) / 100;
     return {
       agentName: name,
       agentId: agent?.id,
       agentShare: stake.splitPercentage ?? 100,
-      agentCommissionRate: COMMISSION_RATES.agentGrossRate,
-      agentCommissionPayout: Math.round(f.agentCommissionPayout * split),
+      agentCommissionRate: 0,
+      agentCommissionPayout: 0,
       agentIncentive: 0,
       agentDeductions: 0,
-      agentTotalAmount: Math.round(f.agentCommissionPayout * split),
+      agentTotalAmount: 0,
       teamLeadName: agent?.teamLeadName,
-      teamLeadRate: COMMISSION_RATES.teamLeadRate,
-      teamLeadShare: Math.round(f.teamLeadShare * split),
+      teamLeadRate: 0,
+      teamLeadShare: 0,
       managerName: agent?.managerName,
-      managerOverrideRate: COMMISSION_RATES.managerOverrideRate,
-      managerOverride: Math.round(f.managerOverride * split),
+      managerOverrideRate: 0,
+      managerOverride: 0,
       referralPercentage: 0,
       referralAmount: 0,
       clientKickback: 0,
@@ -51,29 +46,27 @@ export function enrichDeal(deal: BaseDeal): Deal {
   const conveyanceStake = sharedDealStakeholders.find((s) => s.dealId === deal.id && s.role === "OPERATIONAL_DEDUCTION");
   const conveyanceParty = conveyanceStake ? sharedParties.find((p) => p.id === conveyanceStake.partyId) : undefined;
 
-  const rebateAmount = deal.rebateAmount ?? 0;
-
   return {
     ...deal,
     agents,
     agentShare: 100,
-    agentCommissionRate: COMMISSION_RATES.agentGrossRate,
-    agentCommissionPayout: f.agentCommissionPayout,
+    agentCommissionRate: 0,
+    agentCommissionPayout: 0,
     teamLeadName: primaryEntry?.teamLeadName,
-    teamLeadRate: COMMISSION_RATES.teamLeadRate,
-    teamLeadShare: primaryEntry?.teamLeadShare ?? f.teamLeadShare,
+    teamLeadRate: 0,
+    teamLeadShare: 0,
     managerName: primaryEntry?.managerName,
-    managerOverrideRate: COMMISSION_RATES.managerOverrideRate,
-    managerOverride: primaryEntry?.managerOverride ?? f.managerOverride,
+    managerOverrideRate: 0,
+    managerOverride: 0,
     conveyanceAgentName: conveyanceParty?.displayName,
-    conveyanceAgentRate: COMMISSION_RATES.conveyanceAgentRate,
-    conveyanceAgentPayout: f.conveyanceAgentPayout,
-    huspyConveyanceShare: f.huspyConveyanceShare,
+    conveyanceAgentRate: 0,
+    conveyanceAgentPayout: 0,
+    huspyConveyanceShare: 0,
     clientKickback: 0,
     referralPercentage: 0,
     referralAmount: 0,
-    rebateAmount,
-    cogsInternal: f.cogsInternal,
+    rebateAmount: deal.rebateAmount ?? 0,
+    cogsInternal: 0,
     cogsExternal: 0,
     cogsReferrals: 0,
     cogsRebates: 0,

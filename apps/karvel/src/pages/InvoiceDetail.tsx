@@ -2,6 +2,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useRef, useMemo } from "react";
 import { sharedInvoices, sharedParties, sharedDeals, sharedLedgers, sharedPostings, sharedPostingLines, getPostingLinesForInvoice } from "@huspy/shared-domain";
 import type { Invoice } from "@huspy/shared-domain";
+import { saveSharedInvoices } from "@/data/sharedEntityStore";
+import { findDeal, updateDeal } from "@/data/dealStore";
+import { createCommissionAccrualPosting } from "@/lib/dealCalculations";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { ArrowLeft, Upload, X, AlertTriangle, Check, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,9 +44,83 @@ function resolveLedger(ledgerId: number): string {
   return sharedLedgers.find((l) => l.id === ledgerId)?.name ?? `Ledger ${ledgerId}`;
 }
 
-function PostingsSection({ invoiceId }: { invoiceId: string }) {
+const LEDGERS: Record<string, { AR: number; REV: number; VAT: number; EXP: number; AP: number; BANK: number }> = {
+  EUR: { AR: 2, REV: 6, VAT: 5, EXP: 7, AP: 4, BANK: 1 },
+  AED: { AR: 9, REV: 13, VAT: 12, EXP: 14, AP: 11, BANK: 8 },
+  SAR: { AR: 16, REV: 20, VAT: 19, EXP: 21, AP: 18, BANK: 15 },
+};
+
+function createIssuedPosting(inv: Invoice): void {
+  const l = LEDGERS[inv.currency] ?? LEDGERS.EUR;
+  const deal = sharedDeals.find((d) => d.id === inv.dealId);
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+  const pid = `posting-auto-${inv.id}-${Date.now()}`;
+  const vat = inv.vatAmount ?? 0;
+  const gross = inv.subtotal + vat;
+
+  const posting = {
+    id: pid,
+    dealId: inv.dealId,
+    businessUnit: deal?.businessUnit ?? null,
+    businessProcess: (inv.direction === "outbound" ? "invoice_issued" : "external_cost_accrual") as any,
+    createdBy: "ops",
+    createdAt: now,
+    valueDate: today,
+    currency: inv.currency,
+    description: `${inv.direction === "outbound" ? "Invoice issued" : "Cost accrual"} — ${inv.invoiceNumber}`,
+  };
+  sharedPostings.push(posting);
+
+  if (inv.direction === "outbound") {
+    sharedPostingLines.push({ id: `${pid}-1`, postingId: pid, ledgerId: l.AR,  side: "DEBIT",  amount: gross,        invoiceId: inv.id });
+    sharedPostingLines.push({ id: `${pid}-2`, postingId: pid, ledgerId: l.REV, side: "CREDIT", amount: inv.subtotal });
+    if (vat > 0)
+      sharedPostingLines.push({ id: `${pid}-3`, postingId: pid, ledgerId: l.VAT, side: "CREDIT", amount: vat });
+  } else {
+    sharedPostingLines.push({ id: `${pid}-1`, postingId: pid, ledgerId: l.EXP, side: "DEBIT",  amount: inv.subtotal });
+    if (vat > 0)
+      sharedPostingLines.push({ id: `${pid}-2`, postingId: pid, ledgerId: l.VAT, side: "DEBIT",  amount: vat });
+    sharedPostingLines.push({ id: `${pid}-3`, postingId: pid, ledgerId: l.AP,  side: "CREDIT", amount: gross,        invoiceId: inv.id });
+  }
+}
+
+function createPaidPosting(inv: Invoice): void {
+  const l = LEDGERS[inv.currency] ?? LEDGERS.EUR;
+  const deal = sharedDeals.find((d) => d.id === inv.dealId);
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+  const pid = `posting-auto-${inv.id}-paid-${Date.now()}`;
+  const vat = inv.vatAmount ?? 0;
+  const gross = inv.subtotal + vat;
+
+  const posting = {
+    id: pid,
+    dealId: inv.dealId,
+    businessUnit: deal?.businessUnit ?? null,
+    businessProcess: (inv.direction === "outbound" ? "cash_receipt" : "payment_disbursed") as any,
+    createdBy: "ops",
+    createdAt: now,
+    valueDate: today,
+    currency: inv.currency,
+    description: `${inv.direction === "outbound" ? "Payment received" : "Payment disbursed"} — ${inv.invoiceNumber}`,
+  };
+  sharedPostings.push(posting);
+
+  if (inv.direction === "outbound") {
+    // DR Bank, CR AR (clears the receivable)
+    sharedPostingLines.push({ id: `${pid}-1`, postingId: pid, ledgerId: l.BANK, side: "DEBIT",  amount: gross });
+    sharedPostingLines.push({ id: `${pid}-2`, postingId: pid, ledgerId: l.AR,   side: "CREDIT", amount: gross, invoiceId: inv.id });
+  } else {
+    // DR AP, CR Bank (clears the payable)
+    sharedPostingLines.push({ id: `${pid}-1`, postingId: pid, ledgerId: l.AP,   side: "DEBIT",  amount: gross, invoiceId: inv.id });
+    sharedPostingLines.push({ id: `${pid}-2`, postingId: pid, ledgerId: l.BANK, side: "CREDIT", amount: gross });
+  }
+}
+
+function PostingsSection({ invoiceId, version }: { invoiceId: string; version: number }) {
   const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
-  const postingLines = useMemo(() => getPostingLinesForInvoice(invoiceId), [invoiceId]);
+  const postingLines = useMemo(() => getPostingLinesForInvoice(invoiceId), [invoiceId, version]);
 
   if (postingLines.length === 0) {
     return null;
@@ -138,6 +215,7 @@ export default function InvoiceDetail() {
   const { invoiceId } = useParams<{ invoiceId: string }>();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const invoiceFileInputRef = useRef<HTMLInputElement>(null);
 
   const invoice = sharedInvoices.find((i) => i.id === invoiceId);
   if (!invoice) {
@@ -150,9 +228,11 @@ export default function InvoiceDetail() {
 
   const [paymentReference, setPaymentReference] = useState(invoice.paymentReference || "");
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [postingsVersion, setPostingsVersion] = useState(0);
 
   // Draft edit state (outbound only)
   const [draftDueDate, setDraftDueDate] = useState(invoice.dueDate || "");
@@ -169,6 +249,12 @@ export default function InvoiceDetail() {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file) handleFileSelect(file);
+  };
+
+  const handleInvoiceDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) setInvoiceFile(file);
   };
 
   const handleMarkAsPaid = async () => {
@@ -195,6 +281,23 @@ export default function InvoiceDetail() {
     invoice.paidDate = new Date().toISOString().slice(0, 10);
     invoice.updatedAt = new Date().toISOString();
 
+    // Auto-finalize the deal if all its invoices are now paid
+    if (invoice.dealId) {
+      const deal = findDeal(invoice.dealId);
+      if (deal && deal.status === "pending-receivables") {
+        const dealInvoices = sharedInvoices.filter((i) => i.dealId === invoice.dealId);
+        if (dealInvoices.length > 0 && dealInvoices.every((i) => i.status === "paid")) {
+          const now = new Date().toISOString();
+          const finalized = { ...deal, status: "finalized" as const, statusHistory: [...(deal.statusHistory ?? []), { from: "pending-receivables", to: "finalized", timestamp: now, note: "Auto-finalized: all invoices paid" }] };
+          updateDeal(finalized);
+          createCommissionAccrualPosting(finalized);
+        }
+      }
+    }
+
+    saveSharedInvoices();
+    createPaidPosting(invoice);
+    setPostingsVersion((v) => v + 1);
     setIsSaving(false);
   };
 
@@ -203,13 +306,23 @@ export default function InvoiceDetail() {
       alert("Please set a due date before issuing.");
       return;
     }
+    if (invoice.direction === "inbound" && !invoiceFile && !invoice.invoiceFileName) {
+      alert("Please upload the received invoice document.");
+      return;
+    }
     setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 400));
     invoice.status = "issued";
     invoice.invoiceNumber = draftInvoiceNumber;
     invoice.dueDate = draftDueDate;
     invoice.vatAmount = draftVatAmount ? parseFloat(draftVatAmount) : undefined;
+    if (invoiceFile) {
+      invoice.invoiceFileName = invoiceFile.name;
+    }
     invoice.updatedAt = new Date().toISOString();
+    saveSharedInvoices();
+    createIssuedPosting(invoice);
+    setPostingsVersion((v) => v + 1);
     setIsSaving(false);
   };
 
@@ -337,8 +450,8 @@ export default function InvoiceDetail() {
             </div>
           </div>
 
-          {/* Draft — complete before issuing */}
-          {invoice.status === "draft" && (
+          {/* Draft — outbound: complete & send to party */}
+          {invoice.status === "draft" && invoice.direction === "outbound" && (
             <div className="bg-card border border-amber-200 rounded-lg p-6 space-y-5">
               <div>
                 <h2 className="text-[14px] font-semibold text-foreground">Complete &amp; Issue</h2>
@@ -384,7 +497,6 @@ export default function InvoiceDetail() {
                 </div>
               </div>
 
-              {/* Gross summary */}
               <div className="bg-muted/40 rounded-lg p-4 space-y-2 text-[13px]">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal</span>
@@ -419,8 +531,132 @@ export default function InvoiceDetail() {
             </div>
           )}
 
+          {/* Draft — inbound: waiting for counterparty invoice, then upload & record */}
+          {invoice.status === "draft" && invoice.direction === "inbound" && (
+            <div className="bg-card border border-amber-200 rounded-lg p-6 space-y-5">
+              <div>
+                <h2 className="text-[14px] font-semibold text-foreground">Upload Received Invoice</h2>
+                <p className="text-[12px] text-muted-foreground mt-1">
+                  Waiting for the counterparty to send their invoice. Once received, upload it here and confirm the details before processing the payout.
+                </p>
+              </div>
+
+              {/* Invoice file upload */}
+              <div>
+                <p className="text-[12px] text-muted-foreground mb-2">
+                  Invoice Document <span className="text-destructive">*</span>
+                </p>
+                {invoiceFile ? (
+                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-emerald-600" />
+                      <p className="text-[13px] font-medium text-emerald-700">{invoiceFile.name}</p>
+                    </div>
+                    <button
+                      onClick={() => setInvoiceFile(null)}
+                      className="p-1 hover:bg-emerald-100 rounded text-emerald-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : invoice.invoiceFileName ? (
+                  <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                    <p className="text-[13px] font-medium text-foreground">{invoice.invoiceFileName}</p>
+                    <button
+                      onClick={() => { invoice.invoiceFileName = undefined; }}
+                      className="p-1 hover:bg-muted rounded text-muted-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onDrop={handleInvoiceDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                    onClick={() => invoiceFileInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-muted/30 transition-colors"
+                  >
+                    <Upload className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-[13px] text-foreground font-medium">Drop the invoice here or click to upload</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">PDF or image</p>
+                  </div>
+                )}
+                <input
+                  ref={invoiceFileInputRef}
+                  type="file"
+                  accept=".pdf,image/*"
+                  onChange={(e) => {
+                    const f = e.currentTarget.files?.[0];
+                    if (f) setInvoiceFile(f);
+                  }}
+                  className="hidden"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[12px] text-muted-foreground mb-1.5 block">Invoice Number</label>
+                  <input
+                    type="text"
+                    value={draftInvoiceNumber}
+                    onChange={(e) => setDraftInvoiceNumber(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-[12px] text-muted-foreground mb-1.5 block">
+                    Due Date <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={draftDueDate}
+                    onChange={(e) => setDraftDueDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+                <div>
+                  <label className="text-[12px] text-muted-foreground mb-1.5 block">
+                    VAT Amount ({invoice.currency})
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={draftVatAmount}
+                    onChange={(e) => setDraftVatAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 border border-border rounded-lg text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-muted/40 rounded-lg p-4 space-y-2 text-[13px]">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span className="font-mono">{fmt(invoice.subtotal, invoice.currency)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>VAT</span>
+                  <span className="font-mono">{fmt(parseFloat(draftVatAmount) || 0, invoice.currency)}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-foreground border-t border-border pt-2 mt-1">
+                  <span>Total to pay out</span>
+                  <span className="font-mono">{fmt(invoice.subtotal + (parseFloat(draftVatAmount) || 0), invoice.currency)}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleMarkAsIssued}
+                disabled={isSaving || !draftDueDate || (!invoiceFile && !invoice.invoiceFileName)}
+                className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
+              >
+                {isSaving ? "Saving…" : "Confirm Receipt & Process"}
+              </button>
+            </div>
+          )}
+
           {/* Postings */}
-          <PostingsSection invoiceId={invoiceId!} />
+          <PostingsSection invoiceId={invoiceId!} version={postingsVersion} />
 
           {/* Payment Proof Section */}
           {invoice.status === "issued" && (

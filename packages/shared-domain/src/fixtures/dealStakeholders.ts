@@ -115,4 +115,9 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   { id: "ds-deal-009-conv", dealId: "deal-009", partyId: "party-conv-tamm-legal",       role: "OPERATIONAL_DEDUCTION", financialAmount: -3000 },
   { id: "ds-deal-010-conv", dealId: "deal-010", partyId: "party-conv-tamm-legal",       role: "OPERATIONAL_DEDUCTION", financialAmount: -3000 },
   { id: "ds-deal-016-conv", dealId: "deal-016", partyId: "party-conv-tamm-legal",       role: "OPERATIONAL_DEDUCTION", financialAmount: -3000 },
+
+  // deal-020 — primary, ae/AED, agent-004, developer-pay (Emaar AED 1.2M @ 2%)
+  { id: "ds-deal-020-client",    dealId: "deal-020", partyId: "party-client-008",   role: "REVENUE_SOURCE" },
+  { id: "ds-deal-020-developer", dealId: "deal-020", partyId: "party-third-emaar",  role: "REVENUE_SOURCE",  financialAmount: 24000 },
+  { id: "ds-deal-020-agent",     dealId: "deal-020", partyId: "party-agent-004",    role: "INTERNAL_PAYOUT", isPrimary: true, splitPercentage: 100, financialAmount: 10080 },
 ];
