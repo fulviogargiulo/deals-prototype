@@ -1,6 +1,6 @@
-# Deals — Concepts & Data Model
+# Deals — Concepts & Overview
 
-This document covers the foundational concepts, definitions, and data model that power the Deals ecosystem. It is intended for anyone who needs to understand how Huspy processes transactions and accounts for them.
+This document covers the foundational concepts and accounting model that power the Deals ecosystem. For entity relationships and the full data model, see [Domain Model](./domain-model.md).
 
 ---
 
@@ -55,37 +55,16 @@ The ledger stays balanced; Finance knows exactly what Huspy owes the agent.
 
 ## Key Entities
 
-### Party
-The central identity record. Every person or organisation in the system — buyer, seller, agent, bank, developer, notary — is a `Party`. Deduplicated using `taxId` (NIE in Spain, Emirates ID in UAE). Before creating a new Party, always look up by `taxId` first.
-
-### Deal
-The central transaction record. Holds high-level metadata (status, deal amount, market, BU, country). Delegates all financial specifics to its stakeholders.
-
-### DealStakeholder
-Links a `Party` to a `Deal` with a specific **financial or identity role**. Financial roles drive the P&L waterfall; identity roles (DEMAND, SUPPLY) record who the parties to the transaction are without affecting calculations.
-
-| Role | Meaning |
+| Entity | One-line summary |
 |---|---|
-| `REVENUE_SOURCE` | Party paying Huspy. Their `financialAmount` is Huspy's gross revenue. |
-| `INTERNAL_PAYOUT` | Huspy agent. Commission calculated from `AgentFinancials.strategy`, not entered manually. |
-| `ACQUISITION_DEDUCTION` | External commercial partner (co-broker, referral). Deducted from gross. |
-| `OPERATIONAL_DEDUCTION` | Fixed service cost (notary, conveyance). Deducted from gross. |
-| `DEMAND` | Buyer, tenant, or borrower. Identity role only — not part of the financial waterfall. First DEMAND entry is the canonical source for the deal's client name. |
-| `SUPPLY` | Seller, developer, or lender. Identity role only — not part of the financial waterfall. |
+| `Party` | Single identity record for every person or organisation — deduplicated by `taxId`. |
+| `Deal` | Central transaction record: status, amount, market, BU, country. |
+| `DealStakeholder` | Links a Party to a Deal with a financial or identity role; drives the P&L waterfall. |
+| `Invoice` | Billing instrument — outbound (Huspy bills client) or inbound (agent/vendor bills Huspy). |
+| `Posting` / `PostingLine` | Double-entry primitives — every business event creates a balanced posting across one or more ledger accounts. |
+| `Ledger` | A GL account or agent subledger in the chart of accounts. |
 
-### Invoice
-The billing instrument. An invoice collects one or more uninvoiced `PostingLine` entries — once submitted, each line is linked to the invoice and cleared from the agent's pending balance. Two directions:
-
-| Direction | Who sends it | Cash flow |
-|---|---|---|
-| `outbound` | Huspy bills the client (buyer, developer, bank, tenant) | Huspy collects |
-| `inbound` | Agent or vendor bills Huspy | Huspy pays |
-
-### Ledger, Posting, PostingLine
-Double-entry accounting primitives:
-- **Ledger** — a specific account in the chart of accounts (e.g. `ASSET_AR_EUR`, `LIAB_VAT_EUR`). Agents get individual subledgers: `AgentLiability_agent-{slug}`.
-- **Posting** — a record of a business event (e.g. `invoice_issued`, `commission_accrual`). Groups multiple lines.
-- **PostingLine** — the individual debit or credit applied to a specific Ledger. Every posting's lines must sum to zero.
+> Full entity relationships, role tables, posting types, and invariants: [Domain Model](./domain-model.md).
 
 ---
 
