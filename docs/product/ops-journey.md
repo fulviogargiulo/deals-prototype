@@ -1,3 +1,5 @@
+<!-- Confluence: https://huspy.atlassian.net/wiki/spaces/corp/pages/2412085272 -->
+
 # Ops & Finance Journey — Karvel
 
  is Huspy's internal back-office — an existing product being expanded. It is not visible to agents. Ops and Finance use it to manage the full deal pipeline, handle invoicing on both sides (client and agent), and maintain agent profiles including their accounting ledger and commission structures.

@@ -1,3 +1,5 @@
+<!-- Confluence: https://huspy.atlassian.net/wiki/spaces/corp/pages/2432073741 -->
+
 # 1. Intro
 
 This page aims at introducing key accounting and financial concepts that will be applied in the Deals and Payment product.

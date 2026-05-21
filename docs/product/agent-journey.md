@@ -1,3 +1,5 @@
+<!-- Confluence: https://huspy.atlassian.net/wiki/spaces/corp/pages/2412609545 -->
+
 # Agent Journey — Agent App
 
 The Agent App is the external-facing tool for independent agents working with Huspy (UAE, Spain, Saudi Arabia). It is an existing product being expanded. Agents do not currently create deals — deals are created by Ops in Karvel or triggered automatically when an offer is accepted. The Agent App covers the agent's side of the deal from that point onward: responding to Ops information requests, confirming commission terms, and getting paid.

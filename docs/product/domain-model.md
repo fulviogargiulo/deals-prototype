@@ -1,3 +1,5 @@
+<!-- Confluence: https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692 -->
+
 This page explains how the core entities in the Deals system connect to each other. It is the authoritative reference for anyone building on, integrating with, or reasoning about the data model.
 
 # 1. Entity Relationship Diagram
