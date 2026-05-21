@@ -37,7 +37,7 @@ Once the agent submits their information, the deal returns to Under Review autom
 
 ## The Deals Pipeline
 
-![Karvel — Deal Management pipeline](screenshots/karvel-deals-pipeline.png)
+<!-- SCREENSHOT: Karvel deals pipeline table — full list view with filters and status badges -->
 
 The Deals tab is a paginated, searchable table of all deals across all statuses and markets.
 
@@ -52,7 +52,7 @@ Each row shows: Deal ID, status, BU, country, market, gross revenue, net revenue
 
 ## Inside a Deal — What Ops Does
 
-![Karvel — Deal detail with P&L waterfall](screenshots/karvel-deal-detail.png)
+<!-- SCREENSHOT: Karvel deal detail page — header with status dropdown, stakeholders panel, P&L waterfall -->
 
 ### Status Transitions
 
@@ -155,9 +155,9 @@ If the deal had external deductions (e.g. a €500 notary fee, a conveyance prov
 
 ## Agent Management
 
-![Karvel — Agent list](screenshots/karvel-agents.png)
+<!-- SCREENSHOT: Karvel agents list — searchable table with status badges (Onboarding / Active / Churned) -->
 
-![Karvel — Agent detail profile](screenshots/karvel-agent-detail.png)
+<!-- SCREENSHOT: Karvel agent detail — profile tabs (Overview, Documents, Deals, Ledger, Financials) -->
 
 The Agents section has a searchable, filterable list of all agents with status badges (Onboarding / Active / Churned). Each agent profile has eight tabs:
 

@@ -19,7 +19,7 @@ The app has three main areas: **Deals**, **Income Details**, and the **Earnings 
 
 ## The Actions Required Section — The Agent's Daily Queue
 
-![Agent App — Deals page with Actions Required queue](screenshots/agent-deals.png)
+<!-- SCREENSHOT: Agent App deals page — Actions Required queue showing pending commission confirmations and info requests -->
 
 The top of the Deals page surfaces everything that needs the agent's attention. This is the primary entry point into the deal flow. Two types of action appear here:
 
@@ -51,7 +51,7 @@ Inside the deal, the commission breakdown is expanded and non-collapsible at thi
 
 ## Inside a Deal Page
 
-![Agent App — Deal detail at Pending Agent Approval](screenshots/agent-deal-detail.png)
+<!-- SCREENSHOT: Agent App deal detail — timeline progress bar, commission breakdown expanded, Confirm / Request Review buttons -->
 
 Every deal page has the same structure regardless of status:
 
@@ -70,7 +70,7 @@ Every deal page has the same structure regardless of status:
 
 ## Tracking Income — The Income Details Page
 
-![Agent App — Income Details page](screenshots/agent-income.png)
+<!-- SCREENSHOT: Agent App Income Details — Earned Income, Expected Payout cycle, Potential Income from Pipeline -->
 
 Accessible from the main navigation. Gives a financial snapshot across all deals in three buckets:
 
@@ -86,7 +86,7 @@ Accessible from the main navigation. Gives a financial snapshot across all deals
 
 ## Generating Your Invoice to Huspy — The Earnings Tab
 
-![Agent App — Earnings tab with ledger movements and statements](screenshots/agent-earnings.png)
+<!-- SCREENSHOT: Agent App Earnings tab — ledger movements list with commission/bonus/fee entries, Statements section below -->
 
 The Earnings tab (inside the Deals page) is where the agent manages their actual payout cycle. It is separate from tracking individual deal status.
 
