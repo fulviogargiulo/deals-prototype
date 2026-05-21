@@ -44,7 +44,7 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-01-20T11:00:00.000Z",
     valueDate: "2026-01-20",
     currency: "EUR",
-    description: "Commission accrual — deal-001 (Felicia Canovas EUR 4 230.80)",
+    description: "Commission accrual — deal-001 (Felicia Canovas EUR 4 550.80)",
   },
   {
     id: "posting-004",
@@ -186,7 +186,7 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-05-10T11:00:00.000Z",
     valueDate: "2026-05-10",
     currency: "AED",
-    description: "Commission accrual — deal-016 (Gelo Huspy AED 16 115.40)",
+    description: "Commission accrual — deal-016 (Gelo Huspy AED 17 375.40)",
   },
 
   // ── deal-016 — TL + Mgr commission accrual (REBU, AED) ─────────────────
@@ -306,7 +306,7 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-04-25T11:00:00.000Z",
     valueDate: "2026-04-25",
     currency: "EUR",
-    description: "Commission accrual — deal-018 (Felicia Canovas EUR 9 220.00)",
+    description: "Commission accrual — deal-018 (Felicia Canovas EUR 9 700.00)",
   },
 
   // ── Standalone — Apr 2026 platform fee, agent-001 (REBU, EUR) ─────────
@@ -520,7 +520,7 @@ export const sharedPostings: Posting[] = [
     createdAt: "2026-06-10T11:00:00.000Z",
     valueDate: "2026-06-10",
     currency: "AED",
-    description: "Payment disbursed — Gelo Huspy (INV-2026-012, AED 17 866.17)",
+    description: "Payment disbursed — Gelo Huspy (INV-2026-012, AED 19 189.17)",
   },
 
   // ── deal-020 — AED primary, pending-receivables, agent-004 ───────────────
@@ -584,6 +584,139 @@ export const sharedPostings: Posting[] = [
     valueDate: "2026-05-14",
     currency: "AED",
     description: "Commission accrual — Isabel Torres / Mgr for Gelo Huspy (deal-020)",
+  },
+
+  // ── deal-021 full lifecycle (REBU, EUR, Guilherme + Marta referral) ──────────
+
+  // 1. Client invoice issued
+  {
+    id: "posting-056",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "P0021",
+    businessProcess: "invoice_issued",
+    createdBy: "system",
+    createdAt: "2026-03-10T09:00:00.000Z",
+    valueDate: "2026-03-10",
+    currency: "EUR",
+    description: "Commission earned — deal-021 (Townhouse in Las Rozas, Buy, €480k)",
+  },
+  // 2. Client payment received
+  {
+    id: "posting-057",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "P0021-PAY",
+    businessProcess: "bank_statement_inbound_matched",
+    createdBy: "system",
+    createdAt: "2026-03-15T15:00:00.000Z",
+    valueDate: "2026-03-15",
+    currency: "EUR",
+    description: "Payment received — INV-2026-021 (client-003)",
+  },
+  // 3. Agent commission accrual — Guilherme Castro
+  {
+    id: "posting-058",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "AGINV-021",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-03-20T11:00:00.000Z",
+    valueDate: "2026-03-20",
+    currency: "EUR",
+    description: "Commission accrual — deal-021 (Guilherme Castro EUR 6 210)",
+  },
+  // 4. TL commission accrual — Santiago Vega
+  {
+    id: "posting-059",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "AGINV-021-TL",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-03-20T11:00:00.000Z",
+    valueDate: "2026-03-20",
+    currency: "EUR",
+    description: "Commission accrual — Santiago Vega / TL for Guilherme Castro (deal-021)",
+  },
+  // 5. Mgr commission accrual — Isabel Torres
+  {
+    id: "posting-060",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "AGINV-021-MGR",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-03-20T11:00:00.000Z",
+    valueDate: "2026-03-20",
+    currency: "EUR",
+    description: "Commission accrual — Isabel Torres / Mgr for Guilherme Castro (deal-021)",
+  },
+  // 6. Referral accrual — Marta Sáez (salaried, HR export)
+  {
+    id: "posting-061",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "AGINV-021-REF",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-03-20T11:00:00.000Z",
+    valueDate: "2026-03-20",
+    currency: "EUR",
+    description: "Referral accrual — Marta Sáez (salaried, HR export) for deal-021 (EUR 600)",
+  },
+  // 7. Conveyance accrual — Gestoría López
+  {
+    id: "posting-062",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "CONV-021",
+    businessProcess: "external_cost_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-03-10T09:00:00.000Z",
+    valueDate: "2026-03-10",
+    currency: "EUR",
+    description: "Conveyance fee — deal-021 (Gestoría López & Asociados EUR 800 + IVA 168)",
+  },
+  // 8. Conveyance payment
+  {
+    id: "posting-063",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "CONV-021-PAY",
+    businessProcess: "bank_statement_outbound_matched",
+    createdBy: "system",
+    createdAt: "2026-03-28T10:00:00.000Z",
+    valueDate: "2026-03-28",
+    currency: "EUR",
+    description: "Conveyance payment — INV-2026-023 (Gestoría López)",
+  },
+  // 9. Agent invoice accrual — Guilherme submits inv-022
+  {
+    id: "posting-064",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "AGINV-ACCRUAL-021",
+    businessProcess: "agent_invoice_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-03-25T09:00:00.000Z",
+    valueDate: "2026-03-25",
+    currency: "EUR",
+    description: "Agent invoice accrual — Guilherme Castro, Mar 2026 (INV-2026-022)",
+  },
+  // 10. Agent payout — Huspy pays Guilherme
+  {
+    id: "posting-065",
+    dealId: "deal-021",
+    businessUnit: "rebu",
+    externalRef: "AGINV-ACCRUAL-021-PAY",
+    businessProcess: "bank_statement_outbound_matched",
+    createdBy: "system",
+    createdAt: "2026-04-05T10:00:00.000Z",
+    valueDate: "2026-04-05",
+    currency: "EUR",
+    description: "Agent payout — INV-2026-022 (Guilherme Castro EUR 6 582.60)",
   },
 
 ];

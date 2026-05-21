@@ -16,7 +16,7 @@ const agentDisplayName: Record<string, string> = {
 };
 
 export function enrichDeal(deal: BaseDeal): Deal {
-  const agentStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id && s.role === "INTERNAL_PAYOUT");
+  const agentStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id && s.role === "AGENT_PAYOUT");
   const agents: AgentEntry[] = agentStakes.map((stake) => {
     const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
     const name = agent ? (agentDisplayName[agent.id] ?? agent.id) : stake.partyId;

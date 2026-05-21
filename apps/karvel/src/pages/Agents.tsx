@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, LayoutGrid, Table2, Plus, MessageSquare, ArrowUpRight, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Search, LayoutGrid, Table2, Plus, MessageSquare, ArrowUpRight, ChevronDown, MoreHorizontal, Upload } from "lucide-react";
 import { sharedAgents, sharedParties } from "@huspy/shared-domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { AgentFinancialsBulkUploadDialog } from "@/components/AgentFinancialsBulkUploadDialog";
 
 type StatusBucket = "all" | "onboarding" | "active" | "churned";
 
@@ -48,6 +49,7 @@ const Agents = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<StatusBucket>("all");
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const counts = {
     all: agentsWithParty.length,
@@ -72,6 +74,7 @@ const Agents = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-background overflow-auto">
+      <AgentFinancialsBulkUploadDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
       <div className="px-6 py-6">
         {/* Title row */}
         <div className="flex items-center justify-between mb-5">
@@ -86,10 +89,16 @@ const Agents = () => {
               </button>
             </div>
           </div>
-          <Button className="rounded-full gap-1.5">
-            <Plus className="h-4 w-4" />
-            Create agent
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="rounded-full gap-1.5" onClick={() => setBulkOpen(true)}>
+              <Upload className="h-4 w-4" />
+              Bulk update financials
+            </Button>
+            <Button className="rounded-full gap-1.5">
+              <Plus className="h-4 w-4" />
+              Create agent
+            </Button>
+          </div>
         </div>
 
         {/* Filter bar */}

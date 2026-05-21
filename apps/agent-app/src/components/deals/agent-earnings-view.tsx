@@ -52,6 +52,7 @@ export function AgentEarningsView() {
   const agentPartyId = activeAgent.partyId;
   const agentLedgerId = sharedLedgers.find(l => l.name === `AgentLiability_${activeAgent.id}`)?.id;
   const isSpain = activeAgent.country === 'es';
+  const isSalaried = activeAgent.employmentType === 'salaried';
 
   const [mode, setMode] = useState<EarningsMode>('all');
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
@@ -179,7 +180,7 @@ export function AgentEarningsView() {
               {filteredLines.length}
             </span>
           </div>
-          {canGenerateStatement && (
+          {canGenerateStatement && !isSalaried && (
             <Button
               size="sm"
               className="h-7 rounded-full text-xs"

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Deal, DealStatus } from "@/data/types";
+import { type DealStakeholder, sharedParties } from "@huspy/shared-domain";
 import { Input } from "./ui/input";
 import { CheckCircle2, Circle, Upload, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -10,18 +11,17 @@ interface MissingField {
   type: "text" | "file";
 }
 
-export function getMissingFields(deal: Deal): { details: MissingField[]; documents: MissingField[] } {
+export function getMissingFields(deal: Deal, stakeholders: DealStakeholder[]): { details: MissingField[]; documents: MissingField[] } {
   const details: MissingField[] = [];
   const documents: MissingField[] = [];
 
   if (!deal.externalPartners?.[0]?.partnerBank) {
     details.push({ label: "Bank Account (IBAN)", placeholder: "e.g. ES91 2100 0418 4502 0005 1332", type: "text" });
   }
-  if (!deal.sellerName) {
-    details.push({ label: "Beneficiary Name", placeholder: "Full legal name of the account holder", type: "text" });
-  }
-  if (!deal.sellerTaxId) {
-    details.push({ label: "Tax ID (NIF/CIF)", placeholder: "e.g. 12345678A", type: "text" });
+  const supplyStake = stakeholders.find(s => s.dealId === deal.id && s.role === "SUPPLY");
+  const supplyParty = supplyStake ? sharedParties.find(p => p.id === supplyStake.partyId) : undefined;
+  if (!supplyParty?.taxId) {
+    details.push({ label: "Beneficiary Tax ID (NIF/CIF)", placeholder: "e.g. 12345678A", type: "text" });
   }
 
   documents.push({ label: "Buyer's Passport", placeholder: "", type: "file" });
@@ -34,13 +34,14 @@ export function getMissingFields(deal: Deal): { details: MissingField[]; documen
 
 interface PendingDetailsSectionProps {
   deal: Deal;
+  stakeholders?: DealStakeholder[];
   onSave?: (updated: Deal) => void;
   /** "panel" for side panels, "page" for full-page layout */
   variant?: "panel" | "page";
 }
 
-export function PendingDetailsSection({ deal, onSave, variant = "panel" }: PendingDetailsSectionProps) {
-  const missing = getMissingFields(deal);
+export function PendingDetailsSection({ deal, stakeholders = [], onSave, variant = "panel" }: PendingDetailsSectionProps) {
+  const missing = getMissingFields(deal, stakeholders);
   const [missingValues, setMissingValues] = useState<Record<string, string>>({});
   const [submittedDetails, setSubmittedDetails] = useState<Set<string>>(new Set());
   const [submittedDocs, setSubmittedDocs] = useState<Set<number>>(new Set());

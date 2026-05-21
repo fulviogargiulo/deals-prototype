@@ -5,29 +5,41 @@ export const sharedAgentFinancials: AgentFinancials[] = [
     id: "af-001",
     agentId: "agent-001",
     strategy: { kind: "flat", pct: 40 },
-    teamLeadRate: 10,   managerRate: 5,
-    teamLeadLedgerId: 31, managerLedgerId: 32, // Santiago Vega / Isabel Torres (EUR)
+    connectedAgents: [
+      { id: "ca-af001-tl",  agentId: "agent-008", label: "Team Lead", rate: 10, ledgerId: 31 },
+      { id: "ca-af001-mgr", agentId: "agent-009", label: "Manager",   rate: 5,  ledgerId: 32 },
+    ],
+    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 31, managerLedgerId: 32,
   },
   {
     id: "af-002",
     agentId: "agent-002",
     strategy: { kind: "flat", pct: 45 },
-    teamLeadRate: 10,   managerRate: 5,
-    teamLeadLedgerId: 31, managerLedgerId: 32, // Santiago Vega / Isabel Torres (EUR)
+    connectedAgents: [
+      { id: "ca-af002-tl",  agentId: "agent-008", label: "Team Lead", rate: 10, ledgerId: 31 },
+      { id: "ca-af002-mgr", agentId: "agent-009", label: "Manager",   rate: 5,  ledgerId: 32 },
+    ],
+    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 31, managerLedgerId: 32,
   },
   {
     id: "af-003",
     agentId: "agent-003",
     strategy: { kind: "flat", pct: 40 },
-    teamLeadRate: 10,   managerRate: 5,
-    teamLeadLedgerId: 37, managerLedgerId: 38, // Majid Al Harbi / Karim Mourad (SAR)
+    connectedAgents: [
+      { id: "ca-af003-tl",  agentId: "agent-012", label: "Team Lead", rate: 10, ledgerId: 37 },
+      { id: "ca-af003-mgr", agentId: "agent-011", label: "Manager",   rate: 5,  ledgerId: 38 },
+    ],
+    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 37, managerLedgerId: 38,
   },
   {
     id: "af-004",
     agentId: "agent-004",
     strategy: { kind: "flat", pct: 42 },
-    teamLeadRate: 10,   managerRate: 5,
-    teamLeadLedgerId: 33, managerLedgerId: 34, // Santiago Vega / Isabel Torres (AED)
+    connectedAgents: [
+      { id: "ca-af004-tl",  agentId: "agent-010", label: "Team Lead", rate: 10, ledgerId: 33 },
+      { id: "ca-af004-mgr", agentId: "agent-011", label: "Manager",   rate: 5,  ledgerId: 34 },
+    ],
+    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 33, managerLedgerId: 34,
   },
   {
     id: "af-005",
@@ -40,15 +52,21 @@ export const sharedAgentFinancials: AgentFinancials[] = [
         { upTo: null, pct: 55 },
       ],
     },
-    teamLeadRate: 10,   managerRate: 5,
-    teamLeadLedgerId: 35, managerLedgerId: 36, // Leila Ahmadi / Karim Mourad (AED)
+    connectedAgents: [
+      { id: "ca-af005-tl",  agentId: "agent-010", label: "Team Lead", rate: 10, ledgerId: 35 },
+      { id: "ca-af005-mgr", agentId: "agent-011", label: "Manager",   rate: 5,  ledgerId: 36 },
+    ],
+    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 35, managerLedgerId: 36,
   },
   {
     id: "af-006",
     agentId: "agent-006",
     strategy: { kind: "max", pct: 50, capAmount: 25_000 },
-    teamLeadRate: 10,   managerRate: 5,
-    teamLeadLedgerId: 35, managerLedgerId: 36, // Leila Ahmadi / Karim Mourad (AED)
+    connectedAgents: [
+      { id: "ca-af006-tl",  agentId: "agent-010", label: "Team Lead", rate: 10, ledgerId: 35 },
+      { id: "ca-af006-mgr", agentId: "agent-011", label: "Manager",   rate: 5,  ledgerId: 36 },
+    ],
+    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 35, managerLedgerId: 36,
   },
 ];
 

@@ -164,16 +164,16 @@ export const sharedInvoices: Invoice[] = [
 
   // ── Inbound: agents invoice Huspy ─────────────────────────────────────────
 
-  // Felicia Canovas — Jan 2026 (subtotal 4 080.8 + IVA 21% 856.97 = gross 4 937.77 − IRPF 15% 612.12 = net payout 4 325.65 EUR)
+  // Felicia Canovas — Jan 2026 (subtotal 4 400.8 + IVA 21% 924.17 = gross 5 324.97 − IRPF 15% 660.12 = net payout 4 664.85 EUR)
   {
     id: "inv-009",
     direction: "inbound",
     partyId: "party-agent-001",
     invoiceNumber: "INV-2026-009",
     status: "paid",
-    subtotal: 4080.8,
-    vatAmount: 856.97,
-    withholdingAmount: 612.12,
+    subtotal: 4400.8,
+    vatAmount: 924.17,
+    withholdingAmount: 660.12,
     currency: "EUR",
     issueDate: "2026-01-31",
     dueDate: "2026-02-15",
@@ -206,15 +206,15 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-04-05T09:00:00.000Z",
   },
 
-  // Gelo Huspy — May 2026 (subtotal 17 015.4 + VAT 5% 850.77 = gross 17 866.17 AED, no withholding)
+  // Gelo Huspy — May 2026 (subtotal 18 275.4 + VAT 5% 913.77 = gross 19 189.17 AED, no withholding)
   {
     id: "inv-012",
     direction: "inbound",
     partyId: "party-agent-004",
     invoiceNumber: "INV-2026-012",
     status: "paid",
-    subtotal: 17015.4,
-    vatAmount: 850.77,
+    subtotal: 18275.4,
+    vatAmount: 913.77,
     currency: "AED",
     issueDate: "2026-05-31",
     dueDate: "2026-06-15",
@@ -333,5 +333,75 @@ export const sharedInvoices: Invoice[] = [
     paymentReference: "SEPA-2026-0505-00611",
     createdAt: "2026-04-15T09:00:00.000Z",
     updatedAt: "2026-05-05T00:00:00.000Z",
+  },
+
+  // ── deal-021 — outbound + inbound chain (es/EUR, Guilherme + Marta referral) ──
+
+  // inv-021 — outbound: Huspy invoices client-003 (14 400 + IVA 21% 3 024 = 17 424)
+  {
+    id: "inv-021",
+    dealId: "deal-021",
+    direction: "outbound",
+    partyId: "party-client-003",
+    invoiceNumber: "INV-2026-021",
+    status: "paid",
+    subtotal: 14400,
+    vatAmount: 3024,
+    currency: "EUR",
+    issueDate: "2026-03-10",
+    dueDate: "2026-03-14",
+    paidDate: "2026-03-15",
+    invoiceFileName: "INV-2026-021.pdf",
+    proofFileName: "bank-stmt-2026-03-15-client003.pdf",
+    proofUploadedAt: "2026-03-15T15:00:00.000Z",
+    paymentReference: "SEPA-2026-0315-00489",
+    createdAt: "2026-03-10T09:00:00.000Z",
+    updatedAt: "2026-03-15T00:00:00.000Z",
+  },
+
+  // inv-022 — inbound: Guilherme invoices Huspy (6 210 + IVA 21% 1 304.10 − IRPF 15% 931.50 = net 6 582.60)
+  {
+    id: "inv-022",
+    dealId: "deal-021",
+    direction: "inbound",
+    partyId: "party-agent-002",
+    invoiceNumber: "INV-2026-022",
+    status: "paid",
+    subtotal: 6210,
+    vatAmount: 1304.10,
+    withholdingAmount: 931.50,
+    currency: "EUR",
+    issueDate: "2026-03-25",
+    dueDate: "2026-04-08",
+    paidDate: "2026-04-05",
+    period: "2026-03",
+    invoiceFileName: "INV-2026-022.pdf",
+    proofFileName: "payment-confirm-2026-04-05-guilherme.pdf",
+    proofUploadedAt: "2026-04-05T10:00:00.000Z",
+    paymentReference: "SEPA-2026-0405-00534",
+    createdAt: "2026-03-25T09:00:00.000Z",
+    updatedAt: "2026-04-05T00:00:00.000Z",
+  },
+
+  // inv-023 — inbound: Gestoría López invoices Huspy (800 + IVA 21% 168 = 968)
+  {
+    id: "inv-023",
+    dealId: "deal-021",
+    direction: "inbound",
+    partyId: "party-conv-gestoria-lopez",
+    invoiceNumber: "INV-2026-023",
+    status: "paid",
+    subtotal: 800,
+    vatAmount: 168,
+    currency: "EUR",
+    issueDate: "2026-03-10",
+    dueDate: "2026-03-31",
+    paidDate: "2026-03-28",
+    invoiceFileName: "INV-2026-023.pdf",
+    proofFileName: "payment-confirm-2026-03-28-gestoria.pdf",
+    proofUploadedAt: "2026-03-28T10:00:00.000Z",
+    paymentReference: "SEPA-2026-0328-00501",
+    createdAt: "2026-03-10T09:00:00.000Z",
+    updatedAt: "2026-03-28T00:00:00.000Z",
   },
 ];

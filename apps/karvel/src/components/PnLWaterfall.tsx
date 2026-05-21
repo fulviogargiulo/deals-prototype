@@ -21,6 +21,7 @@ interface FormState {
   amountStr: string;
   splitPctStr: string;
   agentMode: AgentCommissionMode;
+  chargedToAgentPartyId: string | undefined;
 }
 
 const FORM_RESET: FormState = {
@@ -32,6 +33,7 @@ const FORM_RESET: FormState = {
   amountStr: "",
   splitPctStr: "100",
   agentMode: "fixed",
+  chargedToAgentPartyId: undefined,
 };
 
 interface Props {
@@ -147,7 +149,7 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
-// ─── Party search form (Revenue / Service Costs / External Partners) ─────────
+// ─── Party search form (Revenue / Acquisition Costs / Operating Costs) ────────
 
 function PartyAddForm({
   sectionLabel,
@@ -155,6 +157,7 @@ function PartyAddForm({
   amountHint,
   requireAmount,
   currency,
+  agents,
   onConfirm,
   onCancel,
 }: {
@@ -163,7 +166,8 @@ function PartyAddForm({
   amountHint?: string;
   requireAmount: boolean;
   currency: string;
-  onConfirm: (partyId: string, amount: number | undefined) => void;
+  agents?: Array<{ partyId: string; name: string }>;
+  onConfirm: (partyId: string, amount: number | undefined, chargedToAgentPartyId?: string) => void;
   onCancel: () => void;
 }) {
   const [form, setForm] = useState<FormState>(FORM_RESET);
@@ -270,13 +274,28 @@ function PartyAddForm({
               className="w-36 px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
+          {agents && agents.length > 0 && (
+            <div className="flex items-center gap-3">
+              <label className="text-[12px] text-muted-foreground w-[160px] shrink-0">Charge to</label>
+              <select
+                value={form.chargedToAgentPartyId ?? "__huspy__"}
+                onChange={(e) => setForm((f) => ({ ...f, chargedToAgentPartyId: e.target.value === "__huspy__" ? undefined : e.target.value }))}
+                className="flex-1 px-2 py-1 border border-border rounded text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="__huspy__">Huspy (deduct from gross revenue)</option>
+                {agents.map((a) => (
+                  <option key={a.partyId} value={a.partyId}>{a.name} (deduct from their commission)</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       )}
 
       <div className="flex items-center justify-end gap-2">
         <button onClick={onCancel} className="px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground">Cancel</button>
         <button
-          onClick={() => form.selectedParty && onConfirm(form.selectedParty.id, form.amountStr !== "" ? parseFloat(form.amountStr) : undefined)}
+          onClick={() => form.selectedParty && onConfirm(form.selectedParty.id, form.amountStr !== "" ? parseFloat(form.amountStr) : undefined, form.chargedToAgentPartyId)}
           disabled={!canConfirm}
           className="px-4 py-1.5 bg-primary text-primary-foreground rounded text-[13px] font-semibold hover:opacity-90 disabled:opacity-40"
         >
@@ -443,10 +462,15 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
   );
   const [adding, setAdding] = useState<AddSection>(null);
 
-  const agentStakes = stakes.filter((s) => s.role === "INTERNAL_PAYOUT");
+  const agentStakes = stakes.filter((s) => s.role === "AGENT_PAYOUT");
   const revStakes = stakes.filter((s) => s.role === "REVENUE_SOURCE");
-  const serviceStakes = stakes.filter((s) => s.role === "OPERATIONAL_DEDUCTION");
-  const partnerStakes = stakes.filter((s) => s.role === "ACQUISITION_DEDUCTION");
+  const serviceStakes = stakes.filter((s) => s.role === "OPERATIONAL_DEDUCTION" && !s.parentStakeholderId);
+  const partnerStakes = stakes.filter((s) => s.role === "ACQUISITION_DEDUCTION" && !s.parentStakeholderId);
+  const agentSourcedStakes = stakes.filter(
+    (s) => (s.role === "ACQUISITION_DEDUCTION" || s.role === "OPERATIONAL_DEDUCTION") && !!s.parentStakeholderId,
+  );
+
+  const dealAgents = agentStakes.map((s) => ({ partyId: s.partyId, name: resolvePartyName(s.partyId) }));
 
   const poolAgents = agentStakes.filter((s) => s.fixedAmount == null);
   const splitPoolTotal = poolAgents.reduce((sum, s) => sum + (s.splitPercentage ?? 0), 0);
@@ -471,12 +495,18 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
     addStake({ id: `ds-${deal.id}-rev-${Date.now()}`, dealId: deal.id, partyId, role: "REVENUE_SOURCE", financialAmount: amount });
   };
 
-  const handleAddService = (partyId: string, amount: number | undefined) => {
-    addStake({ id: `ds-${deal.id}-svc-${Date.now()}`, dealId: deal.id, partyId, role: "OPERATIONAL_DEDUCTION", financialAmount: amount != null ? -Math.abs(amount) : undefined });
+  const handleAddService = (partyId: string, amount: number | undefined, chargedToAgentPartyId?: string) => {
+    const parentStakeholderId = chargedToAgentPartyId
+      ? agentStakes.find((s) => s.partyId === chargedToAgentPartyId)?.id
+      : undefined;
+    addStake({ id: `ds-${deal.id}-svc-${Date.now()}`, dealId: deal.id, partyId, role: "OPERATIONAL_DEDUCTION", financialAmount: amount != null ? -Math.abs(amount) : undefined, parentStakeholderId });
   };
 
-  const handleAddPartner = (partyId: string, amount: number | undefined) => {
-    addStake({ id: `ds-${deal.id}-ptn-${Date.now()}`, dealId: deal.id, partyId, role: "ACQUISITION_DEDUCTION", financialAmount: amount != null ? -Math.abs(amount) : undefined });
+  const handleAddPartner = (partyId: string, amount: number | undefined, chargedToAgentPartyId?: string) => {
+    const parentStakeholderId = chargedToAgentPartyId
+      ? agentStakes.find((s) => s.partyId === chargedToAgentPartyId)?.id
+      : undefined;
+    addStake({ id: `ds-${deal.id}-ptn-${Date.now()}`, dealId: deal.id, partyId, role: "ACQUISITION_DEDUCTION", financialAmount: amount != null ? -Math.abs(amount) : undefined, parentStakeholderId });
   };
 
   const handleAddAgent = (partyId: string, mode: AgentCommissionMode, value: number) => {
@@ -485,7 +515,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
       id: `ds-${deal.id}-agt-${Date.now()}`,
       dealId: deal.id,
       partyId,
-      role: "INTERNAL_PAYOUT",
+      role: "AGENT_PAYOUT",
       isPrimary: isFirst,
       splitPercentage: mode === "split" ? value : undefined,
       fixedAmount: mode === "fixed" ? value : undefined,
@@ -545,15 +575,21 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
           {revStakes.length > 0 && <SectionLabel>Revenue</SectionLabel>}
           {revStakes.map((s) => {
             const entry = pnl?.ledger.find((e) => e.partyId === s.partyId && e.side === "CREDIT" && !e.id.includes("::net"));
+            const hasMultipleForParty = revStakes.filter((r) => r.partyId === s.partyId).length > 1;
+            const label = hasMultipleForParty && s.description
+              ? `${resolvePartyName(s.partyId)} — ${s.description}`
+              : resolvePartyName(s.partyId);
+            const isRebate = (s.financialAmount ?? 0) < 0;
             return (
               <WaterfallRow
                 key={s.id}
-                name={resolvePartyName(s.partyId)}
-                identifier={resolvePartyIdentifier(s.partyId)}
-                amount={entry?.amount}
+                name={label}
+                identifier={hasMultipleForParty ? undefined : resolvePartyIdentifier(s.partyId)}
+                amount={s.financialAmount != null ? Math.abs(s.financialAmount) : entry?.amount}
                 currency={currency}
-                isCredit
+                isCredit={!isRebate}
                 indent
+                badge={isRebate ? "Rebate" : undefined}
                 onRemove={canEdit ? () => removeStake(s.id) : undefined}
               />
             );
@@ -578,49 +614,10 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
       {/* ── Gross Revenue ────────────────────────────────────────────────────── */}
       {pnl && <Anchor label="Gross Revenue" amount={pnl.grossRevenue} currency={currency} />}
 
-      {/* ── Service Costs ─────────────────────────────────────────────────── */}
-      {(serviceStakes.length > 0 || canEdit) && (
-        <div className="mt-1">
-          <SectionLabel>Service Costs</SectionLabel>
-          {serviceStakes.map((s) => (
-            <WaterfallRow
-              key={s.id}
-              name={resolvePartyName(s.partyId)}
-              identifier={resolvePartyIdentifier(s.partyId)}
-              amount={getLedgerAmount(s.partyId, "D")}
-              currency={currency}
-              onRemove={canEdit ? () => removeStake(s.id) : undefined}
-            />
-          ))}
-          {canEdit && adding === "service" && (
-            <PartyAddForm
-              sectionLabel="Add service cost"
-              amountLabel="Fee Huspy pays"
-              amountHint="Notary, conveyance, legal…"
-              requireAmount
-              currency={currency}
-              onConfirm={handleAddService}
-              onCancel={stopAdding}
-            />
-          )}
-          {canEdit && adding !== "service" && (
-            <AddButton label="Add service cost" onClick={() => setAdding("service")} />
-          )}
-        </div>
-      )}
-
-      {/* ── Net Revenue ──────────────────────────────────────────────────────── */}
-      {pnl && (
-        <>
-          <div className="border-t border-border mt-3 pt-2" />
-          <Anchor label="Net Revenue" amount={pnl.netRevenue} currency={currency} />
-        </>
-      )}
-
-      {/* ── External Partners ────────────────────────────────────────────────── */}
+      {/* ── Acquisition Costs (C) — reduce agent commission pool ───────────── */}
       {(partnerStakes.length > 0 || canEdit) && (
         <div className="mt-1">
-          <SectionLabel>External Partners</SectionLabel>
+          <SectionLabel>Acquisition Costs</SectionLabel>
           {partnerStakes.map((s) => (
             <WaterfallRow
               key={s.id}
@@ -634,10 +631,11 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
           {canEdit && adding === "partners" && (
             <PartyAddForm
               sectionLabel="Add external partner"
-              amountLabel="Fee Huspy pays"
-              amountHint="Referral, co-broker…"
+              amountLabel="Fee amount"
+              amountHint="Co-broker, external referral…"
               requireAmount
               currency={currency}
+              agents={dealAgents}
               onConfirm={handleAddPartner}
               onCancel={stopAdding}
             />
@@ -646,6 +644,14 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
             <AddButton label="Add external partner" onClick={() => setAdding("partners")} />
           )}
         </div>
+      )}
+
+      {/* ── Commission Base ──────────────────────────────────────────────────── */}
+      {pnl && (
+        <>
+          <div className="border-t border-border mt-3 pt-2" />
+          <Anchor label="Net Revenue" amount={pnl.commissionBase} currency={currency} />
+        </>
       )}
 
       {/* ── Agent Commissions ────────────────────────────────────────────────── */}
@@ -688,6 +694,20 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
                     indent
                   />
                 )}
+                {agentSourcedStakes
+                  .filter((d) => d.parentStakeholderId === s.id)
+                  .map((d) => (
+                    <WaterfallRow
+                      key={d.id}
+                      name={resolvePartyName(d.partyId)}
+                      identifier={resolvePartyIdentifier(d.partyId)}
+                      amount={Math.abs(d.financialAmount ?? 0)}
+                      currency={currency}
+                      badge="Agent cost"
+                      indent
+                      onRemove={canEdit ? () => removeStake(d.id) : undefined}
+                    />
+                  ))}
               </Fragment>
             );
           })}
@@ -710,6 +730,38 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
           )}
           {canEdit && adding !== "agents" && (
             <AddButton label="Add agent" onClick={() => setAdding("agents")} />
+          )}
+        </div>
+      )}
+
+      {/* ── Operating Costs (D) — Huspy-only cost, does not reduce agent pool ── */}
+      {(serviceStakes.length > 0 || canEdit) && (
+        <div className="mt-1">
+          <SectionLabel>Operating Costs</SectionLabel>
+          {serviceStakes.map((s) => (
+            <WaterfallRow
+              key={s.id}
+              name={resolvePartyName(s.partyId)}
+              identifier={resolvePartyIdentifier(s.partyId)}
+              amount={getLedgerAmount(s.partyId, "D")}
+              currency={currency}
+              onRemove={canEdit ? () => removeStake(s.id) : undefined}
+            />
+          ))}
+          {canEdit && adding === "service" && (
+            <PartyAddForm
+              sectionLabel="Add service cost"
+              amountLabel="Fee amount"
+              amountHint="Huspy-borne costs (legal, admin)…"
+              requireAmount
+              currency={currency}
+              agents={dealAgents}
+              onConfirm={handleAddService}
+              onCancel={stopAdding}
+            />
+          )}
+          {canEdit && adding !== "service" && (
+            <AddButton label="Add service cost" onClick={() => setAdding("service")} />
           )}
         </div>
       )}

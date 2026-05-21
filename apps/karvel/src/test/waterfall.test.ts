@@ -16,14 +16,15 @@ import {
  * Strategy:
  *   - Use a minimal hand-rolled blueprint per test so each step is verifiable.
  *   - Verify the LEDGER is balanced: Σ CREDITs (gross + net) and Σ DEBITs
- *     match each bucket total. Net = gross − C − D. Huspy margin = net − B.
+ *     match each bucket total. commissionBase = gross − C. Net = gross − C − D.
+ *     Agent splits apply to commissionBase (D does not reduce the agent pool).
+ *     Huspy margin = net − B.
  *   - Cover all three AgentStrategy kinds (flat, slab, max).
  */
 
 const baseInput = (overrides: Partial<ProjectedPnLInput> = {}): ProjectedPnLInput => ({
   country: "ae",
   businessUnit: "rebu",
-  dealType: "buy",
   currency: "AED",
   grossRevenue: 10_000,
   stakeholders: [],
@@ -48,14 +49,12 @@ describe("calculateProjectedPnL — no costs, no agents", () => {
     expect(r.totalBucketC).toBe(0);
     expect(r.totalBucketD).toBe(0);
     expect(r.totalBucketB).toBe(0);
-    expect(r.netRevenue).toBe(10_000);
     expect(r.huspyMargin).toBe(10_000);
     expect(r.splits).toHaveLength(0);
 
     const credits = r.ledger.filter((e) => e.side === "CREDIT");
-    expect(credits).toHaveLength(2); // gross + net
+    expect(credits).toHaveLength(1); // gross only
     expect(credits[0]?.amount).toBe(10_000);
-    expect(credits[1]?.amount).toBe(10_000);
   });
 });
 
@@ -69,8 +68,8 @@ describe("calculateProjectedPnL — deduction buckets C and D", () => {
     const r = calculateProjectedPnL(baseInput({ blueprint: minimalBlueprint, stakeholders }));
     expect(r.totalBucketC).toBe(800 + 500);
     expect(r.totalBucketD).toBe(1_200);
-    expect(r.netRevenue).toBe(10_000 - 1_300 - 1_200); // 7_500
-    expect(r.huspyMargin).toBe(7_500);
+    expect(r.commissionBase).toBe(10_000 - 1_300); // 8_700 — agent splits apply here
+    expect(r.huspyMargin).toBe(10_000 - 1_300 - 1_200); // 7_500 — no agents, so B=0
     expect(r.totalBucketA).toBe(0);
   });
 });
@@ -78,7 +77,7 @@ describe("calculateProjectedPnL — deduction buckets C and D", () => {
 describe("calculateProjectedPnL — internal split (bucket B), flat strategy", () => {
   it("pays the agent flat% of allocated net, plus TL and manager additive", () => {
     const stakeholders: DealStakeholder[] = [
-      { id: "ds-1", dealId: "d", partyId: "party-felicia", role: "INTERNAL_PAYOUT", splitPercentage: 100 },
+      { id: "ds-1", dealId: "d", partyId: "party-felicia", role: "AGENT_PAYOUT", splitPercentage: 100 },
     ];
     const af: AgentFinancials = {
       id: "af-001",
@@ -113,7 +112,7 @@ describe("calculateProjectedPnL — internal split (bucket B), flat strategy", (
     //         manager 5% of agent → €231
     //         huspyNet = 11,550 − 4,620 − 462 − 231 = €6,237
     const stakeholders: DealStakeholder[] = [
-      { id: "ds-1", dealId: "d", partyId: "party-felicia", role: "INTERNAL_PAYOUT", splitPercentage: 100 },
+      { id: "ds-1", dealId: "d", partyId: "party-felicia", role: "AGENT_PAYOUT", splitPercentage: 100 },
     ];
     const af: AgentFinancials = {
       id: "af-001",
@@ -146,7 +145,7 @@ describe("calculateProjectedPnL — slab strategy", () => {
     // Slabs: 0..5000 @ 35%, 5000..20000 @ 45%, 20000..∞ @ 55%
     // allocatedNet 25_000 → 5000×0.35 + 15000×0.45 + 5000×0.55 = 1_750 + 6_750 + 2_750 = 11_250
     const stakeholders: DealStakeholder[] = [
-      { id: "ds-1", dealId: "d", partyId: "party-ravi", role: "INTERNAL_PAYOUT", splitPercentage: 100 },
+      { id: "ds-1", dealId: "d", partyId: "party-ravi", role: "AGENT_PAYOUT", splitPercentage: 100 },
     ];
     const af: AgentFinancials = {
       id: "af-005",
@@ -175,7 +174,7 @@ describe("calculateProjectedPnL — slab strategy", () => {
 
 describe("calculateProjectedPnL — max strategy", () => {
   it("caps payout at capAmount", () => {
-    const stake: DealStakeholder = { id: "ds-1", dealId: "d", partyId: "party-z", role: "INTERNAL_PAYOUT", splitPercentage: 100 };
+    const stake: DealStakeholder = { id: "ds-1", dealId: "d", partyId: "party-z", role: "AGENT_PAYOUT", splitPercentage: 100 };
     const af: AgentFinancials = {
       id: "af-z",
       agentId: "agent-z",
@@ -208,8 +207,8 @@ describe("calculateProjectedPnL — max strategy", () => {
 describe("calculateProjectedPnL — multi-agent split", () => {
   it("allocates net pro-rata by DealStakeholder.splitPercentage and runs each strategy", () => {
     const stakeholders: DealStakeholder[] = [
-      { id: "ds-a", dealId: "d", partyId: "party-a", role: "INTERNAL_PAYOUT", splitPercentage: 70 },
-      { id: "ds-b", dealId: "d", partyId: "party-b", role: "INTERNAL_PAYOUT", splitPercentage: 30 },
+      { id: "ds-a", dealId: "d", partyId: "party-a", role: "AGENT_PAYOUT", splitPercentage: 70 },
+      { id: "ds-b", dealId: "d", partyId: "party-b", role: "AGENT_PAYOUT", splitPercentage: 30 },
     ];
     const finA: AgentFinancials = { id: "af-a", agentId: "agent-a", strategy: { kind: "flat", pct: 40 } };
     const finB: AgentFinancials = { id: "af-b", agentId: "agent-b", strategy: { kind: "flat", pct: 50 } };
@@ -234,9 +233,9 @@ describe("calculateProjectedPnL — multi-agent split", () => {
 });
 
 describe("calculateProjectedPnL — ledger integrity", () => {
-  it("ledger debits sum to bucket totals; gross − (C + D) === netRevenue; net − B === huspyMargin", () => {
+  it("ledger debits sum to bucket totals; gross − C = commissionBase; commissionBase − D − B = huspyMargin", () => {
     const stakeholders: DealStakeholder[] = [
-      { id: "ds-1",  dealId: "d", partyId: "party-x",   role: "INTERNAL_PAYOUT",        splitPercentage: 100 },
+      { id: "ds-1",  dealId: "d", partyId: "party-x",   role: "AGENT_PAYOUT",        splitPercentage: 100 },
       { id: "s-c1",  dealId: "d", partyId: "p-ref",     role: "ACQUISITION_DEDUCTION",   financialAmount: -500 },
       { id: "s-d1",  dealId: "d", partyId: "p-notary",  role: "OPERATIONAL_DEDUCTION",   financialAmount: -800 },
     ];
@@ -265,9 +264,9 @@ describe("calculateProjectedPnL — ledger integrity", () => {
     expect(sumByBucket("C")).toBeCloseTo(r.totalBucketC);
     expect(sumByBucket("D")).toBeCloseTo(r.totalBucketD);
 
-    // gross − (C + D) === netRevenue (no bucket A in the waterfall)
-    expect(r.grossRevenue - r.totalBucketC - r.totalBucketD).toBeCloseTo(r.netRevenue);
-    // netRevenue − B === huspyMargin
-    expect(r.netRevenue - r.totalBucketB).toBeCloseTo(r.huspyMargin);
+    // gross − C = commissionBase (agent splits use this, D does not reduce the pool)
+    expect(r.grossRevenue - r.totalBucketC).toBeCloseTo(r.commissionBase);
+    // commissionBase − D − B = huspyMargin
+    expect(r.commissionBase - r.totalBucketD - r.totalBucketB).toBeCloseTo(r.huspyMargin);
   });
 });

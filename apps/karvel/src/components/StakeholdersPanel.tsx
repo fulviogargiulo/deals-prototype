@@ -9,14 +9,14 @@ import {
 import type { DealStakeholder, Party, ProjectedPnL, StakeholderType } from "@huspy/shared-domain";
 
 const ALL_TYPES: StakeholderType[] = [
-  "INTERNAL_PAYOUT",
+  "AGENT_PAYOUT",
   "REVENUE_SOURCE",
   "ACQUISITION_DEDUCTION",
   "OPERATIONAL_DEDUCTION",
 ];
 
 const TYPE_LABELS: Record<StakeholderType, string> = {
-  INTERNAL_PAYOUT:        "Agent",
+  AGENT_PAYOUT:        "Agent",
   REVENUE_SOURCE:         "Client",
   ACQUISITION_DEDUCTION:  "Referral / Acquisition",
   OPERATIONAL_DEDUCTION:  "Service Cost",
@@ -72,7 +72,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
   const [newPartyMode, setNewPartyMode] = useState(false);
   const [newParty, setNewParty] = useState({ displayName: "", legalType: "individual", taxId: "" });
 
-  const isAgentRole = role === "INTERNAL_PAYOUT";
+  const isAgentRole = role === "AGENT_PAYOUT";
   const isPayerRole = role === "REVENUE_SOURCE";
   const isCostRole = role === "ACQUISITION_DEDUCTION" || role === "OPERATIONAL_DEDUCTION";
 
@@ -162,7 +162,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
       dealId,
       partyId: selectedParty.id,
       role,
-      isPrimary: isAgentRole && stakes.filter((s) => s.role === "INTERNAL_PAYOUT").length === 0,
+      isPrimary: isAgentRole && stakes.filter((s) => s.role === "AGENT_PAYOUT").length === 0,
       splitPercentage,
       financialAmount: isCostRole && financialAmount != null
         ? -Math.abs(financialAmount)  // entered positive, stored negative
@@ -204,12 +204,12 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
       )}
 
       {stakes.map((s) => {
-        const agentId = s.role === "INTERNAL_PAYOUT" ? agentIdForParty(s.partyId) : undefined;
+        const agentId = s.role === "AGENT_PAYOUT" ? agentIdForParty(s.partyId) : undefined;
         const identifier = resolvePartyIdentifier(s.partyId);
-        const isPrimaryAgent = s.isPrimary && s.role === "INTERNAL_PAYOUT";
+        const isPrimaryAgent = s.isPrimary && s.role === "AGENT_PAYOUT";
 
         // cut: positive = revenue to Huspy, negative = cost from Huspy
-        const agentSplit = s.role === "INTERNAL_PAYOUT" ? pnl?.splits.find((sp) => sp.partyId === s.partyId) : undefined;
+        const agentSplit = s.role === "AGENT_PAYOUT" ? pnl?.splits.find((sp) => sp.partyId === s.partyId) : undefined;
         let cut: number | undefined;
         if (agentSplit != null) {
           cut = -agentSplit.agentPayout;

@@ -22,30 +22,30 @@ export const sharedPostingLines: PostingLine[] = [
 
   // posting-003 — commission_accrual — deal-001, agent-001
   // Triggered: deal moves to finalized (system calculates and books agent liability — no invoice yet)
-  // net 10 577 = 11 377 − 800 conveyance; agent 40% = 4 230.80
-  { id: "pline-003-1", postingId: "posting-003", ledgerId: 7,  side: "DEBIT",  amount: 4230.8 },
-  { id: "pline-003-2", postingId: "posting-003", ledgerId: 22, side: "CREDIT", amount: 4230.8, invoiceId: "inv-009" },
+  // 40% × 11 377 (gross) = 4 550.80; OPERATIONAL_DEDUCTION (800) is bucket D and does not reduce agent pool
+  { id: "pline-003-1", postingId: "posting-003", ledgerId: 7,  side: "DEBIT",  amount: 4550.8 },
+  { id: "pline-003-2", postingId: "posting-003", ledgerId: 22, side: "CREDIT", amount: 4550.8, invoiceId: "inv-009" },
 
-  // posting-040 — commission_accrual — deal-001, Santiago Vega TL (EUR 423.08)
-  { id: "pline-040-1", postingId: "posting-040", ledgerId: 7,  side: "DEBIT",  amount: 423.08 },
-  { id: "pline-040-2", postingId: "posting-040", ledgerId: 31, side: "CREDIT", amount: 423.08 },
+  // posting-040 — commission_accrual — deal-001, Santiago Vega TL (EUR 455.08)
+  { id: "pline-040-1", postingId: "posting-040", ledgerId: 7,  side: "DEBIT",  amount: 455.08 },
+  { id: "pline-040-2", postingId: "posting-040", ledgerId: 31, side: "CREDIT", amount: 455.08 },
 
-  // posting-041 — commission_accrual — deal-001, Isabel Torres Mgr (EUR 211.54)
-  { id: "pline-041-1", postingId: "posting-041", ledgerId: 7,  side: "DEBIT",  amount: 211.54 },
-  { id: "pline-041-2", postingId: "posting-041", ledgerId: 32, side: "CREDIT", amount: 211.54 },
+  // posting-041 — commission_accrual — deal-001, Isabel Torres Mgr (EUR 227.54)
+  { id: "pline-041-1", postingId: "posting-041", ledgerId: 7,  side: "DEBIT",  amount: 227.54 },
+  { id: "pline-041-2", postingId: "posting-041", ledgerId: 32, side: "CREDIT", amount: 227.54 },
 
   // posting-004 — agent_invoice_accrual — agent-001, inv-009
   // Triggered: agent invoice → issued (Felicia submits January invoice; VAT and IRPF crystallise)
-  // base 4 080.8 → clears agent subledger accrual; input VAT 856.97; IRPF 612.12; net AP payable 4 325.65
-  { id: "pline-004-1", postingId: "posting-004", ledgerId: 22, side: "DEBIT",  amount: 4080.8,   invoiceId: "inv-009" },
-  { id: "pline-004-2", postingId: "posting-004", ledgerId: 5,  side: "DEBIT",  amount: 856.97  },
-  { id: "pline-004-3", postingId: "posting-004", ledgerId: 28, side: "CREDIT", amount: 612.12  },
-  { id: "pline-004-4", postingId: "posting-004", ledgerId: 4,  side: "CREDIT", amount: 4325.65, invoiceId: "inv-009" },
+  // base 4 400.8 (commission 4 550.80 − fee 150) + IVA 21% 924.17 − IRPF 15% 660.12 = net payable 4 664.85
+  { id: "pline-004-1", postingId: "posting-004", ledgerId: 22, side: "DEBIT",  amount: 4400.8,   invoiceId: "inv-009" },
+  { id: "pline-004-2", postingId: "posting-004", ledgerId: 5,  side: "DEBIT",  amount: 924.17  },
+  { id: "pline-004-3", postingId: "posting-004", ledgerId: 28, side: "CREDIT", amount: 660.12  },
+  { id: "pline-004-4", postingId: "posting-004", ledgerId: 4,  side: "CREDIT", amount: 4664.85, invoiceId: "inv-009" },
 
   // posting-030 — bank_statement_outbound_matched — agent-001, inv-009
   // Triggered: agent invoice issued → paid (Finance wires net payout to Felicia and uploads proof)
-  { id: "pline-030-1", postingId: "posting-030", ledgerId: 4,  side: "DEBIT",  amount: 4325.65, invoiceId: "inv-009" },
-  { id: "pline-030-2", postingId: "posting-030", ledgerId: 1,  side: "CREDIT", amount: 4325.65 },
+  { id: "pline-030-1", postingId: "posting-030", ledgerId: 4,  side: "DEBIT",  amount: 4664.85, invoiceId: "inv-009" },
+  { id: "pline-030-2", postingId: "posting-030", ledgerId: 1,  side: "CREDIT", amount: 4664.85 },
 
   // posting-023 — external_cost_accrual — deal-001, inv-013 (Gestoría López EUR 800)
   // Triggered: inbound vendor invoice draft → issued (Finance receives vendor invoice and marks as issued)
@@ -136,17 +136,17 @@ export const sharedPostingLines: PostingLine[] = [
 
   // posting-011 — commission_accrual — deal-016, agent-004
   // Triggered: deal moves to finalized (system calculates and books agent liability — no invoice yet)
-  // net 38 370 = 41 370 − 3 000 conveyance; agent 42% = 16 115.4; TL 10% = 1 611.54; Mgr 5% = 805.77; total bucket B = 18 532.71
-  { id: "pline-011-1", postingId: "posting-011", ledgerId: 14, side: "DEBIT",  amount: 16115.4 },
-  { id: "pline-011-2", postingId: "posting-011", ledgerId: 24, side: "CREDIT", amount: 16115.4, invoiceId: "inv-012" },
+  // 42% × 41 370 (gross) = 17 375.40; TL 10% = 1 737.54; Mgr 5% = 868.77; total bucket B = 19 981.71
+  { id: "pline-011-1", postingId: "posting-011", ledgerId: 14, side: "DEBIT",  amount: 17375.4 },
+  { id: "pline-011-2", postingId: "posting-011", ledgerId: 24, side: "CREDIT", amount: 17375.4, invoiceId: "inv-012" },
 
-  // posting-042 — commission_accrual — deal-016, Santiago Vega TL (AED 1 611.54)
-  { id: "pline-042-1", postingId: "posting-042", ledgerId: 14, side: "DEBIT",  amount: 1611.54 },
-  { id: "pline-042-2", postingId: "posting-042", ledgerId: 33, side: "CREDIT", amount: 1611.54 },
+  // posting-042 — commission_accrual — deal-016, Santiago Vega TL (AED 1 737.54)
+  { id: "pline-042-1", postingId: "posting-042", ledgerId: 14, side: "DEBIT",  amount: 1737.54 },
+  { id: "pline-042-2", postingId: "posting-042", ledgerId: 33, side: "CREDIT", amount: 1737.54 },
 
-  // posting-043 — commission_accrual — deal-016, Isabel Torres Mgr (AED 805.77)
-  { id: "pline-043-1", postingId: "posting-043", ledgerId: 14, side: "DEBIT",  amount: 805.77 },
-  { id: "pline-043-2", postingId: "posting-043", ledgerId: 34, side: "CREDIT", amount: 805.77 },
+  // posting-043 — commission_accrual — deal-016, Isabel Torres Mgr (AED 868.77)
+  { id: "pline-043-1", postingId: "posting-043", ledgerId: 14, side: "DEBIT",  amount: 868.77 },
+  { id: "pline-043-2", postingId: "posting-043", ledgerId: 34, side: "CREDIT", amount: 868.77 },
 
   // posting-026 — external_cost_accrual — deal-016, inv-015 (TAMM Legal AED 3 000)
   // Triggered: inbound vendor invoice draft → issued (Finance receives vendor invoice and marks as issued)
@@ -178,17 +178,17 @@ export const sharedPostingLines: PostingLine[] = [
 
   // posting-015 — commission_accrual — deal-018, agent-001
   // Triggered: deal moves to finalized (system calculates and books agent liability)
-  // net 23 050 = 24 250 − 1 200 conveyance; agent 40% = 9 220
-  { id: "pline-015-1", postingId: "posting-015", ledgerId: 7,  side: "DEBIT",  amount: 9220 },
-  { id: "pline-015-2", postingId: "posting-015", ledgerId: 22, side: "CREDIT", amount: 9220 },
+  // 40% × 24 250 (gross) = 9 700; OPERATIONAL_DEDUCTION (1 200) is bucket D and does not reduce agent pool
+  { id: "pline-015-1", postingId: "posting-015", ledgerId: 7,  side: "DEBIT",  amount: 9700 },
+  { id: "pline-015-2", postingId: "posting-015", ledgerId: 22, side: "CREDIT", amount: 9700 },
 
-  // posting-044 — commission_accrual — deal-018, Santiago Vega TL (EUR 922.00)
-  { id: "pline-044-1", postingId: "posting-044", ledgerId: 7,  side: "DEBIT",  amount: 922.0 },
-  { id: "pline-044-2", postingId: "posting-044", ledgerId: 31, side: "CREDIT", amount: 922.0 },
+  // posting-044 — commission_accrual — deal-018, Santiago Vega TL (EUR 970.00)
+  { id: "pline-044-1", postingId: "posting-044", ledgerId: 7,  side: "DEBIT",  amount: 970.0 },
+  { id: "pline-044-2", postingId: "posting-044", ledgerId: 31, side: "CREDIT", amount: 970.0 },
 
-  // posting-045 — commission_accrual — deal-018, Isabel Torres Mgr (EUR 461.00)
-  { id: "pline-045-1", postingId: "posting-045", ledgerId: 7,  side: "DEBIT",  amount: 461.0 },
-  { id: "pline-045-2", postingId: "posting-045", ledgerId: 32, side: "CREDIT", amount: 461.0 },
+  // posting-045 — commission_accrual — deal-018, Isabel Torres Mgr (EUR 485.00)
+  { id: "pline-045-1", postingId: "posting-045", ledgerId: 7,  side: "DEBIT",  amount: 485.0 },
+  { id: "pline-045-2", postingId: "posting-045", ledgerId: 32, side: "CREDIT", amount: 485.0 },
 
   // posting-028 — external_cost_accrual — deal-018, inv-016 (Gestoría López EUR 1 200)
   // Triggered: inbound vendor invoice draft → issued (Finance receives vendor invoice and marks as issued)
@@ -226,10 +226,10 @@ export const sharedPostingLines: PostingLine[] = [
 
   // posting-032 — agent_invoice_accrual — agent-004, inv-012 (May 2026)
   // Triggered: agent invoice → issued (Gelo submits May invoice; input VAT crystallises; no IRPF in UAE)
-  // base 17 015.4 + VAT 5% 850.77 = net payable 17 866.17
-  { id: "pline-032-1", postingId: "posting-032", ledgerId: 24, side: "DEBIT",  amount: 17015.4,  invoiceId: "inv-012" },
-  { id: "pline-032-2", postingId: "posting-032", ledgerId: 12, side: "DEBIT",  amount: 850.77   },
-  { id: "pline-032-3", postingId: "posting-032", ledgerId: 11, side: "CREDIT", amount: 17866.17, invoiceId: "inv-012" },
+  // base 18 275.4 (commission 17 375.40 + bonus 1 200 − fee 300) + VAT 5% 913.77 = net payable 19 189.17
+  { id: "pline-032-1", postingId: "posting-032", ledgerId: 24, side: "DEBIT",  amount: 18275.4,  invoiceId: "inv-012" },
+  { id: "pline-032-2", postingId: "posting-032", ledgerId: 12, side: "DEBIT",  amount: 913.77   },
+  { id: "pline-032-3", postingId: "posting-032", ledgerId: 11, side: "CREDIT", amount: 19189.17, invoiceId: "inv-012" },
 
   // posting-013 — huspy_fee — agent-004 (AED 300)
   // Triggered: manually created by Finance to charge a platform fee against the agent's subledger
@@ -247,9 +247,9 @@ export const sharedPostingLines: PostingLine[] = [
   { id: "pline-016-2", postingId: "posting-016", ledgerId: 6,  side: "CREDIT", amount: 150 },
 
   // posting-055 — bank_statement_outbound_matched — inv-012 (Gelo Huspy payment, Jun 2026)
-  // gross = subtotal 17 015.4 + VAT 5% 850.77 = 17 866.17 AED
-  { id: "pline-055-1", postingId: "posting-055", ledgerId: 11, side: "DEBIT",  amount: 17866.17, invoiceId: "inv-012" },
-  { id: "pline-055-2", postingId: "posting-055", ledgerId: 8,  side: "CREDIT", amount: 17866.17 },
+  // gross = subtotal 18 275.4 + VAT 5% 913.77 = 19 189.17 AED
+  { id: "pline-055-1", postingId: "posting-055", ledgerId: 11, side: "DEBIT",  amount: 19189.17, invoiceId: "inv-012" },
+  { id: "pline-055-2", postingId: "posting-055", ledgerId: 8,  side: "CREDIT", amount: 19189.17 },
 
   // ─────────────────────────────────────────────────────────────────────────
   // DEAL-020  (AE/AED · REBU · primary · pending-receivables)
@@ -276,5 +276,53 @@ export const sharedPostingLines: PostingLine[] = [
   // posting-053 — commission_accrual — deal-020, Isabel Torres Mgr (5% × 10 080 = AED 504)
   { id: "pline-053-1", postingId: "posting-053", ledgerId: 14, side: "DEBIT",  amount: 504 },
   { id: "pline-053-2", postingId: "posting-053", ledgerId: 34, side: "CREDIT", amount: 504 },
+
+  // ── deal-021 (REBU, EUR) ────────────────────────────────────────────────────
+
+  // posting-056 — invoice_issued — deal-021, inv-021 (client-003, 14 400 + IVA 3 024 = 17 424)
+  { id: "pline-056-1", postingId: "posting-056", ledgerId: 2,  side: "DEBIT",  amount: 17424,   invoiceId: "inv-021" },
+  { id: "pline-056-2", postingId: "posting-056", ledgerId: 6,  side: "CREDIT", amount: 14400 },
+  { id: "pline-056-3", postingId: "posting-056", ledgerId: 5,  side: "CREDIT", amount: 3024 },
+
+  // posting-057 — bank_statement_inbound_matched — deal-021, inv-021
+  { id: "pline-057-1", postingId: "posting-057", ledgerId: 1,  side: "DEBIT",  amount: 17424 },
+  { id: "pline-057-2", postingId: "posting-057", ledgerId: 2,  side: "CREDIT", amount: 17424,   invoiceId: "inv-021" },
+
+  // posting-058 — commission_accrual — deal-021, Guilherme Castro (45% × 13 800 = 6 210; commissionBase = 14 400 − 600 referral)
+  { id: "pline-058-1", postingId: "posting-058", ledgerId: 7,  side: "DEBIT",  amount: 6210 },
+  { id: "pline-058-2", postingId: "posting-058", ledgerId: 23, side: "CREDIT", amount: 6210 },
+
+  // posting-059 — commission_accrual — deal-021, Santiago Vega TL (10% × 6 210 = 621)
+  { id: "pline-059-1", postingId: "posting-059", ledgerId: 7,  side: "DEBIT",  amount: 621 },
+  { id: "pline-059-2", postingId: "posting-059", ledgerId: 31, side: "CREDIT", amount: 621 },
+
+  // posting-060 — commission_accrual — deal-021, Isabel Torres Mgr (5% × 6 210 = 310.50)
+  { id: "pline-060-1", postingId: "posting-060", ledgerId: 7,  side: "DEBIT",  amount: 310.50 },
+  { id: "pline-060-2", postingId: "posting-060", ledgerId: 32, side: "CREDIT", amount: 310.50 },
+
+  // posting-061 — commission_accrual — deal-021, Marta Sáez referral salaried (600)
+  { id: "pline-061-1", postingId: "posting-061", ledgerId: 7,  side: "DEBIT",  amount: 600 },
+  { id: "pline-061-2", postingId: "posting-061", ledgerId: 39, side: "CREDIT", amount: 600 },
+
+  // posting-062 — external_cost_accrual — deal-021, Gestoría 800 + IVA 168 = 968
+  { id: "pline-062-1", postingId: "posting-062", ledgerId: 7,  side: "DEBIT",  amount: 800 },
+  { id: "pline-062-2", postingId: "posting-062", ledgerId: 5,  side: "DEBIT",  amount: 168 },
+  { id: "pline-062-3", postingId: "posting-062", ledgerId: 4,  side: "CREDIT", amount: 968,     invoiceId: "inv-023" },
+
+  // posting-063 — bank_statement_outbound_matched — deal-021, Gestoría payment 968
+  { id: "pline-063-1", postingId: "posting-063", ledgerId: 4,  side: "DEBIT",  amount: 968,     invoiceId: "inv-023" },
+  { id: "pline-063-2", postingId: "posting-063", ledgerId: 1,  side: "CREDIT", amount: 968 },
+
+  // posting-064 — agent_invoice_accrual — deal-021, Guilherme inv-022
+  // DEBIT subledger (clears accrued liability) + input VAT; CREDIT withholding + net payable
+  // base 6 210 + IVA 21% 1 304.10 − IRPF 15% 931.50 = net payable 6 582.60
+  { id: "pline-064-1", postingId: "posting-064", ledgerId: 23, side: "DEBIT",  amount: 6210,    invoiceId: "inv-022" },
+  { id: "pline-064-2", postingId: "posting-064", ledgerId: 5,  side: "DEBIT",  amount: 1304.10 },
+  { id: "pline-064-3", postingId: "posting-064", ledgerId: 28, side: "CREDIT", amount: 931.50 },
+  { id: "pline-064-4", postingId: "posting-064", ledgerId: 4,  side: "CREDIT", amount: 6582.60, invoiceId: "inv-022" },
+
+  // posting-065 — bank_statement_outbound_matched — deal-021, Guilherme payout 6 582.60
+  { id: "pline-065-1", postingId: "posting-065", ledgerId: 4,  side: "DEBIT",  amount: 6582.60, invoiceId: "inv-022" },
+  { id: "pline-065-2", postingId: "posting-065", ledgerId: 1,  side: "CREDIT", amount: 6582.60 },
 
 ];

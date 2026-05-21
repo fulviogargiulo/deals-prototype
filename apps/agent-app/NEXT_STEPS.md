@@ -2,12 +2,12 @@
 
 Prioritized list of cleanups, correctness bugs, architecture concerns, and missing real-world wiring. Mark items with `~~strikethrough~~` as completed.
 
-## P0 — Universal Lovable cleanup (Step 1, awaiting approval)
+## ~~P0 — Universal Lovable cleanup (Step 1, awaiting approval)~~
 
-- [ ] Remove `lovable-tagger` from `package.json` devDependencies ([package.json:86](package.json#L86))
-- [ ] Simplify [vite.config.ts](vite.config.ts): drop `componentTagger` import + plugin entry; collapse `defineConfig(({ mode }) => …)` back to plain `defineConfig({…})`
-- [ ] Delete `package-lock.json` (Lovable defaults to bun; `bun.lock` + `bun.lockb` are present). Fall back to npm only if `bun` is not on PATH.
-- [ ] `bun install` (or `npm install`) and verify `bun dev` / `npm run dev` serves Vite on port 8080.
+- [x] ~~Remove `lovable-tagger` from `package.json` devDependencies ([package.json:86](package.json#L86))~~
+- [x] ~~Simplify [vite.config.ts](vite.config.ts): drop `componentTagger` import + plugin entry; collapse `defineConfig(({ mode }) => …)` back to plain `defineConfig({…})`~~
+- [x] ~~Delete `package-lock.json` and move to monorepo with pnpm~~
+- [x] ~~`pnpm install` and verify `pnpm dev:agent` serves Vite on port 8081.~~
 
 ## P0 — Correctness & security bugs
 

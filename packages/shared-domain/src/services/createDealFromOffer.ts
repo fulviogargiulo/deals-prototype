@@ -26,7 +26,7 @@ export function createDealFromOffer(
     agentStakeholders.push({
       id: `ds-new-closer-${offer.id}`,
       partyId: `party-${offer.buyerAgentId}`,
-      role: "INTERNAL_PAYOUT",
+      role: "AGENT_PAYOUT",
       splitPercentage: offer.buyerAgentSplitPct ?? (offer.sellerAgentId ? 50 : 100),
       isPrimary: true,
     });
@@ -36,7 +36,7 @@ export function createDealFromOffer(
     agentStakeholders.push({
       id: `ds-new-lister-${offer.id}`,
       partyId: `party-${offer.sellerAgentId}`,
-      role: "INTERNAL_PAYOUT",
+      role: "AGENT_PAYOUT",
       splitPercentage: offer.sellerAgentSplitPct ?? (offer.buyerAgentId ? 50 : 100),
       isPrimary: !offer.buyerAgentId,
     });

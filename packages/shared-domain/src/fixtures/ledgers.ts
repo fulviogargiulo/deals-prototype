@@ -58,6 +58,15 @@ export const sharedLedgers: Ledger[] = [
     partyId: "party-agent-002",
     currency: "EUR",
   },
+  {
+    id: 39,
+    name: "AgentLiability_agent-007",
+    description: "Agent Liability — Marta Sáez (salaried)",
+    type: "liability",
+    glId: 3,
+    partyId: "party-agent-007",
+    currency: "EUR",
+  },
 
   // ══════════════════════════════════════════════════════════════════════════════
   // Agent subledgers — AED (Dubai)

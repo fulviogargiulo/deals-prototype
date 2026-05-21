@@ -81,9 +81,10 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, cou
   const [agentTaxId, setAgentTaxId] = useState('');
   const [bankAccount, setBankAccount] = useState('');
   const [withholdingRate, setWithholdingRate] = useState(cfg.defaultWithholdingRate);
+  const [vatRate, setVatRate] = useState(cfg.vatRate);
 
   const base = statement.balance;
-  const vatAmount = Math.round(base * (cfg.vatRate / 100) * 100) / 100;
+  const vatAmount = Math.round(base * (vatRate / 100) * 100) / 100;
   const withholdingAmount = cfg.hasWithholding ? Math.round(base * (withholdingRate / 100) * 100) / 100 : 0;
   const grossAmount = Math.round((base + vatAmount) * 100) / 100;
   const netPayout = Math.round((grossAmount - withholdingAmount) * 100) / 100;
@@ -308,7 +309,17 @@ export function CreateInvoiceModal({ open, onOpenChange, statement, agentId, cou
                 <span className="text-[14px] font-semibold tabular-nums text-foreground">{sym}{base.toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between px-3">
-                <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">{cfg.vatLabel} ({cfg.vatRate}%)</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] font-semibold leading-[140%] text-fg-secondary">{cfg.vatLabel}</span>
+                  {isCreated ? (
+                    <span className="text-[12px] font-semibold text-fg-secondary">({vatRate}%)</span>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <Input type="number" value={vatRate} onChange={(e) => setVatRate(Number(e.target.value))} className="h-6 text-[12px] rounded-lg w-14 text-center" min={0} max={30} />
+                      <span className="text-[12px] text-fg-secondary">%</span>
+                    </div>
+                  )}
+                </div>
                 <span className="text-[14px] font-semibold tabular-nums text-foreground">+{sym}{vatAmount.toLocaleString()}</span>
               </div>
               {cfg.hasWithholding && (

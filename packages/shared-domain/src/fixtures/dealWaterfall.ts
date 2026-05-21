@@ -40,7 +40,7 @@ export function buildWaterfallInput(deal: WaterfallDeal): ProjectedPnLInput | nu
     const party = sharedParties.find((p) => p.id === stake.partyId);
     if (party) partyDisplayNames[stake.partyId] = party.displayName;
 
-    if (stake.role === "INTERNAL_PAYOUT") {
+    if (stake.role === "AGENT_PAYOUT") {
       const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
       if (!agent) continue;
       const af = sharedAgentFinancials.find((f) => f.agentId === agent.id);

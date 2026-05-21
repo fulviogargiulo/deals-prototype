@@ -52,7 +52,7 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
     const party = sharedParties.find((p) => p.id === stake.partyId);
     if (party) partyDisplayNames[stake.partyId] = party.displayName;
 
-    if (stake.role === "INTERNAL_PAYOUT") {
+    if (stake.role === "AGENT_PAYOUT") {
       const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
       if (!agent) continue;
       const af = sharedAgentFinancials.find((f) => f.agentId === agent.id);
@@ -74,7 +74,7 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
         id: `ds-${deal.id}-agent-${idx}`,
         dealId: deal.id,
         partyId,
-        role: "INTERNAL_PAYOUT",
+        role: "AGENT_PAYOUT",
         splitPercentage: a.agentShare,
       });
       const fromFixture = sharedAgentFinancials.find((af) => af.agentId === agentId);
@@ -88,7 +88,7 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
       agentFinancialsByAgentId[agentId] = af;
       partyIdToAgentId[partyId] = agentId;
     });
-    stakeholders = [...allFixtureStakes.filter((s) => s.role !== "INTERNAL_PAYOUT"), ...legacyAgentStakes];
+    stakeholders = [...allFixtureStakes.filter((s) => s.role !== "AGENT_PAYOUT"), ...legacyAgentStakes];
   }
 
   if (Object.keys(agentFinancialsByAgentId).length === 0) return null;
@@ -253,17 +253,13 @@ export function recalculateREBU(deal: Deal): Deal {
   const totalTeamLeadShare = agents.reduce((sum, a) => sum + a.teamLeadShare, 0);
   const totalManagerOverride = agents.reduce((sum, a) => sum + a.managerOverride, 0);
 
-  // OPERATIONAL_DEDUCTION stakeholders replace the deprecated deal.conveyanceRevenue / conveyanceAgentRate fields.
+  // OPERATIONAL_DEDUCTION stakeholders are the canonical source for conveyance / service costs.
   const opDeductionStakes = sharedDealStakeholders.filter(
     (s) => s.dealId === deal.id && s.role === "OPERATIONAL_DEDUCTION"
   );
-  const conveyanceFeeTotal = opDeductionStakes.length > 0
-    ? opDeductionStakes.reduce((sum, s) => sum + Math.abs(s.financialAmount ?? 0), 0)
-    : (deal.conveyanceRevenue ?? 0);
-  const conveyanceAgentPayout = opDeductionStakes.length > 0
-    ? conveyanceFeeTotal
-    : (deal.conveyanceAgentRate / 100) * conveyanceFeeTotal;
-  const huspyConveyanceShare = conveyanceFeeTotal - conveyanceAgentPayout;
+  const conveyanceFeeTotal = opDeductionStakes.reduce((sum, s) => sum + Math.abs(s.financialAmount ?? 0), 0);
+  const conveyanceAgentPayout = conveyanceFeeTotal;
+  const huspyConveyanceShare = 0;
 
   // Referrals are now per-agent
   const totalReferralAmount = agents.reduce((sum, a) => sum + a.referralAmount, 0);
@@ -307,15 +303,11 @@ export function recalculateREBU(deal: Deal): Deal {
     }
   });
 
-  // Conveyance — one entry per OPERATIONAL_DEDUCTION stakeholder; fall back to legacy deal field.
-  if (opDeductionStakes.length > 0) {
-    opDeductionStakes.forEach((s) => {
-      const party = sharedParties.find((p) => p.id === s.partyId);
-      payableEntries.push({ entityType: "conveyance", entityLabel: `Conveyance — ${party?.displayName ?? s.partyId}`, expectedAmount: Math.abs(s.financialAmount ?? 0) });
-    });
-  } else if (deal.conveyanceAgentName || conveyanceAgentPayout > 0) {
-    payableEntries.push({ entityType: "conveyance", entityLabel: `Conveyance${deal.conveyanceAgentName ? ` — ${deal.conveyanceAgentName}` : ""}`, expectedAmount: conveyanceAgentPayout });
-  }
+  // Operating costs — one payable entry per OPERATIONAL_DEDUCTION stakeholder.
+  opDeductionStakes.forEach((s) => {
+    const party = sharedParties.find((p) => p.id === s.partyId);
+    payableEntries.push({ entityType: "conveyance", entityLabel: `Operating Cost — ${party?.displayName ?? s.partyId}`, expectedAmount: Math.abs(s.financialAmount ?? 0) });
+  });
 
   const payables = buildPayables(deal, payableEntries);
 
@@ -360,23 +352,21 @@ export function recalculateREBU(deal: Deal): Deal {
 }
 
 export function recalculateMBU(deal: Deal): Deal {
-  const huspyRevenue = (deal.bankSlab / 100) * deal.disbursedAmount;
-  const rmPayout = (deal.rmCommissionRate / 100) * huspyRevenue;
-  const tlPayout = (deal.tlCommissionRate / 100) * huspyRevenue;
-  const dsPayout = (deal.dsCommissionRate / 100) * huspyRevenue;
-  const brokerPayout = (deal.brokerCommissionRate / 100) * deal.disbursedAmount;
-  const externalPayout = (deal.externalCommissionRate / 100) * huspyRevenue;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = deal as any; // MBU fixture fields not typed on shared Deal
+  const huspyRevenue = ((d.bankSlab ?? 0) / 100) * (deal.disbursedAmount ?? 0);
+  const rmPayout = ((d.rmCommissionRate ?? 0) / 100) * huspyRevenue;
+  const tlPayout = ((d.tlCommissionRate ?? 0) / 100) * huspyRevenue;
+  const dsPayout = ((d.dsCommissionRate ?? 0) / 100) * huspyRevenue;
+  const brokerPayout = ((d.brokerCommissionRate ?? 0) / 100) * (deal.disbursedAmount ?? 0);
+  const externalPayout = ((deal.externalCommissionRate ?? 0) / 100) * huspyRevenue;
 
-  const cogsInternal = rmPayout + tlPayout + dsPayout;
-  const cogsExternal = brokerPayout + externalPayout;
-  const totalCOGS = cogsInternal + cogsExternal;
-  const netHuspyRevenue = huspyRevenue - totalCOGS;
+  const netHuspyRevenue = huspyRevenue - rmPayout - tlPayout - dsPayout - brokerPayout - externalPayout;
 
-  // Build payable entries for MBU
   const payableEntries: { entityType: PayableEntry["entityType"]; entityLabel: string; expectedAmount: number }[] = [];
-  if (deal.rmName || rmPayout > 0) payableEntries.push({ entityType: "rm", entityLabel: `RM${deal.rmName ? ` — ${deal.rmName}` : ""}`, expectedAmount: rmPayout });
-  if (deal.tlName || tlPayout > 0) payableEntries.push({ entityType: "tl", entityLabel: `TL${deal.tlName ? ` — ${deal.tlName}` : ""}`, expectedAmount: tlPayout });
-  if (deal.dsName || dsPayout > 0) payableEntries.push({ entityType: "ds", entityLabel: `DS${deal.dsName ? ` — ${deal.dsName}` : ""}`, expectedAmount: dsPayout });
+  if (d.rmName || rmPayout > 0) payableEntries.push({ entityType: "rm", entityLabel: `RM${d.rmName ? ` — ${d.rmName}` : ""}`, expectedAmount: rmPayout });
+  if (d.tlName || tlPayout > 0) payableEntries.push({ entityType: "tl", entityLabel: `TL${d.tlName ? ` — ${d.tlName}` : ""}`, expectedAmount: tlPayout });
+  if (d.dsName || dsPayout > 0) payableEntries.push({ entityType: "ds", entityLabel: `DS${d.dsName ? ` — ${d.dsName}` : ""}`, expectedAmount: dsPayout });
   if (brokerPayout > 0) payableEntries.push({ entityType: "broker", entityLabel: "Broker", expectedAmount: brokerPayout });
   if (externalPayout > 0) payableEntries.push({ entityType: "external_partner", entityLabel: "External", expectedAmount: externalPayout });
 
@@ -386,15 +376,8 @@ export function recalculateMBU(deal: Deal): Deal {
   return {
     ...deal,
     huspyRevenue,
-    rmPayout,
-    tlPayout,
-    dsPayout,
-    brokerPayout,
-    externalPayout,
-    cogsInternal,
-    cogsExternal,
-    cogsReferrals: 0,
     netHuspyRevenue,
+    externalPayout,
     dealAmount: huspyRevenue,
     dealPrice: deal.disbursedAmount,
     takeRate: deal.bankSlab,
@@ -419,7 +402,7 @@ export function computeDealPnL(deal: Deal) {
   const pnl = calculateProjectedPnL(input);
 
   const fixedAgents = sharedDealStakeholders.filter(
-    (s) => s.dealId === deal.id && s.role === "INTERNAL_PAYOUT" && s.fixedAmount != null
+    (s) => s.dealId === deal.id && s.role === "AGENT_PAYOUT" && s.fixedAmount != null
   );
   if (fixedAgents.length === 0) return pnl;
 

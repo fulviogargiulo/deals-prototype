@@ -5,6 +5,7 @@ import { TrackedTitle } from '@/components/ui/tracked-title';
 import { Button } from '@/components/ui/button';
 import { FileText, CheckCircle2, AlertTriangle, ChevronDown, RotateCcw } from 'lucide-react';
 import { DocumentRow } from '@/components/deals/document-row';
+import { CommissionBreakdown } from '@/components/deals/commission-breakdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { mockDeals, getAgentStakeMap } from '@/data/mockDeals';
 import { useDevTools } from '@/contexts/dev-tools-context';
@@ -193,87 +194,50 @@ export function DealDetails() {
           const projection = waterfallInput ? calculateProjectedPnL(waterfallInput) : null;
           const agentSplit = projection?.splits.find(s => s.partyId === stake?.partyId);
           const personalCommission = agentSplit?.agentPayout ?? computeAgentCommission(viewDeal.commissionAmount, stake);
-          const splitPct = stake?.splitPercentage ?? 100;
           const isExpandable = viewDeal.status !== 'pending-agent-approval';
 
           const content = (
             <>
-              {/* Breakdown rows — waterfall engine output */}
-              <div className="divide-y divide-border-ds-primary">
-                <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                  <span className="text-[12px] text-fg-secondary leading-[140%]">Deal Price</span>
-                  <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{viewDeal.currency}{viewDeal.dealAmount.toLocaleString()}</span>
-                </div>
-                <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                  <span className="text-[12px] text-fg-secondary leading-[140%]">Gross Revenue</span>
-                  <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>{viewDeal.currency}{(projection?.grossRevenue ?? viewDeal.huspyRevenue).toLocaleString()}</span>
-                </div>
-                {projection && projection.totalBucketD > 0 && (
-                  <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                    <span className="text-[12px] text-fg-secondary leading-[140%]">Operational Deductions</span>
-                    <span className="text-[12px] font-semibold text-right tabular-nums" style={{ color: 'hsl(var(--ds-red))' }}>−{viewDeal.currency}{projection.totalBucketD.toLocaleString()}</span>
-                  </div>
-                )}
-                {projection && projection.totalBucketD > 0 && (
-                  <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                    <span className="text-[12px] text-fg-secondary leading-[140%]">Net Revenue</span>
-                    <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{viewDeal.currency}{projection.netRevenue.toLocaleString()}</span>
-                  </div>
-                )}
-                {splitPct < 100 && (
-                  <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                    <span className="text-[12px] text-fg-secondary leading-[140%]">Your Deal Split</span>
-                    <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">{splitPct}%</span>
-                  </div>
-                )}
-                <div className="grid grid-cols-[1fr_120px] px-4 py-2.5 items-center gap-3">
-                  <span className="text-[12px] text-fg-secondary leading-[140%]">Your Commission Rate</span>
-                  <span className="text-[12px] font-semibold text-foreground text-right tabular-nums">
-                    {agentSplit?.strategyKind === "flat" && agentSplit.allocatedNet > 0
-                      ? `${Math.round((agentSplit.agentPayout / agentSplit.allocatedNet) * 100)}%`
-                      : "—"}
-                  </span>
-                </div>
-              </div>
+              <CommissionBreakdown
+                deal={viewDeal}
+                stake={stake}
+                projection={projection}
+                agentSplit={agentSplit}
+                personalCommission={personalCommission}
+              />
 
-              {/* Total */}
-              <div className="border-t border-border-ds-primary px-4 py-3 flex items-center justify-between">
-                <div>
-                  <span className="text-sm font-semibold text-foreground">Your Commission Payout</span>
-                  <span className="text-[20px] font-semibold text-foreground ml-3 tabular-nums">{viewDeal.currency}{personalCommission.toLocaleString()}</span>
+              {/* Action buttons */}
+              {viewDeal.status === 'pending-agent-approval' && !confirmedForInvoicing && !reviewRequested && (
+                <div className="border-t border-border-ds-primary px-4 py-3 flex items-center justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 rounded-full text-xs"
+                    style={{ color: 'hsl(var(--ds-orange))' }}
+                    onClick={() => setShowReviewForm(true)}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                    Request Review
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-7 rounded-full text-xs"
+                    style={{ backgroundColor: 'hsl(var(--ds-green))', color: 'white' }}
+                    onClick={() => {
+                      if (!canTransitionDealStatus(viewDeal.status, 'pending-receivables')) {
+                        toast.error('This deal cannot move to Pending Receivables from the current status.');
+                        return;
+                      }
+                      setDealState(prev => prev ? { ...prev, status: 'pending-receivables' } : prev);
+                      setConfirmedForInvoicing(true);
+                      toast.success('Deal confirmed and moved to Pending Receivables');
+                    }}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                    Confirm
+                  </Button>
                 </div>
-                {viewDeal.status === 'pending-agent-approval' && !confirmedForInvoicing && !reviewRequested && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 rounded-full text-xs"
-                      style={{ color: 'hsl(var(--ds-orange))' }}
-                      onClick={() => setShowReviewForm(true)}
-                    >
-                      <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                      Request Review
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-7 rounded-full text-xs"
-                      style={{ backgroundColor: 'hsl(var(--ds-green))', color: 'white' }}
-                      onClick={() => {
-                        if (!canTransitionDealStatus(viewDeal.status, 'pending-receivables')) {
-                          toast.error('This deal cannot move to Pending Receivables from the current status.');
-                          return;
-                        }
-                        setDealState(prev => prev ? { ...prev, status: 'pending-receivables' } : prev);
-                        setConfirmedForInvoicing(true);
-                        toast.success('Deal confirmed and moved to Pending Receivables');
-                      }}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                      Confirm
-                    </Button>
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* Review request form */}
               {showReviewForm && viewDeal.status === 'pending-agent-approval' && !confirmedForInvoicing && !reviewRequested && (

@@ -19,7 +19,7 @@ export function getAgentDeals(agentId: string): Deal[] {
   if (!agent) return [];
   const dealIds = new Set(
     sharedDealStakeholders
-      .filter(s => s.partyId === agent.partyId && s.role === 'INTERNAL_PAYOUT')
+      .filter(s => s.partyId === agent.partyId && s.role === 'AGENT_PAYOUT' && s.isPrimary)
       .map(s => s.dealId)
   );
   return mockDeals.filter(d => dealIds.has(d.id));
@@ -30,7 +30,7 @@ export function getAgentStakeMap(agentId: string): Map<string, DealStakeholder> 
   if (!agent) return new Map();
   return new Map(
     sharedDealStakeholders
-      .filter(s => s.partyId === agent.partyId && s.role === 'INTERNAL_PAYOUT')
+      .filter(s => s.partyId === agent.partyId && s.role === 'AGENT_PAYOUT' && s.isPrimary)
       .map(s => [s.dealId, s])
   );
 }

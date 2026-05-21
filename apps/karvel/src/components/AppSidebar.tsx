@@ -1,6 +1,7 @@
-import { Search, ContactRound, Building, UsersRound, ChevronRight, Handshake } from "lucide-react";
+import { Search, ContactRound, Building, UsersRound, ChevronRight, Handshake, ChevronDown } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useCurrentUser, USERS, type AppUser } from "@/contexts/UserContext";
 
 const navItems = [
   { title: "Opportunities", url: "/", icon: Search },
@@ -9,6 +10,35 @@ const navItems = [
   { title: "Properties", url: "/properties", icon: Building, hasSubmenu: true },
   { title: "Agents", url: "/agents", icon: UsersRound },
 ];
+
+function UserSwitcher() {
+  const { currentUser, setCurrentUser } = useCurrentUser();
+  return (
+    <div className="px-4 py-3 border-t border-border">
+      <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-semibold mb-2">Logged in as</p>
+      <div className="relative group">
+        <select
+          value={currentUser.id}
+          onChange={(e) => {
+            const user = USERS.find((u) => u.id === e.target.value);
+            if (user) setCurrentUser(user);
+          }}
+          className="w-full appearance-none px-3 py-2 pr-7 border border-border rounded-md text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+        >
+          {USERS.map((u: AppUser) => (
+            <option key={u.id} value={u.id}>{u.name}</option>
+          ))}
+        </select>
+        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+      </div>
+      <p className="mt-1.5 text-[10px] text-muted-foreground/60">
+        Role: <span className={`font-semibold ${currentUser.role === "finance_lead" ? "text-amber-600" : "text-muted-foreground"}`}>
+          {currentUser.role === "finance_lead" ? "Finance Lead" : "Ops"}
+        </span>
+      </p>
+    </div>
+  );
+}
 
 export function AppSidebar() {
   const location = useLocation();
@@ -57,6 +87,7 @@ export function AppSidebar() {
           })}
         </ul>
       </nav>
+      <UserSwitcher />
     </aside>
   );
 }

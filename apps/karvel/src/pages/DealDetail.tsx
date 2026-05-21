@@ -1,12 +1,13 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { findDeal, updateDeal } from "@/data/dealStore";
 import { saveDocumentRequirements } from "@/data/sharedEntityStore";
 import { Deal, DealStatus } from "@/data/types";
 import { DealStatusBadge } from "@/components/DealBadges";
-import { ArrowLeft, CheckCircle2, Circle, ExternalLink, Download } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, ExternalLink, Download, AlertTriangle, CheckCheck, Undo2 } from "lucide-react";
 import { computeDealPnL, createCommissionAccrualPosting } from "@/lib/dealCalculations";
 import { toast } from "sonner";
+import { useCurrentUser } from "@/contexts/UserContext";
 import {
   canTransitionDealStatus,
   getAllowedDealTransitions,
@@ -88,6 +89,7 @@ function SectionCard({ title, children, className = "" }: { title: string; child
 const DealDetail = () => {
   const { dealId } = useParams<{ dealId: string }>();
   const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
 
   const deal = useMemo(() => findDeal(dealId || ""), [dealId]);
   const [stakesVersion, setStakesVersion] = useState(0);
@@ -99,6 +101,42 @@ const DealDetail = () => {
   const [docs, setDocs] = useState<DealDocumentRequirement[]>(() =>
     sharedDealDocumentRequirements.filter((r) => r.dealId === (deal?.id ?? ""))
   );
+
+  // P&L approval state
+  const [pnlPendingApproval, setPnlPendingApproval] = useState(false);
+  const stakesSnapshot = useRef<typeof sharedDealStakeholders[0][]>([]);
+
+  const handleWaterfallChanged = () => {
+    if (!pnlPendingApproval && deal) {
+      // Snapshot before the first edit in this session
+      stakesSnapshot.current = sharedDealStakeholders
+        .filter((s) => s.dealId === deal.id)
+        .map((s) => ({ ...s }));
+    }
+    setPnlPendingApproval(true);
+    setStakesVersion((v) => v + 1);
+  };
+
+  const handleApprovePnL = () => {
+    setPnlPendingApproval(false);
+    stakesSnapshot.current = [];
+    toast.success("P&L changes approved");
+  };
+
+  const handleRejectPnL = () => {
+    if (!deal) return;
+    // Remove all current stakes for this deal and restore from snapshot
+    const toRemove = sharedDealStakeholders.filter((s) => s.dealId === deal.id);
+    toRemove.forEach((s) => {
+      const idx = sharedDealStakeholders.indexOf(s);
+      if (idx !== -1) sharedDealStakeholders.splice(idx, 1);
+    });
+    stakesSnapshot.current.forEach((s) => sharedDealStakeholders.push({ ...s }));
+    stakesSnapshot.current = [];
+    setPnlPendingApproval(false);
+    setStakesVersion((v) => v + 1);
+    toast.info("P&L changes rejected — reverted to previous state");
+  };
 
   useEffect(() => {
     if (!deal) return;
@@ -131,7 +169,7 @@ const DealDetail = () => {
   const allowedTransitions = [status, ...getAllowedDealTransitions(status)];
   const stageDates = getStageDates({ ...deal, status, statusHistory });
   const currentIdx = getStageIndex(status);
-  const canEditOps = status === "pending-details" || status === "under-review";
+  const canEditOps = (status === "pending-details" || status === "under-review") && !pnlPendingApproval;
 
   const handleStatusChange = (to: DealStatus) => {
     if (to === status) return;
@@ -140,6 +178,10 @@ const DealDetail = () => {
       return;
     }
     if (status === "under-review" && to === "pending-agent-approval") {
+      if (pnlPendingApproval) {
+        toast.error("Cannot move to Agent Approval: P&L changes must be approved by Finance Lead first.");
+        return;
+      }
       const allClear = docs.every((r) => r.status === "approved" || r.status === "waived");
       if (!allClear) {
         toast.error("Cannot move to Agent Approval: all documents must be approved or waived first.");
@@ -149,32 +191,75 @@ const DealDetail = () => {
     if (to === "pending-receivables") {
       const blueprint = getBlueprint(deal.country, deal.businessUnit);
       const billableStakes = sharedDealStakeholders.filter(
-        (s) => s.dealId === deal.id && s.role !== "INTERNAL_PAYOUT" && s.financialAmount != null && s.financialAmount !== 0,
+        (s) => s.dealId === deal.id && s.role !== "AGENT_PAYOUT" && s.financialAmount != null && s.financialAmount !== 0,
       );
       const now = new Date().toISOString();
       const today = now.slice(0, 10);
       const dueDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-      billableStakes.forEach((s, idx) => {
-        const isRevenue = s.role === "REVENUE_SOURCE";
-        const subtotal = Math.abs(s.financialAmount!);
+
+      // Group REVENUE_SOURCE by partyId so a client with multiple charges (commission + conveyance) gets one bundled invoice.
+      // Non-revenue stakes (costs, referrals) stay as individual invoices.
+      const revenueStakesByParty = new Map<string, typeof billableStakes>();
+      const nonRevenueStakes: typeof billableStakes = [];
+      billableStakes.forEach((s) => {
+        if (s.role === "REVENUE_SOURCE") {
+          if (!revenueStakesByParty.has(s.partyId)) revenueStakesByParty.set(s.partyId, []);
+          revenueStakesByParty.get(s.partyId)!.push(s);
+        } else {
+          nonRevenueStakes.push(s);
+        }
+      });
+
+      let invIdx = 0;
+      const country = (deal.country ?? "XX").toUpperCase();
+      const currency = deal.currency ?? "EUR";
+
+      revenueStakesByParty.forEach((stakes) => {
+        const subtotal = stakes.reduce((sum, s) => sum + Math.abs(s.financialAmount!), 0);
         const vatAmount = blueprint.taxRate ? Math.round(subtotal * blueprint.taxRate) / 100 : undefined;
-        const inv = {
-          id: `inv-auto-${deal.id}-${idx}-${Date.now()}`,
-          direction: isRevenue ? ("outbound" as const) : ("inbound" as const),
-          partyId: s.partyId,
+        const lineItems = stakes.length > 1
+          ? stakes.map((s) => ({ description: s.description ?? "Commission", amount: Math.abs(s.financialAmount!) }))
+          : undefined;
+        sharedInvoices.push({
+          id: `inv-auto-${deal.id}-rev-${invIdx}-${Date.now()}`,
+          direction: "outbound" as const,
+          partyId: stakes[0].partyId,
           dealId: deal.id,
-          invoiceNumber: `INV-${(deal.country ?? "XX").toUpperCase()}-${String(sharedInvoices.length + idx + 1).padStart(3, "0")}`,
+          invoiceNumber: `INV-${country}-${String(sharedInvoices.length + invIdx + 1).padStart(3, "0")}`,
           status: "draft" as const,
           subtotal,
           vatAmount,
-          currency: deal.currency ?? "EUR",
+          lineItems,
+          currency,
           issueDate: today,
           dueDate,
           createdAt: now,
           updatedAt: now,
-        };
-        sharedInvoices.push(inv);
+        });
+        invIdx++;
       });
+
+      nonRevenueStakes.forEach((s) => {
+        const subtotal = Math.abs(s.financialAmount!);
+        const vatAmount = blueprint.taxRate ? Math.round(subtotal * blueprint.taxRate) / 100 : undefined;
+        sharedInvoices.push({
+          id: `inv-auto-${deal.id}-cost-${invIdx}-${Date.now()}`,
+          direction: "inbound" as const,
+          partyId: s.partyId,
+          dealId: deal.id,
+          invoiceNumber: `INV-${country}-${String(sharedInvoices.length + invIdx + 1).padStart(3, "0")}`,
+          status: "draft" as const,
+          subtotal,
+          vatAmount,
+          currency,
+          issueDate: today,
+          dueDate,
+          createdAt: now,
+          updatedAt: now,
+        });
+        invIdx++;
+      });
+
       if (billableStakes.length > 0) setInvoicesVersion((v) => v + 1);
     }
     const entry = { from: status, to, timestamp: new Date().toISOString(), note: "Manual transition" };
@@ -266,13 +351,42 @@ const DealDetail = () => {
             </SectionCard>
 
             {/* P&L */}
-            <SectionCard title="P&L">
+            <SectionCard title={pnlPendingApproval ? "P&L — Pending Approval" : "P&L"}>
+              {pnlPendingApproval && (
+                <div className={`flex items-center justify-between mb-4 px-3 py-2.5 rounded-md border ${currentUser.role === "finance_lead" ? "border-amber-300 bg-amber-50 dark:bg-amber-950/20" : "border-border bg-muted/40"}`}>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <div>
+                      <p className="text-[13px] font-semibold text-foreground">P&L changes pending Finance Lead approval</p>
+                      {currentUser.role !== "finance_lead" && (
+                        <p className="text-[11px] text-muted-foreground">Switch to Finance Lead in the sidebar to approve or reject.</p>
+                      )}
+                    </div>
+                  </div>
+                  {currentUser.role === "finance_lead" && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={handleRejectPnL}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-[12px] font-medium text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+                      >
+                        <Undo2 className="h-3.5 w-3.5" /> Reject
+                      </button>
+                      <button
+                        onClick={handleApprovePnL}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"
+                      >
+                        <CheckCheck className="h-3.5 w-3.5" /> Approve
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               <PnLWaterfall
                 deal={deal}
                 currency={currency}
                 pnl={pnl}
                 canEdit={canEditOps}
-                onChanged={() => setStakesVersion((v) => v + 1)}
+                onChanged={handleWaterfallChanged}
               />
             </SectionCard>
 

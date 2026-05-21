@@ -126,7 +126,7 @@ export function DealListingTable({ deals, currency }: Props) {
 
         case "market": va = a.market ?? ""; vb = b.market ?? ""; break;
         case "grossRevenue": va = pnlByDealId.get(a.id)?.grossRevenue ?? a.grossRevenue ?? 0; vb = pnlByDealId.get(b.id)?.grossRevenue ?? b.grossRevenue ?? 0; break;
-        case "netRevenue": va = pnlByDealId.get(a.id)?.netRevenue ?? 0; vb = pnlByDealId.get(b.id)?.netRevenue ?? 0; break;
+        case "netRevenue": va = pnlByDealId.get(a.id)?.commissionBase ?? 0; vb = pnlByDealId.get(b.id)?.commissionBase ?? 0; break;
         case "huspyMargin": va = pnlByDealId.get(a.id)?.huspyMargin ?? 0; vb = pnlByDealId.get(b.id)?.huspyMargin ?? 0; break;
         default: return 0;
       }
@@ -227,7 +227,7 @@ export function DealListingTable({ deals, currency }: Props) {
                       {pnl ? formatAmount(pnl.grossRevenue, deal.currency ?? currency) : deal.grossRevenue != null ? formatAmount(deal.grossRevenue, deal.currency ?? currency) : dash}
                     </td>
                     <td className={`${tdClass} text-right tabular-nums`}>
-                      {pnl ? formatAmount(pnl.netRevenue, deal.currency ?? currency) : dash}
+                      {pnl ? formatAmount(pnl.commissionBase, deal.currency ?? currency) : dash}
                     </td>
                     <td className={`${tdClass} text-right tabular-nums font-bold ${pnl && pnl.huspyMargin >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}`}>
                       {pnl ? formatAmount(pnl.huspyMargin, deal.currency ?? currency) : dash}

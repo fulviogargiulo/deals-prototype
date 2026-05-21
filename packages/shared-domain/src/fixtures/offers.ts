@@ -206,4 +206,14 @@ export const sharedOffers: Offer[] = [
     buyerAgentId: "agent-004", buyerAgentSplitPct: 100,
     createdAt: "2026-05-10T10:00:00.000Z", updatedAt: "2026-05-12T00:00:00.000Z",
   },
+  // offer-021 → deal-021 (es/EUR, primary/buy, agent-002/Guilherme, referral Marta Sáez)
+  {
+    id: "offer-021", status: "deal-created",
+    country: "es", currency: "EUR",
+    propertyId: "prop-005", propertyName: "Townhouse in Las Rozas",
+    opportunityId: "opp-005", clientId: "client-003",
+    offerAmount: 480000, commissionPayer: "developer", totalCommissionPct: 3,
+    buyerAgentId: "agent-002", buyerAgentSplitPct: 100,
+    createdAt: "2026-03-01T10:00:00.000Z", updatedAt: "2026-03-05T00:00:00.000Z",
+  },
 ];

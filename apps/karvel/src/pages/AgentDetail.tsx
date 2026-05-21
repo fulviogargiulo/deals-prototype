@@ -14,6 +14,7 @@ import type {
   AgentDocument,
   AgentFinancials as SharedAgentFinancials,
   AgentStrategy,
+  ConnectedAgent,
   DocumentRequirementStatus,
   Posting,
   PostingLine,
@@ -110,6 +111,7 @@ function findOrSeedAgentFinancials(agentId: string): SharedAgentFinancials {
     id: `af-${agentId}`,
     agentId,
     strategy: { kind: "flat", pct: 40 },
+    connectedAgents: [],
     teamLeadRate: 10,
     managerRate: 5,
   };
@@ -782,27 +784,72 @@ export default function AgentDetail() {
                 </CardTitle>
                 <CardDescription className="text-xs">Team lead and manager cuts — Huspy-borne, do not reduce agent earnings</CardDescription>
               </CardHeader>
-              <CardContent className="pt-2 space-y-5">
-                <div>
-                  <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Team Lead</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <NonEditableField label="Name" value={agent.teamLeadName ?? "—"} />
-                    <RateField label="Rate" sublabel="% of agent payout"
-                      value={finEditing ? (finDraft.teamLeadRate ?? 0) : (fin.teamLeadRate ?? 0)}
-                      editing={finEditing}
-                      onChange={(v) => setFinDraft((d) => ({ ...d, teamLeadRate: v }))} />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Manager</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <NonEditableField label="Name" value={agent.managerName ?? "—"} />
-                    <RateField label="Rate" sublabel="% of agent payout"
-                      value={finEditing ? (finDraft.managerRate ?? 0) : (fin.managerRate ?? 0)}
-                      editing={finEditing}
-                      onChange={(v) => setFinDraft((d) => ({ ...d, managerRate: v }))} />
-                  </div>
-                </div>
+              <CardContent className="pt-2 space-y-3">
+                {!finEditing && (fin.connectedAgents ?? []).length === 0 && (
+                  <p className="text-xs text-muted-foreground">No connected agents configured.</p>
+                )}
+                {(finEditing ? finDraft.connectedAgents : fin.connectedAgents)?.map((ca, idx) => {
+                  const caAgent = sharedAgents.find((a) => a.id === ca.agentId);
+                  const caParty = caAgent ? sharedParties.find((p) => p.id === caAgent.partyId) : undefined;
+                  const caName = caParty?.displayName ?? ca.agentId;
+                  return finEditing ? (
+                    <div key={ca.id} className="grid grid-cols-[1fr_1fr_80px_32px] gap-2 items-end">
+                      <div>
+                        <p className="text-[11px] text-muted-foreground mb-1">Label</p>
+                        <input
+                          value={ca.label}
+                          onChange={(e) => setFinDraft((d) => ({ ...d, connectedAgents: d.connectedAgents?.map((x, i) => i === idx ? { ...x, label: e.target.value } : x) }))}
+                          className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground mb-1">Agent</p>
+                        <select
+                          value={ca.agentId}
+                          onChange={(e) => setFinDraft((d) => ({ ...d, connectedAgents: d.connectedAgents?.map((x, i) => i === idx ? { ...x, agentId: e.target.value } : x) }))}
+                          className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">— select —</option>
+                          {sharedAgents.map((a) => {
+                            const p = sharedParties.find((p) => p.id === a.partyId);
+                            return <option key={a.id} value={a.id}>{p?.displayName ?? a.id}</option>;
+                          })}
+                        </select>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-muted-foreground mb-1">Rate</p>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number" min={0} max={100} step={0.5}
+                            value={ca.rate}
+                            onChange={(e) => setFinDraft((d) => ({ ...d, connectedAgents: d.connectedAgents?.map((x, i) => i === idx ? { ...x, rate: Number(e.target.value) } : x) }))}
+                            className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                          />
+                          <span className="text-[13px] text-muted-foreground shrink-0">%</span>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 mb-0.5 text-muted-foreground hover:text-destructive"
+                        onClick={() => setFinDraft((d) => ({ ...d, connectedAgents: d.connectedAgents?.filter((_, i) => i !== idx) }))}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div key={ca.id} className="grid grid-cols-3 gap-4">
+                      <NonEditableField label="Label" value={ca.label} />
+                      <NonEditableField label="Agent" value={caName} />
+                      <NonEditableField label="Rate" value={`${ca.rate}%`} />
+                    </div>
+                  );
+                })}
+                {finEditing && (
+                  <Button size="sm" variant="outline" className="w-full"
+                    onClick={() => setFinDraft((d) => ({
+                      ...d,
+                      connectedAgents: [...(d.connectedAgents ?? []), { id: `ca-${Date.now()}`, agentId: "", label: "Team Lead", rate: 10 }],
+                    }))}>
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add connected agent
+                  </Button>
+                )}
                 {finEditing && (
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" onClick={saveFinancials}>Save</Button>

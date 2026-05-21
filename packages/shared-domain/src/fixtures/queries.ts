@@ -79,7 +79,7 @@ export const getDealStakeholdersForParty = (partyId: string) => sharedDealStakeh
 
 // Returns the agent-role DealStakeholder for a specific agent party on a given deal.
 export const getAgentStakeForDeal = (dealId: string, agentPartyId: string): DealStakeholder | undefined =>
-  sharedDealStakeholders.find((s) => s.dealId === dealId && s.partyId === agentPartyId && s.role === "INTERNAL_PAYOUT");
+  sharedDealStakeholders.find((s) => s.dealId === dealId && s.partyId === agentPartyId && s.role === "AGENT_PAYOUT");
 
 // Computes the commission amount attributable to one agent based on their stake.
 // Uses fixedAmount when set; otherwise applies splitPercentage (defaults to 100%).

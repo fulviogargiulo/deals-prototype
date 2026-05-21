@@ -70,10 +70,50 @@ export type BusinessProcess =
 /**
  * StakeholderType — semantic financial role of a party on a deal.
  *
- * REVENUE_SOURCE:         Party paying Huspy. financialAmount > 0 contributes to commissionable gross.
- * OPERATIONAL_DEDUCTION:  Fixed service costs Huspy pays (notaries, conveyance, legal). Routes to Bucket D.
- * ACQUISITION_DEDUCTION:  Sales/referral costs Huspy pays (co-brokers, client rebates). Routes to Bucket C.
- * INTERNAL_PAYOUT:        Agent — system-calculated via AgentStrategy. Routes to Bucket B.
+ * Waterfall flow (tax-exclusive):
+ *   Σ REVENUE_SOURCE.financialAmount          → Gross Revenue
+ *     − Σ ACQUISITION_DEDUCTION               → Commission Base  (agent splits apply here)
+ *       − Σ AGENT_PAYOUT (per strategy)         → Huspy Gross Share
+ *         − Σ OPERATIONAL_DEDUCTION           → Huspy Net Margin
+ *
+ * Role semantics:
+ *
+ *   REVENUE_SOURCE
+ *     Party paying Huspy. Positive = commission / fee charged to client.
+ *     Negative = rebate or discount returned to the client; reduces gross directly and appears
+ *     as a line item on the same invoice as the commission.
+ *     UI label: "Revenue"
+ *
+ *   ACQUISITION_DEDUCTION  (Bucket C)
+ *     Huspy-borne cost that reduces the commission base shared with agents
+ *     (co-brokers, external referrals, partner fees).
+ *     When parentStakeholderId is set → cost is charged to that agent's pool instead
+ *     of the Huspy-level base (agent-borne cost, deducted from agent payout only).
+ *     UI label: "External Partners" (top-level) / "Agent cost" (agent-borne)
+ *
+ *   OPERATIONAL_DEDUCTION  (Bucket D)
+ *     Huspy-only cost deducted AFTER agent splits — does not reduce agent commissions
+ *     (legal, admin, internal service costs).
+ *     When parentStakeholderId is set → same agent-borne logic as ACQUISITION_DEDUCTION.
+ *     UI label: "Service Costs" (top-level) / "Agent cost" (agent-borne)
+ *
+ *   AGENT_PAYOUT  (Bucket B)
+ *     Agent — payout calculated by the waterfall engine via AgentStrategy.
+ *     splitPercentage determines share of the commission base.
+ *     UI label: "Agent Commissions"
+ *
+ *   SUPPLY
+ *     Non-financial role: the supply-side party on the transaction.
+ *     REBU buy/sell: the seller or developer. Leasing: the landlord. MBU: the bank/lender.
+ *     Multiple SUPPLY parties are allowed (e.g. co-sellers, multiple lenders).
+ *     No financialAmount — this role is purely relational (replaces Deal.sellerName text field).
+ *
+ *   DEMAND
+ *     Non-financial role: the demand-side party on the transaction.
+ *     REBU: the buyer. Leasing: the tenant. MBU: the borrower.
+ *     Multiple DEMAND parties are allowed.
+ *     No financialAmount — purely relational (replaces Deal.buyerName text field).
+ *     Primary DEMAND party is the canonical source for Deal.clientName display cache.
  *
  * [TO BE DETERMINED] Agent split percentages will migrate to an Offer entity
  * linked from the deal; splitPercentage on DealStakeholder is the interim source of truth.
@@ -82,7 +122,9 @@ export type StakeholderType =
   | "REVENUE_SOURCE"
   | "OPERATIONAL_DEDUCTION"
   | "ACQUISITION_DEDUCTION"
-  | "INTERNAL_PAYOUT";
+  | "AGENT_PAYOUT"
+  | "SUPPLY"
+  | "DEMAND";
 
 // ============================================================
 // Waterfall — cost-bucket taxonomy used by the lean P&L engine.

@@ -241,6 +241,8 @@ export interface Agent {
   partyId: string;
   country?: Country;
   uid?: number;
+  /** Whether the agent is paid via payroll (salaried) or self-invoices (commission). */
+  employmentType?: "salaried" | "commission";
   employmentStatus?: string;
   teamLeadName?: string;
   managerName?: string;
@@ -362,13 +364,7 @@ export interface Deal {
   propertyType?: string;
   projectName?: string;
 
-  // Buyer / Seller (REBU)
-  buyerName?: string;
-  buyerPhone?: string;
-  buyerEmail?: string;
-  sellerName?: string;
-  sellerTaxId?: string;
-  sellerEmail?: string;
+  // Buyer / Seller — use DEMAND/SUPPLY DealStakeholders linked to Party records.
   paymentMode?: PaymentMode;
 
   // Revenue
@@ -376,8 +372,6 @@ export interface Deal {
   takeRate?: number;
   huspyRevenue?: number;
   netHuspyRevenue?: number;
-  /** @deprecated Conveyance fee — now modelled as a DealStakeholder with role "conveyance" and negative financialAmount. */
-  conveyanceRevenue?: number;
 
   // Lean waterfall — set by the new Deal creation flow.
   /** Gross commission Huspy charges. For multi-payer deals, equals Σ DealStakeholder.financialAmount where > 0. */
@@ -397,17 +391,6 @@ export interface Deal {
   numberOfTranches?: number;
   disbursedAmount?: number;
   bankSlab?: number;
-  brokerCommissionRate?: number;
-  brokerPayout?: number;
-  rmName?: string;
-  rmCommissionRate?: number;
-  rmPayout?: number;
-  tlName?: string;
-  tlCommissionRate?: number;
-  tlPayout?: number;
-  dsName?: string;
-  dsCommissionRate?: number;
-  dsPayout?: number;
   externalCommissionRate?: number;
   externalPayout?: number;
 
@@ -456,14 +439,24 @@ export interface MaxAgentStrategy {
 
 export type AgentStrategy = FlatAgentStrategy | SlabAgentStrategy | MaxAgentStrategy;
 
+export interface ConnectedAgent {
+  id: string;
+  agentId: string;
+  label: string;
+  rate: number;
+  ledgerId?: number;
+}
+
 export interface AgentFinancials {
   id: string;
   agentId: string;
   /** Strategy used to compute the agent's payout against deal net revenue. */
   strategy: AgentStrategy;
-  /** % of agent payout passed to the team lead (Huspy-borne overhead, additive on top). */
+  /** Flexible list of connected agents (team leads, managers, etc.) and their overhead rates. */
+  connectedAgents?: ConnectedAgent[];
+  /** @deprecated Use connectedAgents. Kept for waterfall engine compat. */
   teamLeadRate?: number;
-  /** % of agent payout passed to the manager (Huspy-borne overhead, additive on top). */
+  /** @deprecated Use connectedAgents. Kept for waterfall engine compat. */
   managerRate?: number;
   /** Subledger ID where the team lead's portion is credited on commission_accrual. */
   teamLeadLedgerId?: number;
@@ -506,15 +499,24 @@ export interface DealStakeholder {
   partyId: string;
   role: StakeholderType;
   isPrimary?: boolean;
-  /** Agent's share of the commission pool (0–100). Used only when financialAmount is not set —
-   *  the waterfall derives payout as splitPercentage% × netRevenue × agentRate.
+  /** Agent's share of the commission pool (0–100).
+   *  Waterfall allocates commissionBase × (splitPercentage / 100) to this agent before applying AgentStrategy.
    *  Prefer setting financialAmount directly when the payout is fixed or pre-negotiated. */
   splitPercentage?: number;
   fixedAmount?: number;
   /** Signed financial impact on the deal P&L.
-   *  Positive → party pays Huspy (gross revenue source). Engine sums these instead of Deal.grossRevenue when present.
-   *  Negative → Huspy pays party (cost). Bucket derived from role: conveyance → D; all others → C. */
+   *  Positive → party pays Huspy (REVENUE_SOURCE: commission, conveyance fee, etc.).
+   *  Negative → rebate returned to client (REVENUE_SOURCE) or cost Huspy pays (ACQUISITION_DEDUCTION / OPERATIONAL_DEDUCTION).
+   *  Bucket derived from role — see StakeholderType. */
   financialAmount?: number;
+  /** Human-readable label for this line (e.g. "Commission", "Conveyance Fee").
+   *  Used to distinguish multiple REVENUE_SOURCE entries on the same party and as invoice line item description. */
+  description?: string;
+  /** Links a cost stake (ACQUISITION_DEDUCTION or OPERATIONAL_DEDUCTION) to a parent
+   *  AGENT_PAYOUT stake. When set, the cost is deducted from the parent agent's
+   *  commission pool rather than from Huspy's gross revenue. TL/Mgr rates apply to
+   *  the agent's net (after all child costs are removed). */
+  parentStakeholderId?: string;
 }
 
 // ============================================================
@@ -658,4 +660,6 @@ export interface Invoice {
   cancelledAt?: string;
   createdAt: string;
   updatedAt: string;
+  /** Line-item breakdown for bundled invoices (e.g. commission + conveyance on the same party). */
+  lineItems?: Array<{ description: string; amount: number }>;
 }

@@ -45,6 +45,13 @@ export const sharedParties: Party[] = [
     phone: "+971 55 876 5432",
     legalType: "individual",
   },
+  {
+    id: "party-agent-007",
+    displayName: "Marta Sáez",
+    email: "marta.saez@huspy.io",
+    phone: "+34 631 987 654",
+    legalType: "individual",
+  },
 
   // ── Clients ────────────────────────────────────────────────────────────────
   {
@@ -128,6 +135,21 @@ export const sharedParties: Party[] = [
     taxId: "1087654321",
   },
 
+  // ── Individual sellers / landlords (SUPPLY for secondary market + leasing deals) ──
+  { id: "party-seller-002", displayName: "María López Fernández",    legalType: "individual", taxId: "47123456A" },
+  { id: "party-seller-003", displayName: "Carlos Ruiz García",       legalType: "individual", taxId: "38765432B" },
+  { id: "party-seller-004", displayName: "Antonio Sánchez Pérez",    legalType: "individual", taxId: "52341678C" },
+  { id: "party-seller-006", displayName: "Isabel Romero Torres",     legalType: "individual", taxId: "29876543D" },
+  { id: "party-seller-007", displayName: "Francisco Jiménez Alonso", legalType: "individual", taxId: "61234987E" },
+  { id: "party-seller-010", displayName: "Mohammed Al Rashid",       legalType: "individual", taxId: "784-1990-1234567" },
+  { id: "party-seller-013", displayName: "Rosa Moreno Castillo",     legalType: "individual", taxId: "43219876F" },
+  { id: "party-seller-018", displayName: "Javier Díaz Navarro",      legalType: "individual", taxId: "75432198G" },
+  { id: "party-seller-019", displayName: "Laura Gómez Herrera",      legalType: "individual", taxId: "56789012H" },
+
+  // ── Developers (SUPPLY for primary market deals) ───────────────────────────
+  { id: "party-dev-neinor",         displayName: "Neinor Homes",    legalType: "company", taxId: "A86731611" },
+  { id: "party-dev-dar-al-arkan",   displayName: "Dar Al Arkan",    legalType: "company", taxId: "SA2000000001" },
+
   // ── Third parties (banks, developers) ─────────────────────────────────────
   {
     id: "party-third-inmobiliaria-grupo-norte",
@@ -152,6 +174,12 @@ export const sharedParties: Party[] = [
     displayName: "Emaar Properties",
     legalType: "company",
     taxId: "AE100000001",
+  },
+  {
+    id: "party-third-fab",
+    displayName: "First Abu Dhabi Bank",
+    legalType: "financial_institution",
+    taxId: "AE200000001",
   },
 
   // ── Connected agents (team leads / managers) — one entry per currency ─────
