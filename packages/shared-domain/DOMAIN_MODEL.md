@@ -128,7 +128,7 @@ erDiagram
         string dealId FK
         string invoiceNumber
         InvoiceStatus status
-        number amount "base commission (pre-VAT); gross = amount + vatAmount"
+        number subtotal "base commission (pre-VAT); gross = subtotal + vatAmount"
         number vatAmount "optional — VAT charged on top of base"
         number withholdingRate "optional — IRPF rate applied (agent-editable)"
         number withholdingAmount "optional — withheld by Huspy, remitted to authority"
@@ -365,9 +365,11 @@ Both fields survive on `Deal` as reference data and appear as greyed context lin
 | Value | Bucket | Used when |
 |---|---|---|
 | `REVENUE_SOURCE` | — | Party paying Huspy. `financialAmount > 0` contributes to commissionable gross. |
-| `INTERNAL_PAYOUT` | B | Huspy agent. Commission calculated via `AgentFinancials.strategy`; not manually entered. |
+| `AGENT_PAYOUT` | B | Huspy agent. Commission calculated via `AgentFinancials.strategy`; not manually entered. |
 | `ACQUISITION_DEDUCTION` | C | External commercial partner (co-broker, referral agency). Huspy pays them. |
 | `OPERATIONAL_DEDUCTION` | D | Fixed service provider (notary, conveyance, legal). Huspy pays a fixed fee. |
+| `SUPPLY` | — | Non-financial role: supply-side party (seller, developer, landlord, bank/lender). No `financialAmount`. Replaces `Deal.sellerName`. |
+| `DEMAND` | — | Non-financial role: demand-side party (buyer, tenant, borrower). No `financialAmount`. Primary DEMAND party is the canonical source for `Deal.clientName`. Replaces `Deal.buyerName`. |
 
 ## P&L waterfall — cost bucket taxonomy
 
@@ -577,7 +579,7 @@ Stand-ins for what a real backend query layer would do. All return from in-memor
 | `getDealStakeholdersForParty(partyId)` | All deals a party participates in |
 | `getAgentStakeForDeal(dealId, agentPartyId)` | The `INTERNAL_PAYOUT` stake for a specific agent on a deal |
 | `computeAgentCommission(totalAgentCommission, stake)` | Agent's share of total commission — uses `fixedAmount` if set, otherwise `splitPercentage` |
-| `getClientForDeal(dealId)` | Primary `REVENUE_SOURCE` client record for a deal |
+| `getClientForDeal(dealId)` | Primary `DEMAND` client record for a deal |
 
 ## Deprecated fields (kept for fixture compatibility — remove before real API)
 

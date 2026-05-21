@@ -17,7 +17,7 @@ const agentDisplayName: Record<string, string> = {
   "agent-006": "Zainab Al-Qadi",
 };
 
-const CLIENT_ROLES = new Set<string>(["REVENUE_SOURCE"]);
+const CLIENT_ROLES = new Set<string>(["DEMAND"]);
 
 function findOffer(id: string) {
   return sharedOffers.find((o) => o.id === id);
@@ -46,7 +46,6 @@ interface BaseInput {
   commissionPercentage: number;
   paymentDate?: string;
   channel?: string;
-  conveyanceFee?: number;
   rebatePercentage?: number;
   subsidyAmount?: number;
   statusHistory?: Deal["statusHistory"];
@@ -65,7 +64,7 @@ function expand(b: BaseInput): Deal {
   const blueprint = getBlueprint(b.country, businessUnit);
 
   // Primary agent display name (display cache only — full AgentEntry[] lives in Karvel enricher).
-  const primaryAgentStake = sharedDealStakeholders.find((s) => s.dealId === b.id && s.role === "INTERNAL_PAYOUT" && s.isPrimary);
+  const primaryAgentStake = sharedDealStakeholders.find((s) => s.dealId === b.id && s.role === "AGENT_PAYOUT" && s.isPrimary);
   const primaryAgent = primaryAgentStake ? sharedAgents.find((a) => a.partyId === primaryAgentStake.partyId) : undefined;
   const agentName = primaryAgent ? (agentDisplayName[primaryAgent.id] ?? primaryAgent.id) : "Unknown";
 
@@ -81,12 +80,12 @@ function expand(b: BaseInput): Deal {
     return {
       entityName: party?.displayName ?? "Unknown",
       entityType: deriveReceivableEntityType(inv.partyId, b.market),
-      amount: inv.amount,
+      amount: (inv.subtotal ?? 0) + (inv.vatAmount ?? 0),
       invoiceNumber: inv.invoiceNumber,
       invoiceStatus: inv.status,
       invoiceDate: inv.issueDate,
       paymentReceivedDate: inv.paidDate,
-      paymentReceivedAmount: inv.paidDate ? inv.amount : undefined,
+      paymentReceivedAmount: inv.paidDate ? (inv.subtotal ?? 0) + (inv.vatAmount ?? 0) : undefined,
     };
   });
 
@@ -120,14 +119,10 @@ function expand(b: BaseInput): Deal {
     channel: b.channel,
     ofCaseNumber: `OF-${b.id.toUpperCase()}`,
     buildingName: propertyTitle,
-    buyerName: b.market !== "leasing" ? clientParty?.displayName : undefined,
-    buyerEmail: b.market !== "leasing" ? clientParty?.email : undefined,
-    buyerPhone: b.market !== "leasing" ? clientParty?.phone : undefined,
     paymentMode: "cash",
     dealPrice: b.dealAmount,
     takeRate: b.commissionPercentage,
     huspyRevenue,
-    conveyanceRevenue: b.conveyanceFee ?? 0,
     receivables,
     rebatePercentage: b.rebatePercentage ?? 0,
     rebateAmount,
@@ -135,14 +130,6 @@ function expand(b: BaseInput): Deal {
     numberOfTranches: 0,
     disbursedAmount: 0,
     bankSlab: 0,
-    brokerCommissionRate: 0,
-    brokerPayout: 0,
-    rmCommissionRate: 0,
-    rmPayout: 0,
-    tlCommissionRate: 0,
-    tlPayout: 0,
-    dsCommissionRate: 0,
-    dsPayout: 0,
     externalCommissionRate: 0,
     externalPayout: 0,
     // Agent-app — agent-facing
@@ -390,6 +377,20 @@ export const sharedDeals: Deal[] = [
       { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-05-13T14:00:00.000Z" },
       { from: "pending-agent-approval", to: "pending-receivables",    timestamp: "2026-05-14T09:00:00.000Z", note: "Invoice issued to Emaar" },
       { from: "pending-receivables",    to: "finalized",              timestamp: "2026-05-17T14:00:00.000Z", note: "Emaar payment received" },
+    ],
+  }),
+  expand({
+    id: "deal-021", offerId: "offer-021",
+    status: "finalized", market: "primary", country: "es", currency: "EUR",
+    dealAmount: 480000, reportDate: "2026-03-05",
+    createdAt: "2026-03-05T00:00:00.000Z", updatedAt: "2026-03-20T15:00:00.000Z",
+    commissionPercentage: 3,
+    paymentDate: "2026-03-15",
+    statusHistory: [
+      { from: "pending-details",        to: "under-review",           timestamp: "2026-03-06T09:00:00.000Z" },
+      { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-03-08T14:00:00.000Z" },
+      { from: "pending-agent-approval", to: "pending-receivables",    timestamp: "2026-03-10T09:00:00.000Z", note: "Invoice issued" },
+      { from: "pending-receivables",    to: "finalized",              timestamp: "2026-03-15T15:00:00.000Z", note: "Payment confirmed" },
     ],
   }),
 ];
