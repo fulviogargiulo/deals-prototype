@@ -4,7 +4,7 @@ import { findDeal, updateDeal } from "@/data/dealStore";
 import { saveDocumentRequirements } from "@/data/sharedEntityStore";
 import { Deal, DealStatus } from "@/data/types";
 import { DealStatusBadge } from "@/components/DealBadges";
-import { ArrowLeft, CheckCircle2, Circle, ExternalLink, Download, AlertTriangle, CheckCheck, Undo2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, ExternalLink, Download, AlertTriangle, CheckCheck, Undo2, ChevronDown } from "lucide-react";
 import { computeDealPnL, createCommissionAccrualPosting } from "@/lib/dealCalculations";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/contexts/UserContext";
@@ -31,7 +31,7 @@ const STAGE_ORDER: { key: DealStatus; label: string }[] = [
   { key: "pending-details", label: "Pending Details" },
   { key: "under-review", label: "Under Review" },
   { key: "pending-agent-approval", label: "Agent Approval" },
-  { key: "pending-receivables", label: "Receivables" },
+  { key: "invoicing", label: "Receivables" },
   { key: "finalized", label: "Finalized" },
 ];
 
@@ -75,13 +75,20 @@ function ReadRow({ label, value, children }: { label: string; value?: string | R
   );
 }
 
-function SectionCard({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
+function SectionCard({ title, children, className = "", collapsible = false, defaultOpen = true }: { title: string; children: React.ReactNode; className?: string; collapsible?: boolean; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={`bg-card border border-border rounded-lg shadow-sm ${className}`}>
-      <div className="px-5 py-3.5 border-b border-border">
+      <div
+        className={`px-5 py-3.5 border-b border-border flex items-center justify-between ${collapsible ? "cursor-pointer select-none" : ""}`}
+        onClick={collapsible ? () => setOpen((o) => !o) : undefined}
+      >
         <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wider">{title}</h3>
+        {collapsible && (
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
+        )}
       </div>
-      <div className="px-5 py-4">{children}</div>
+      {(!collapsible || open) && <div className="px-5 py-4">{children}</div>}
     </div>
   );
 }
@@ -188,7 +195,7 @@ const DealDetail = () => {
         return;
       }
     }
-    if (to === "pending-receivables") {
+    if (to === "invoicing") {
       const blueprint = getBlueprint(deal.country, deal.businessUnit);
       const billableStakes = sharedDealStakeholders.filter(
         (s) => s.dealId === deal.id && s.role !== "AGENT_PAYOUT" && s.financialAmount != null && s.financialAmount !== 0,
@@ -325,7 +332,7 @@ const DealDetail = () => {
                   .filter(Boolean)
                   .join(", ");
                 const clientDisplay = revenueParties || deal.clientName || "—";
-                const dealAmountValue = deal.dealAmount ?? deal.dealPrice;
+                const dealAmountValue = deal.dealPrice ?? deal.dealAmount;
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
                     <div>
@@ -351,7 +358,7 @@ const DealDetail = () => {
             </SectionCard>
 
             {/* P&L */}
-            <SectionCard title={pnlPendingApproval ? "P&L — Pending Approval" : "P&L"}>
+            <SectionCard title={pnlPendingApproval ? "P&L — Pending Approval" : "P&L"} collapsible>
               {pnlPendingApproval && (
                 <div className={`flex items-center justify-between mb-4 px-3 py-2.5 rounded-md border ${currentUser.role === "finance_lead" ? "border-amber-300 bg-amber-50 dark:bg-amber-950/20" : "border-border bg-muted/40"}`}>
                   <div className="flex items-center gap-2">
@@ -423,7 +430,7 @@ const DealDetail = () => {
 
           {/* Right sidebar: Deal Progress + Timeline */}
           <div className="flex flex-col gap-5">
-            <SectionCard title="Deal Progress">
+            <SectionCard title="Deal Progress" collapsible>
               <div className="relative pl-4">
                 {STAGE_ORDER.map((stage, i) => {
                   const completed = i <= currentIdx;
@@ -505,7 +512,7 @@ function PostingsSection({ dealId }: { dealId: string }) {
 
   return (
     <>
-      <SectionCard title="Accounting Events">
+      <SectionCard title="Accounting Events" collapsible>
         <div className="rounded-lg border border-border overflow-hidden">
           <table className="w-full text-[13px]">
             <thead>
@@ -599,14 +606,14 @@ function InvoicesSection({ dealId, navigate, invoicesVersion }: { dealId: string
 
   if (invoices.length === 0) {
     return (
-      <SectionCard title="Invoices">
+      <SectionCard title="Invoices" collapsible>
         <p className="text-[13px] text-muted-foreground italic">No invoices for this deal.</p>
       </SectionCard>
     );
   }
 
   return (
-    <SectionCard title="Invoices">
+    <SectionCard title="Invoices" collapsible>
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="w-full text-[13px]">
           <thead>
@@ -672,7 +679,7 @@ function CommentsSection({ dealId, canAdd }: { dealId: string; canAdd: boolean }
   };
 
   return (
-    <SectionCard title="Comments">
+    <SectionCard title="Comments" collapsible>
       <div className="space-y-3">
         {comments.length === 0 ? (
           <p className="text-[13px] text-muted-foreground italic">No comments on this deal.</p>
@@ -757,7 +764,7 @@ function DocumentsSection({
   const [addingLabel, setAddingLabel] = useState("");
 
   return (
-    <SectionCard title="Documents">
+    <SectionCard title="Documents" collapsible>
       {docs.length === 0 && !canEdit ? (
         <p className="text-[13px] text-muted-foreground italic">No document requirements for this deal.</p>
       ) : (

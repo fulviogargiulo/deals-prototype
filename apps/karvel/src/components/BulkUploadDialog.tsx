@@ -20,21 +20,27 @@ const CSV_HEADERS = [
   "stakeRole", "partyId", "amount", "description", "chargedTo", "splitPct",
 ];
 
-// Template: 1 deal, 8 stakeholder rows demonstrating all role types.
-// Math: gross = 30,000 + 1,500 − 2,000 + 20,000 = 49,500 AED
+// Template: 2 deals showing REBU and MBU MA/Broker patterns.
+//
+// DEAL-BULK-001 (REBU): gross = 30,000 + 1,500 − 2,000 + 20,000 = 49,500 AED
 //   commissionBase = 49,500 − 3,500 (C, co-broker) = 46,000
-//   Agent1 (60%) pool 27,600 → flat 42% = 11,592; agent cost 0 → payout 11,592 (+ TL/Mgr)
-//   Agent2 (40%) pool 18,400 → slab: 5,000×35% + 13,400×45% = 1,750 + 6,030 = 7,780 (+ TL/Mgr)
-//   Service cost 800 (D) deducted from Huspy's share only
-//   Huspy margin ≈ 46,000 − (11,592 + 7,780 + TL/Mgr) − 800
+//   Agent1 (60%) pool 27,600 → flat 42% = 11,592 (+ TL/Mgr)
+//   Agent2 (40%) pool 18,400 → slab: 5k×35% + 13.4k×45% = 7,780 (+ TL/Mgr)
+//   Service cost 800 (D) deducted from Huspy share only
+//
+// DEAL-MBU-001 (MBU MA/Broker): mortgage principal AED 1,500,000 at DIB
+//   Huspy revenue = 1.2% of principal = AED 18,000 (REVENUE_SOURCE from bank)
+//   Broker payout auto-computed from AgentFinancials (0.624% of principal = AED 9,360)
+//   No TL/Manager rows — external broker, no connected agents
 const TEMPLATE_ROWS = [
+  // ── REBU example ──────────────────────────────────────────────────────────
   // row 1: deal header + primary agent (lister, 60%)
   ["DEAL-BULK-001", "Dubai Marina Tower Apt 2204", "primary", "rebu", "ae", "AED", "1500000", "AGENT_PAYOUT", "party-agent-004", "", "", "", "60"],
   // row 2: co-agent (closer, 40%)
   ["DEAL-BULK-001", "", "", "", "", "", "", "AGENT_PAYOUT", "party-agent-005", "", "", "", "40"],
-  // row 3: DEMAND — the buyer (non-financial; no amount needed)
+  // row 3: DEMAND — the buyer
   ["DEAL-BULK-001", "", "", "", "", "", "", "DEMAND", "party-client-008", "", "", "", ""],
-  // row 4: SUPPLY — the developer/seller (non-financial; no amount needed)
+  // row 4: SUPPLY — the developer/seller
   ["DEAL-BULK-001", "", "", "", "", "", "", "SUPPLY", "party-third-emaar", "", "", "", ""],
   // rows 5-7: revenue lines (buyer commission + conveyance + rebate)
   ["DEAL-BULK-001", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "30000", "Commission", "", ""],
@@ -42,10 +48,22 @@ const TEMPLATE_ROWS = [
   ["DEAL-BULK-001", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "-2000", "Rebate", "", ""],
   // row 8: developer revenue line
   ["DEAL-BULK-001", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-007", "20000", "Commission", "", ""],
-  // row 9: Huspy-borne service cost (D) — does NOT reduce agent commission pool
+  // row 9: Huspy-borne service cost (D)
   ["DEAL-BULK-001", "", "", "", "", "", "", "OPERATIONAL_DEDUCTION", "party-third-snb", "800", "Admin Cost", "", ""],
-  // row 10: co-broker cost charged to agent1's pool (C with chargedTo → parentStakeholderId)
+  // row 10: co-broker cost charged to agent1's pool (C with chargedTo)
   ["DEAL-BULK-001", "", "", "", "", "", "", "ACQUISITION_DEDUCTION", "party-third-inmobiliaria-grupo-norte", "3500", "Co-broker", "party-agent-004", ""],
+
+  // ── MBU MA/Broker example ─────────────────────────────────────────────────
+  // dealPrice = mortgage principal. Broker payout resolved at runtime from
+  // BrokerRateSlab(reportingMonth, bankId, brokerMonthlyGmv). No TL/Manager rows.
+  // row 11: deal header + sole broker (100% pool share)
+  ["DEAL-MBU-001", "Creek Harbour Apartment", "primary", "mortgage", "ae", "AED", "1500000", "AGENT_PAYOUT", "party-broker-omar-rahman", "", "", "", "100"],
+  // row 12: DEMAND — the borrower
+  ["DEAL-MBU-001", "", "", "", "", "", "", "DEMAND", "party-client-011", "", "", "", ""],
+  // row 13: SUPPLY — the lending bank (non-financial role)
+  ["DEAL-MBU-001", "", "", "", "", "", "", "SUPPLY", "party-third-dib", "", "", "", ""],
+  // row 14: REVENUE_SOURCE — bank commission to Huspy (1.2% × 1,500,000 = 18,000)
+  ["DEAL-MBU-001", "", "", "", "", "", "", "REVENUE_SOURCE", "party-third-dib", "18000", "Bank commission 1.2%", "", ""],
 ];
 
 function downloadTemplate(): void {

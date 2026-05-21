@@ -1,7 +1,9 @@
 import { Deal, AgentEntry, PayableEntry } from "@/data/types";
+import { getDeals } from "@/data/dealStore";
 import {
   calculateProjectedPnL,
   getBlueprint,
+  resolveBrokerRate,
   sharedAgentFinancials,
   sharedDealStakeholders,
   sharedAgents,
@@ -18,27 +20,48 @@ import {
   type ProjectedPnL,
 } from "@huspy/shared-domain";
 
-/**
- * Phase C3 — REBU deals are now scored by the waterfall engine.
- *
- * Engine path is taken when the deal carries the lean-shape markers
- * (grossRevenue, blueprintId) AND has at least one agent entry. Engine output
- * is projected back onto the legacy Karvel fields (huspyRevenue, netHuspyRevenue,
- * cogsInternal, agents[].agentCommissionPayout, ...) so existing PnL views read
- * the same shape they always did — just with engine-derived numbers underneath.
- *
- * MBU continues to use the legacy `recalculateMBU` (bankSlab × disbursedAmount
- * is product-specific math; gross-revenue derivation is done outside the engine
- * per the agreed split, but the MBU wizard step lives in Phase D).
- */
+// ── Engine dispatch ──────────────────────────────────────────────────────────
+// Single source of truth for which P&L engine handles a given (businessUnit × channel).
+// Rules are MECE: every deal maps to exactly one key.
+//
+// Engine          businessUnit   channel   Expected stakeholder roles
+// ─────────────────────────────────────────────────────────────────────────────
+// rebu            rebu           any       AGENT_PAYOUT (1+, AF strategy: flat/slab/max)
+//                                          REVENUE_SOURCE (1+, payer → client or developer)
+//                                          SUPPLY (seller/developer), DEMAND (buyer/tenant)
+//                                          ACQUISITION_DEDUCTION (opt, Huspy-borne co-brokers)
+//                                          OPERATIONAL_DEDUCTION (opt, Huspy-borne service costs)
+//
+// mbu-ma-broker   mortgage       MA        AGENT_PAYOUT (1+, AF strategy: broker-rate-slab)
+//                                          REVENUE_SOURCE (bank commission = principal × commissionPct)
+//                                          SUPPLY (lending bank), DEMAND (borrower)
+//                                          No ACQUISITION_DEDUCTION / OPERATIONAL_DEDUCTION
+//
+// mbu-b2c         mortgage       B2C       [TO BE DETERMINED]
+// mbu-bbg         mortgage       BBG       [TO BE DETERMINED]
+// mbu-legacy      mortgage       other/—   Legacy field-based path (recalculateMBU).
+//                                          Deals lacking a channel fall here until migrated.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type DealEngineKey = "rebu" | "mbu-ma-broker" | "mbu-b2c" | "mbu-bbg" | "mbu-legacy";
+
+export function getDealEngine(deal: Pick<Deal, "businessUnit" | "channel">): DealEngineKey {
+  if (deal.businessUnit !== "mortgage") return "rebu";
+  switch (deal.channel) {
+    case "MA":  return "mbu-ma-broker";
+    case "B2C": return "mbu-b2c";
+    case "BBG": return "mbu-bbg";
+    default:    return "mbu-legacy";
+  }
+}
 
 function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[0] | null {
-  if (deal.businessUnit === "mortgage") return null;
   if (deal.grossRevenue == null || !deal.blueprintId) return null;
 
   const country = deal.country ?? "ae";
   const currency = deal.currency ?? "AED";
-  const blueprint = getBlueprint(country, "rebu");
+  const businessUnit = deal.businessUnit ?? "rebu";
+  const blueprint = getBlueprint(country, businessUnit);
 
   const agentFinancialsByAgentId: Record<string, AgentFinancials> = {};
   const partyIdToAgentId: Record<string, string> = {};
@@ -55,7 +78,56 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
     if (stake.role === "AGENT_PAYOUT") {
       const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
       if (!agent) continue;
-      const af = sharedAgentFinancials.find((f) => f.agentId === agent.id);
+      let af = sharedAgentFinancials.find((f) => f.agentId === agent.id);
+      const engine = getDealEngine(deal);
+      const isMABroker = engine === "mbu-ma-broker";
+      if (isMABroker && stake.financialAmount != null && stake.financialAmount > 0) {
+        // Fixture deal: financialAmount pre-computed from BrokerRateSlab — back-compute implied %.
+        const synBase = (deal.dealAmount ?? 0) * ((stake.splitPercentage ?? 100) / 100);
+        const impliedPct = synBase > 0 ? (stake.financialAmount / synBase) * 100 : 0;
+        af = {
+          id: `af-syn-${agent.id}`,
+          agentId: agent.id,
+          strategy: { kind: "flat", pct: impliedPct },
+          teamLeadRate: 0,
+          managerRate: 0,
+        };
+      } else if (isMABroker) {
+        // No pre-computed amount (e.g. bulk-uploaded deal) — resolve dynamically.
+        // Rate depends on: reporting month, lending bank, broker's total monthly GMV.
+        const reportingMonth = deal.reportDate?.slice(0, 7);
+        const bankStake = allFixtureStakes.find((s) => s.role === "SUPPLY");
+        const bankId = bankStake?.partyId;
+        const brokerMonthlyGmv = getDeals()
+          .filter((d) => d.channel === "MA" && d.reportDate?.startsWith(reportingMonth ?? "\0"))
+          .reduce((sum, d) => {
+            const hasBroker = sharedDealStakeholders.some(
+              (s) => s.dealId === d.id && s.role === "AGENT_PAYOUT" && s.partyId === stake.partyId
+            );
+            return hasBroker ? sum + (d.dealAmount ?? 0) : sum;
+          }, 0);
+        const resolvedPct = reportingMonth && bankId
+          ? resolveBrokerRate(reportingMonth, bankId, brokerMonthlyGmv)
+          : undefined;
+        if (resolvedPct != null) {
+          af = {
+            id: `af-syn-${agent.id}`,
+            agentId: agent.id,
+            strategy: { kind: "flat", pct: resolvedPct },
+            teamLeadRate: 0,
+            managerRate: 0,
+          };
+        }
+      } else if (!af && stake.financialAmount != null && stake.financialAmount > 0) {
+        // REBU / other channels fallback — no AF entry, synthesise from financialAmount.
+        const synBase = (deal.grossRevenue ?? 0) * ((stake.splitPercentage ?? 100) / 100);
+        const impliedPct = synBase > 0 ? (stake.financialAmount / synBase) * 100 : 0;
+        af = {
+          id: `af-syn-${agent.id}`,
+          agentId: agent.id,
+          strategy: { kind: "flat", pct: impliedPct },
+        };
+      }
       if (!af) continue;
       agentFinancialsByAgentId[agent.id] = af;
       partyIdToAgentId[stake.partyId] = agent.id;
@@ -107,9 +179,11 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
   }
   return {
     country,
-    businessUnit: "rebu",
+    businessUnit,
     currency,
     grossRevenue: deal.grossRevenue,
+    // MA/Broker: payout base is the mortgage principal, not Huspy's gross revenue.
+    agentPayoutBase: getDealEngine(deal) === "mbu-ma-broker" ? deal.dealAmount : undefined,
     stakeholders,
     agentFinancialsByAgentId,
     partyIdToAgentId,
@@ -194,7 +268,6 @@ function applyEngineToREBU(deal: Deal): Deal | null {
     cogsExternal: projection.totalBucketC,
     cogsReferrals: 0,
     payables,
-    dealAmount: projection.grossRevenue,
   };
 }
 
@@ -344,7 +417,6 @@ export function recalculateREBU(deal: Deal): Deal {
     rebateAmount,
     subsidyAmount,
     netHuspyRevenue,
-    dealAmount: amount,
     payables,
     payableRefNumber: firstPayable?.refNumber,
     payableStatus: firstPayable?.status,
@@ -378,9 +450,6 @@ export function recalculateMBU(deal: Deal): Deal {
     huspyRevenue,
     netHuspyRevenue,
     externalPayout,
-    dealAmount: huspyRevenue,
-    dealPrice: deal.disbursedAmount,
-    takeRate: deal.bankSlab,
     payables,
     payableRefNumber: firstPayable?.refNumber,
     payableStatus: firstPayable?.status,
@@ -388,12 +457,21 @@ export function recalculateMBU(deal: Deal): Deal {
 }
 
 export function recalculateDeal(deal: Deal): Deal {
-  if (deal.businessUnit === "mortgage") return recalculateMBU(deal);
-  // Try engine path first; if the deal lacks the lean-shape markers we fall back
-  // to the legacy per-agent-rate computation so editing those rates in the PnL
-  // panel still has an effect on deals that haven't been migrated yet.
-  const viaEngine = applyEngineToREBU(deal);
-  return viaEngine ?? recalculateREBU(deal);
+  switch (getDealEngine(deal)) {
+    case "rebu":
+      // Try waterfall engine first; fall back to legacy field-based calc for
+      // deals that predate the stakeholder migration (no grossRevenue/blueprintId).
+      return applyEngineToREBU(deal) ?? recalculateREBU(deal);
+    case "mbu-ma-broker":
+      // Waterfall engine handles MA/Broker via BrokerRateSlab; no legacy fallback.
+      return applyEngineToREBU(deal) ?? deal;
+    case "mbu-b2c":
+    case "mbu-bbg":
+      // [TO BE DETERMINED] — return unchanged until engine is built.
+      return deal;
+    case "mbu-legacy":
+      return recalculateMBU(deal);
+  }
 }
 
 export function computeDealPnL(deal: Deal) {

@@ -523,7 +523,7 @@ export const sharedPostings: Posting[] = [
     description: "Payment disbursed — Gelo Huspy (INV-2026-012, AED 19 189.17)",
   },
 
-  // ── deal-020 — AED primary, pending-receivables, agent-004 ───────────────
+  // ── deal-020 — AED primary, invoicing, agent-004 ───────────────
 
   {
     id: "posting-050",
@@ -717,6 +717,156 @@ export const sharedPostings: Posting[] = [
     valueDate: "2026-04-05",
     currency: "EUR",
     description: "Agent payout — INV-2026-022 (Guilherme Castro EUR 6 582.60)",
+  },
+
+  // ── deal-011 — MBU MA/Broker — DIB, Omar Rahman (sole broker) ─────────────
+
+  // posting-070 — invoice_issued — deal-011, inv-011
+  // deal → invoicing: Huspy invoices DIB 18 000 + VAT 5% 900 = 18 900 AED
+  {
+    id: "posting-070",
+    dealId: "deal-011",
+    businessUnit: "mortgage",
+    externalRef: "MBU-INV-011",
+    businessProcess: "invoice_issued",
+    createdBy: "system",
+    createdAt: "2026-04-22T10:00:00.000Z",
+    valueDate: "2026-04-22",
+    currency: "AED",
+    description: "Commission invoice to DIB — deal-011 (AED 1.5M × 1.20% = 18 000)",
+  },
+
+  // posting-071 — commission_accrual — deal-011, Omar Rahman (provisional)
+  // Provisional: month-end batch not yet run; rate locked at month-end May 2026
+  // Omar < 5M GMV → DIB rate 52% → 52% × 18 000 = 9 360
+  {
+    id: "posting-071",
+    dealId: "deal-011",
+    businessUnit: "mortgage",
+    externalRef: "MBU-BROKER-011",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-04-22T10:30:00.000Z",
+    valueDate: "2026-04-22",
+    currency: "AED",
+    description: "Broker commission accrual (provisional) — deal-011 Omar Rahman AED 9 360",
+  },
+
+  // ── deal-022 — MBU MA/Broker — ADIB, Omar Rahman 60% + Khalid & Associates 40% ─
+
+  // posting-072 — invoice_issued — deal-022, inv-024
+  // Huspy invoices ADIB 35 000 + VAT 5% 1 750 = 36 750 AED
+  {
+    id: "posting-072",
+    dealId: "deal-022",
+    businessUnit: "mortgage",
+    externalRef: "MBU-INV-022",
+    businessProcess: "invoice_issued",
+    createdBy: "system",
+    createdAt: "2026-05-08T09:00:00.000Z",
+    valueDate: "2026-05-08",
+    currency: "AED",
+    description: "Commission invoice to ADIB — deal-022 (AED 2.8M × 1.25% = 35 000)",
+  },
+
+  // posting-073 — bank_statement_inbound_matched — deal-022, inv-024
+  // ADIB pays 36 750 AED; deal → finalized
+  {
+    id: "posting-073",
+    dealId: "deal-022",
+    businessUnit: "mortgage",
+    externalRef: "MBU-INV-022-PAY",
+    businessProcess: "bank_statement_inbound_matched",
+    createdBy: "system",
+    createdAt: "2026-05-14T15:00:00.000Z",
+    valueDate: "2026-05-14",
+    currency: "AED",
+    description: "ADIB payment received — INV-2026-024 (AED 36 750)",
+  },
+
+  // posting-074 — commission_accrual Omar — deal-022
+  // Month-end May 2026: Omar GMV < 5M → ADIB rate 53% | deal split 60% → base 21 000 → 11 130
+  {
+    id: "posting-074",
+    dealId: "deal-022",
+    businessUnit: "mortgage",
+    externalRef: "MBU-BROKER-022-OMAR",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-15T10:00:00.000Z",
+    valueDate: "2026-05-15",
+    currency: "AED",
+    description: "Broker commission accrual — deal-022 Omar Rahman AED 11 130 (53% × 21 000)",
+  },
+
+  // posting-075 — commission_accrual Khalid — deal-022
+  // Month-end May 2026: Khalid GMV < 5M → ADIB rate 53% | deal split 40% → base 14 000 → 7 420
+  {
+    id: "posting-075",
+    dealId: "deal-022",
+    businessUnit: "mortgage",
+    externalRef: "MBU-BROKER-022-KHALID",
+    businessProcess: "commission_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-15T10:00:00.000Z",
+    valueDate: "2026-05-15",
+    currency: "AED",
+    description: "Broker commission accrual — deal-022 Khalid & Associates AED 7 420 (53% × 14 000)",
+  },
+
+  // posting-076 — agent_invoice_accrual Omar — inv-025
+  // Decoupled from deal (same as REBU agent invoice postings): no dealId.
+  // Omar submits invoice: 11 130 base + VAT 5% 556.50 = 11 686.50 AED net payable
+  {
+    id: "posting-076",
+    businessUnit: "mortgage",
+    externalRef: "MBU-BROKER-022-OMAR-INV",
+    businessProcess: "agent_invoice_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-18T09:00:00.000Z",
+    valueDate: "2026-05-18",
+    currency: "AED",
+    description: "Broker invoice accrual — Omar Rahman INV-2026-025 (AED 11 686.50)",
+  },
+
+  // posting-077 — bank_statement_outbound_matched — inv-025 (Omar payout)
+  {
+    id: "posting-077",
+    businessUnit: "mortgage",
+    externalRef: "MBU-BROKER-022-OMAR-PAY",
+    businessProcess: "bank_statement_outbound_matched",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-22T11:00:00.000Z",
+    valueDate: "2026-05-22",
+    currency: "AED",
+    description: "Broker payout — Omar Rahman INV-2026-025 (AED 11 686.50)",
+  },
+
+  // posting-078 — agent_invoice_accrual Khalid — inv-026
+  // Khalid submits invoice: 7 420 base + VAT 5% 371 = 7 791 AED net payable
+  {
+    id: "posting-078",
+    businessUnit: "mortgage",
+    externalRef: "MBU-BROKER-022-KHALID-INV",
+    businessProcess: "agent_invoice_accrual",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-18T09:00:00.000Z",
+    valueDate: "2026-05-18",
+    currency: "AED",
+    description: "Broker invoice accrual — Khalid & Associates INV-2026-026 (AED 7 791)",
+  },
+
+  // posting-079 — bank_statement_outbound_matched — inv-026 (Khalid payout)
+  {
+    id: "posting-079",
+    businessUnit: "mortgage",
+    externalRef: "MBU-BROKER-022-KHALID-PAY",
+    businessProcess: "bank_statement_outbound_matched",
+    createdBy: "user-ops-finance",
+    createdAt: "2026-05-22T11:30:00.000Z",
+    valueDate: "2026-05-22",
+    currency: "AED",
+    description: "Broker payout — Khalid & Associates INV-2026-026 (AED 7 791)",
   },
 
 ];

@@ -15,7 +15,7 @@ const statusLabels: Record<DealStatus, string> = {
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
   'pending-agent-approval': 'Pending Approval',
-  'pending-receivables': 'Pending Receivables',
+  'invoicing': 'Invoicing',
   finalized: 'Finalized',
   canceled: 'Canceled',
 };
@@ -31,7 +31,7 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
   lease: { icon: LeaseBareIcon, color: '#CD52C3' },
 };
 
-const COMMISSION_STATUSES = new Set<DealStatus>(['pending-agent-approval', 'pending-receivables', 'finalized']);
+const COMMISSION_STATUSES = new Set<DealStatus>(['pending-agent-approval', 'invoicing', 'finalized']);
 
 type SortKey = 'title' | 'dealAmount' | 'commissionAmount' | 'reportDate';
 type SortDir = 'asc' | 'desc';

@@ -74,7 +74,7 @@ function resolvedCommission(d: Deal, agentStakeMap: Map<string, DealStakeholder>
   return split?.agentPayout ?? computeAgentCommission(d.commissionAmount, stake);
 }
 
-const PIPELINE_STATUSES = ['under-review', 'pending-agent-approval', 'pending-receivables'];
+const PIPELINE_STATUSES = ['under-review', 'pending-agent-approval', 'invoicing'];
 const CLOSED_STATUSES = ['finalized'];
 
 export function PaymentHistory() {

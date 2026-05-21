@@ -134,6 +134,22 @@ export const sharedParties: Party[] = [
     legalType: "individual",
     taxId: "1087654321",
   },
+  {
+    id: "party-client-011",
+    displayName: "Ahmed Al Farsi",
+    email: "ahmed.alfarsi@email.com",
+    phone: "+971501122334",
+    legalType: "individual",
+    taxId: "784199012345672",
+  },
+  {
+    id: "party-client-012",
+    displayName: "Hassan Khoury",
+    email: "hassan.khoury@email.com",
+    phone: "+971504455667",
+    legalType: "individual",
+    taxId: "784198876543219",
+  },
 
   // ── Individual sellers / landlords (SUPPLY for secondary market + leasing deals) ──
   { id: "party-seller-002", displayName: "María López Fernández",    legalType: "individual", taxId: "47123456A" },
@@ -180,6 +196,47 @@ export const sharedParties: Party[] = [
     displayName: "First Abu Dhabi Bank",
     legalType: "financial_institution",
     taxId: "AE200000001",
+  },
+  {
+    id: "party-third-dib",
+    displayName: "Dubai Islamic Bank",
+    legalType: "financial_institution",
+    taxId: "AE300000001",
+  },
+  {
+    id: "party-third-adib",
+    displayName: "Abu Dhabi Islamic Bank",
+    legalType: "financial_institution",
+    taxId: "AE400000001",
+  },
+  {
+    id: "party-third-mashreq",
+    displayName: "Mashreq Bank",
+    legalType: "financial_institution",
+    taxId: "AE500000001",
+  },
+
+  // ── MBU external brokers (UAE) ────────────────────────────────────────────
+  {
+    id: "party-broker-omar-rahman",
+    displayName: "Omar Rahman",
+    legalType: "individual",
+    taxId: "784-1985-1234567",
+    iban: "AE070331234567890123456",
+  },
+  {
+    id: "party-broker-sara-mansoor",
+    displayName: "Sara Mansoor",
+    legalType: "individual",
+    taxId: "784-1988-7654321",
+    iban: "AE070339876543210987654",
+  },
+  {
+    id: "party-broker-khalid-assoc",
+    displayName: "Khalid & Associates",
+    legalType: "company",
+    taxId: "AE600000001",
+    iban: "AE070330000000000111222",
   },
 
   // ── Connected agents (team leads / managers) — one entry per currency ─────

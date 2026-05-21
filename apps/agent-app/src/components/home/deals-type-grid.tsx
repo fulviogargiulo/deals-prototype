@@ -47,10 +47,10 @@ const statusGroups: StatusGroup[] = [
   {
     key: 'payment',
     label: 'Payment Pending',
-    statuses: ['pending-receivables'],
+    statuses: ['invoicing'],
     icon: Banknote,
-    color: c('pending-receivables'),
-    bgColor: cb('pending-receivables'),
+    color: c('invoicing'),
+    bgColor: cb('invoicing'),
   },
   {
     key: 'finalized',
@@ -66,7 +66,7 @@ const statusLabels: Record<DealStatus, string> = {
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
   'pending-agent-approval': 'Pending Approval',
-  'pending-receivables': 'Pending Receivables',
+  'invoicing': 'Invoicing',
   'finalized': 'Finalized',
   'canceled': 'Canceled',
 };

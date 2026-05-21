@@ -30,8 +30,8 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-01-12T00:00:00.000Z",
   },
 
-  // deal-008 — sell, pending-receivables, ES/EUR split seller + developer
-  // inv-002: auto-created on deal → pending-receivables; Finance has not yet set due date or uploaded PDF
+  // deal-008 — sell, invoicing, ES/EUR split seller + developer
+  // inv-002: auto-created on deal → invoicing; Finance has not yet set due date or uploaded PDF
   {
     id: "inv-002",
     dealId: "deal-008",
@@ -64,8 +64,8 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-03-10T00:00:00.000Z",
   },
 
-  // deal-014 — mortgage, pending-receivables, ES/EUR | subtotal 2 480 + IVA 21% 520.80 = gross 3 000.80
-  // inv-004: auto-created on deal → pending-receivables; Finance has not yet set due date or uploaded PDF
+  // deal-014 — mortgage, invoicing, ES/EUR | subtotal 2 480 + IVA 21% 520.80 = gross 3 000.80
+  // inv-004: auto-created on deal → invoicing; Finance has not yet set due date or uploaded PDF
   {
     id: "inv-004",
     dealId: "deal-014",
@@ -81,8 +81,8 @@ export const sharedInvoices: Invoice[] = [
     updatedAt: "2026-04-15T00:00:00.000Z",
   },
 
-  // deal-015 — mortgage, pending-receivables, SA/SAR | subtotal 4 600 + VAT 15% 690 = gross 5 290
-  // inv-005: auto-created on deal → pending-receivables; Finance has not yet set due date or uploaded PDF
+  // deal-015 — mortgage, invoicing, SA/SAR | subtotal 4 600 + VAT 15% 690 = gross 5 290
+  // inv-005: auto-created on deal → invoicing; Finance has not yet set due date or uploaded PDF
   {
     id: "inv-005",
     dealId: "deal-015",
@@ -275,7 +275,7 @@ export const sharedInvoices: Invoice[] = [
   },
 
   // deal-008 — Gestoría López & Asociados, EUR 800 + IVA 21% 168 = gross 968 (OPERATIONAL_DEDUCTION ds-deal-008-conv)
-  // inv-014: auto-created on deal → pending-receivables; vendor has not yet submitted their invoice
+  // inv-014: auto-created on deal → invoicing; vendor has not yet submitted their invoice
   {
     id: "inv-014",
     dealId: "deal-008",
@@ -403,5 +403,97 @@ export const sharedInvoices: Invoice[] = [
     paymentReference: "SEPA-2026-0328-00501",
     createdAt: "2026-03-10T09:00:00.000Z",
     updatedAt: "2026-03-28T00:00:00.000Z",
+  },
+
+  // ── MBU MA/Broker — deal-011 (DIB, Omar Rahman sole broker) ──────────────
+
+  // inv-011 — outbound: Huspy invoices DIB (18 000 + VAT 5% 900 = gross 18 900)
+  // deal → invoicing: invoice issued, awaiting DIB payment
+  {
+    id: "inv-011",
+    dealId: "deal-011",
+    direction: "outbound",
+    partyId: "party-third-dib",
+    invoiceNumber: "INV-2026-011",
+    status: "issued",
+    subtotal: 18000,
+    vatAmount: 900,
+    currency: "AED",
+    issueDate: "2026-04-22",
+    dueDate: "2026-05-22",
+    invoiceFileName: "INV-2026-011.pdf",
+    createdAt: "2026-04-22T10:00:00.000Z",
+    updatedAt: "2026-04-22T10:00:00.000Z",
+  },
+
+  // ── MBU MA/Broker — deal-022 (ADIB, Omar Rahman 60% + Khalid & Associates 40%) ──
+
+  // inv-024 — outbound: Huspy invoices ADIB (35 000 + VAT 5% 1 750 = gross 36 750)
+  {
+    id: "inv-024",
+    dealId: "deal-022",
+    direction: "outbound",
+    partyId: "party-third-adib",
+    invoiceNumber: "INV-2026-024",
+    status: "paid",
+    subtotal: 35000,
+    vatAmount: 1750,
+    currency: "AED",
+    issueDate: "2026-05-08",
+    dueDate: "2026-05-22",
+    paidDate: "2026-05-14",
+    invoiceFileName: "INV-2026-024.pdf",
+    proofFileName: "bank-stmt-2026-05-14-adib.pdf",
+    proofUploadedAt: "2026-05-14T15:00:00.000Z",
+    paymentReference: "ADIB-TXN-20260514-3301",
+    createdAt: "2026-05-08T09:00:00.000Z",
+    updatedAt: "2026-05-14T00:00:00.000Z",
+  },
+
+  // inv-025 — inbound: Omar Rahman invoices Huspy (broker payout 11 130 + VAT 5% 556.50 = gross 11 686.50)
+  // Month-end May 2026 confirmed: Omar GMV < 5M AED, ADIB rate 53% → 53% × 21 000 = 11 130
+  // No dealId — broker invoices are decoupled from deals (same pattern as REBU agent invoices).
+  {
+    id: "inv-025",
+    direction: "inbound",
+    partyId: "party-broker-omar-rahman",
+    invoiceNumber: "INV-2026-025",
+    status: "paid",
+    subtotal: 11130,
+    vatAmount: 556.50,
+    currency: "AED",
+    issueDate: "2026-05-18",
+    dueDate: "2026-06-02",
+    paidDate: "2026-05-22",
+    period: "2026-05",
+    invoiceFileName: "INV-2026-025.pdf",
+    proofFileName: "payment-confirm-2026-05-22-omar.pdf",
+    proofUploadedAt: "2026-05-22T11:00:00.000Z",
+    paymentReference: "ADIB-TXN-20260522-7741",
+    createdAt: "2026-05-18T09:00:00.000Z",
+    updatedAt: "2026-05-22T00:00:00.000Z",
+  },
+
+  // inv-026 — inbound: Khalid & Associates invoices Huspy (broker payout 7 420 + VAT 5% 371 = gross 7 791)
+  // Month-end May 2026 confirmed: Khalid GMV < 5M AED, ADIB rate 53% → 53% × 14 000 = 7 420
+  {
+    id: "inv-026",
+    direction: "inbound",
+    partyId: "party-broker-khalid-assoc",
+    invoiceNumber: "INV-2026-026",
+    status: "paid",
+    subtotal: 7420,
+    vatAmount: 371,
+    currency: "AED",
+    issueDate: "2026-05-18",
+    dueDate: "2026-06-02",
+    paidDate: "2026-05-22",
+    period: "2026-05",
+    invoiceFileName: "INV-2026-026.pdf",
+    proofFileName: "payment-confirm-2026-05-22-khalid.pdf",
+    proofUploadedAt: "2026-05-22T11:30:00.000Z",
+    paymentReference: "ADIB-TXN-20260522-7742",
+    createdAt: "2026-05-18T09:00:00.000Z",
+    updatedAt: "2026-05-22T00:00:00.000Z",
   },
 ];

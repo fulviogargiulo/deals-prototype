@@ -58,7 +58,7 @@
     --deal-pending-details: 35 80% 52%;
     --deal-under-review: 262 50% 52%;
     --deal-ready-invoicing: 152 55% 48%;
-    --deal-pending-receivables: 330 65% 55%;
+    --deal-invoicing: 330 65% 55%;
     --deal-pending-payment: 4 70% 55%;
     --deal-paid: 152 60% 40%;
 

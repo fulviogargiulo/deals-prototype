@@ -284,11 +284,11 @@ export default function InvoiceDetail() {
     // Auto-finalize the deal if all its invoices are now paid
     if (invoice.dealId) {
       const deal = findDeal(invoice.dealId);
-      if (deal && deal.status === "pending-receivables") {
+      if (deal && deal.status === "invoicing") {
         const dealInvoices = sharedInvoices.filter((i) => i.dealId === invoice.dealId);
         if (dealInvoices.length > 0 && dealInvoices.every((i) => i.status === "paid")) {
           const now = new Date().toISOString();
-          const finalized = { ...deal, status: "finalized" as const, statusHistory: [...(deal.statusHistory ?? []), { from: "pending-receivables", to: "finalized", timestamp: now, note: "Auto-finalized: all invoices paid" }] };
+          const finalized = { ...deal, status: "finalized" as const, statusHistory: [...(deal.statusHistory ?? []), { from: "invoicing", to: "finalized", timestamp: now, note: "Auto-finalized: all invoices paid" }] };
           updateDeal(finalized);
           createCommissionAccrualPosting(finalized);
         }

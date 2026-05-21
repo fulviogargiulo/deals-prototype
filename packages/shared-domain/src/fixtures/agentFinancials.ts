@@ -68,6 +68,12 @@ export const sharedAgentFinancials: AgentFinancials[] = [
     ],
     teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 35, managerLedgerId: 36,
   },
+
+  // MBU MA/Broker channel — rate resolved at runtime from BrokerRateSlab, not fixed here.
+  { id: "af-broker-001", agentId: "broker-001", strategy: { kind: "broker-rate-slab" }, teamLeadRate: 0, managerRate: 0 },
+  { id: "af-broker-002", agentId: "broker-002", strategy: { kind: "broker-rate-slab" }, teamLeadRate: 0, managerRate: 0 },
+  { id: "af-broker-003", agentId: "broker-003", strategy: { kind: "broker-rate-slab" }, teamLeadRate: 0, managerRate: 0 },
+
 ];
 
 export function getAgentFinancialsByAgentId(agentId: string): AgentFinancials | undefined {

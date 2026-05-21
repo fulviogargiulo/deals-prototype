@@ -12,7 +12,7 @@ export const dealStatusColors: Record<DealStatus, DealStatusColor> = {
   "pending-details":        { hsl: "38 85% 51%" },   // orange
   "under-review":           { hsl: "262 50% 52%" },  // purple
   "pending-agent-approval": { hsl: "205 75% 48%" },  // sky blue
-  "pending-receivables":    { hsl: "176 55% 38%" },  // teal
+  "invoicing":              { hsl: "176 55% 38%" },  // teal
   finalized:                { hsl: "152 60% 40%" },  // green
   canceled:                 { hsl: "0 0% 50%" },     // muted gray
 };

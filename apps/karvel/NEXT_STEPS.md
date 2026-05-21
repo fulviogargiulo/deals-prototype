@@ -79,6 +79,12 @@ Both are linked in the sidebar. Properties and Agents are natural extensions of 
 ### 19. Real backend / persistence
 Today: all data lives in memory, lost on refresh. The natural path is Supabase (already a common pairing with Lovable/shadcn stacks) — tables map cleanly from `types.ts`. TanStack Query is already in the dependency tree, ready to wrap the API calls.
 
+### 20. Support for Partial Payments & Tranches
+Currently, the `Invoice` state machine only supports `draft` → `issued` → `paid`. Real estate deals are often paid in tranches. We need a `partially_paid` state and an `amountPaid` field to accurately match bank statements without forcing an invoice to be fully paid or fully issued.
+
+### 21. Multi-Currency and FX Consolidation
+Ledgers are currently strictly per-currency (e.g., `REV_EUR`, `REV_AED`). To support cross-border deals or generate a consolidated company P&L, we need an `exchangeRateToBase` field on `Posting` and a defined corporate base currency.
+
 ---
 
 ## P5 — Code Quality / Test Coverage

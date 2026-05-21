@@ -83,4 +83,8 @@ export const sharedDocumentRequirementTemplates: DocumentRequirementTemplate[] =
   { id: "tmpl-leasing-sa-passport-tenant",  market: "leasing",   businessUnit: "rebu", country: "sa",            label: "Tenant Passport",                 required: true  },
   { id: "tmpl-leasing-sa-eid-tenant",       market: "leasing",   businessUnit: "rebu", country: "sa",                 label: "Tenant EID",                      required: true  },
   { id: "tmpl-leasing-sa-aml-kyc",          market: "leasing",   businessUnit: "rebu", country: "sa",             label: "AML/KYC",                         required: true  },
+
+  // ── MBU — AE (MA/Broker channel) ─────────────────────────────────────────
+  { id: "tmpl-primary-mortgage-ae-fol",        market: "primary", businessUnit: "mortgage", country: "ae", label: "Final Offer Letter (FOL)", required: true  },
+  { id: "tmpl-primary-mortgage-ae-title-deed", market: "primary", businessUnit: "mortgage", country: "ae", label: "Title Deed",               required: true  },
 ];

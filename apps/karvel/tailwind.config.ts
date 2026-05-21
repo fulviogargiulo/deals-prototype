@@ -74,7 +74,7 @@ export default {
           "pending-details": "hsl(var(--deal-pending-details))",
           "under-review": "hsl(var(--deal-under-review))",
           "ready-invoicing": "hsl(var(--deal-ready-invoicing))",
-          "pending-receivables": "hsl(var(--deal-pending-receivables))",
+          "invoicing": "hsl(var(--deal-invoicing))",
           "pending-payment": "hsl(var(--deal-pending-payment))",
           paid: "hsl(var(--deal-paid))",
           mortgage: "hsl(var(--deal-mortgage))",

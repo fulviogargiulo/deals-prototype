@@ -10,8 +10,8 @@ The full lifecycle of a Huspy deal — from the moment a deal enters the system 
 |---|---|
 | **Under Review** | Pending Details · Pending Agent Approval · Canceled |
 | **Pending Details** | Under Review · Canceled |
-| **Pending Agent Approval** | Under Review · Pending Receivables · Canceled |
-| **Pending Receivables** | *(auto → Finalized when all invoices paid)* · Canceled |
+| **Pending Agent Approval** | Under Review · Invoicing · Canceled |
+| **Invoicing** | *(auto → Finalized when all invoices paid)* · Canceled |
 | **Finalized** | — terminal |
 | **Canceled** | — terminal |
 
@@ -57,13 +57,13 @@ Ops has locked the commission terms. The agent must review and explicitly confir
 
 - **Agent**: Reviews the full commission breakdown (deal price → gross revenue → deductions → their payout). Clicks **Confirm** to approve.
 - If the agent disagrees, they click **Request Review** and provide a reason. The deal reverts to **Under Review**. This can loop.
-- On confirmation: deal moves to **Pending Receivables**. The agent is notified.
+- On confirmation: deal moves to **Invoicing**. The agent is notified.
 
-### Stage 4 — Client Invoicing → `pending-receivables`
+### Stage 4 — Client Invoicing → `invoicing`
 
 Finance takes over. The deal is now locked — stakeholders cannot be changed. The focus is collecting the commission from the receivable parties.
 
-- An outbound invoice is **automatically created in Draft** when the deal reaches Pending Receivables. Finance validates the amounts and issues it to the relevant receivable party (developer, bank, buyer, or tenant depending on deal type).
+- An outbound invoice is **automatically created in Draft** when the deal reaches Invoicing. Finance validates the amounts and issues it to the relevant receivable party (developer, bank, buyer, or tenant depending on deal type).
 - **Finance**: Matches the incoming bank transfer to the invoice, optionally uploads proof of payment, and marks the invoice as **Paid**.
 - Once **all** outbound invoices are marked Paid, the deal **automatically** transitions to Finalized.
 
@@ -142,7 +142,7 @@ A deal can be moved to **Canceled** from any status except Finalized — enforce
 | `under-review` | Starting state. Ops is actively reviewing. Stakeholders and deal data can be edited. |
 | `pending-details` | Ops sent the deal back to the agent. Agent must provide missing documents or information. |
 | `pending-agent-approval` | Commission terms are set. Agent must confirm before invoicing starts. |
-| `pending-receivables` | Deal locked. Finance is collecting the commission payment from receivable parties. |
+| `invoicing` | Deal locked. Finance is collecting the commission payment from receivable parties. |
 | `finalized` | All outbound invoices paid. Agent commission liability recorded. Auto-triggered — no manual step. |
 | `canceled` | Deal voided. Reachable from any non-terminal status. Cannot be reactivated. |
 

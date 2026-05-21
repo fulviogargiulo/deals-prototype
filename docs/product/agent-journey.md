@@ -43,7 +43,7 @@ Inside the deal, the commission breakdown is expanded and non-collapsible at thi
 
 | Button             | What it does                                                                                          |
 | ------------------ | ----------------------------------------------------------------------------------------------------- |
-| **Confirm**        | Approves the commission terms. Deal moves to Pending Receivables. Finance can now invoice the client. |
+| **Confirm**        | Approves the commission terms. Deal moves to Invoicing. Finance can now invoice the client. |
 | **Request Review** | Pushes the deal back to Ops with a written reason. Deal reverts to Under Review.                      |
 
 
@@ -79,7 +79,7 @@ Accessible from the main navigation. Gives a financial snapshot across all deals
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Earned Income**   | Count of finalized deals and total commission received to date. Clicking the total opens a breakdown per deal.                                                       |
 | **Expected Payout** | Current payment cycle: balance owed, due date, and status (Paid / Payment Pending / In Review). Overdue cycles are flagged in red. Click to open the invoice detail. |
-| **Pipeline**        | Deals currently in Under Review, Pending Agent Approval, or Pending Receivables — projected commission totals. Not yet invoiceable, but shows what's coming.         |
+| **Pipeline**        | Deals currently in Under Review, Pending Agent Approval, or Invoicing — projected commission totals. Not yet invoiceable, but shows what's coming.         |
 
 
 ---

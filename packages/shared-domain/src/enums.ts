@@ -5,7 +5,7 @@ export type DealStatus =
   | "pending-details"
   | "under-review"
   | "pending-agent-approval"
-  | "pending-receivables"
+  | "invoicing"
   | "finalized"
   | "canceled";
 
@@ -137,7 +137,9 @@ export type StakeholderType =
 export type CostBucket = "A" | "B" | "C" | "D";
 
 // Discriminator for AgentFinancials.strategy. See entities.ts for the union shape.
-export type AgentStrategyKind = "flat" | "slab" | "max";
+// "broker-rate-slab": rate is not fixed — resolved at calculation time from BrokerRateSlab
+// based on reporting month, lending bank, and broker's monthly GMV tier.
+export type AgentStrategyKind = "flat" | "slab" | "max" | "broker-rate-slab";
 
 // ============================================================
 // Deal document requirements — per-deal checklist driven by

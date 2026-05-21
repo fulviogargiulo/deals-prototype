@@ -60,7 +60,7 @@ export const sharedPostingLines: PostingLine[] = [
   { id: "pline-024-2", postingId: "posting-024", ledgerId: 1,  side: "CREDIT", amount: 968 },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // DEAL-008  (ES/EUR · REBU · sell · pending-receivables)
+  // DEAL-008  (ES/EUR · REBU · sell · invoicing)
   // ─────────────────────────────────────────────────────────────────────────
 
   // posting-017 — invoice_issued — deal-008, inv-002 (seller split)
@@ -85,7 +85,7 @@ export const sharedPostingLines: PostingLine[] = [
   { id: "pline-025-3", postingId: "posting-025", ledgerId: 4,  side: "CREDIT", amount: 968,    invoiceId: "inv-014" },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // DEAL-014  (ES/EUR · MBU · mortgage · pending-receivables)
+  // DEAL-014  (ES/EUR · MBU · mortgage · invoicing)
   // ─────────────────────────────────────────────────────────────────────────
 
   // posting-019 — invoice_issued — deal-014, inv-004
@@ -96,7 +96,7 @@ export const sharedPostingLines: PostingLine[] = [
   { id: "pline-019-3", postingId: "posting-019", ledgerId: 5,  side: "CREDIT", amount: 520.8 },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // DEAL-015  (SA/SAR · MBU · mortgage · pending-receivables)
+  // DEAL-015  (SA/SAR · MBU · mortgage · invoicing)
   // ─────────────────────────────────────────────────────────────────────────
 
   // posting-020 — invoice_issued — deal-015, inv-005
@@ -252,7 +252,7 @@ export const sharedPostingLines: PostingLine[] = [
   { id: "pline-055-2", postingId: "posting-055", ledgerId: 8,  side: "CREDIT", amount: 19189.17 },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // DEAL-020  (AE/AED · REBU · primary · pending-receivables)
+  // DEAL-020  (AE/AED · REBU · primary · invoicing)
   // ─────────────────────────────────────────────────────────────────────────
 
   // posting-050 — invoice_issued — deal-020, inv-020 (Emaar)
@@ -324,5 +324,74 @@ export const sharedPostingLines: PostingLine[] = [
   // posting-065 — bank_statement_outbound_matched — deal-021, Guilherme payout 6 582.60
   { id: "pline-065-1", postingId: "posting-065", ledgerId: 4,  side: "DEBIT",  amount: 6582.60, invoiceId: "inv-022" },
   { id: "pline-065-2", postingId: "posting-065", ledgerId: 1,  side: "CREDIT", amount: 6582.60 },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DEAL-011  (AE/AED · MBU · MA/Broker · invoicing)
+  // Mortgage 1 500 000 AED · DIB · Omar Rahman sole broker
+  // Revenue: 1.20% × 1 500 000 = 18 000 | Broker (provisional): 52% × 18 000 = 9 360
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // posting-070 — invoice_issued — deal-011, inv-011
+  // DR ASSET_AR_AED (9) 18 900 | CR REV_AED (13) 18 000 + CR LIAB_VAT_AED (12) 900
+  { id: "pline-070-1", postingId: "posting-070", ledgerId: 9,  side: "DEBIT",  amount: 18900,  invoiceId: "inv-011" },
+  { id: "pline-070-2", postingId: "posting-070", ledgerId: 13, side: "CREDIT", amount: 18000 },
+  { id: "pline-070-3", postingId: "posting-070", ledgerId: 12, side: "CREDIT", amount: 900 },
+
+  // posting-071 — commission_accrual (provisional) — deal-011, Omar Rahman
+  // DR EXP_COMMISSION_AED (14) 9 360 | CR BrokerLiability_broker-001 (40) 9 360
+  { id: "pline-071-1", postingId: "posting-071", ledgerId: 14, side: "DEBIT",  amount: 9360 },
+  { id: "pline-071-2", postingId: "posting-071", ledgerId: 40, side: "CREDIT", amount: 9360 },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DEAL-022  (AE/AED · MBU · MA/Broker · finalized)
+  // Mortgage 2 800 000 AED · ADIB · Omar Rahman 60% + Khalid & Associates 40%
+  // Revenue: 1.25% × 2 800 000 = 35 000
+  // Omar base: 60% × 35 000 = 21 000 → 53% = 11 130
+  // Khalid base: 40% × 35 000 = 14 000 → 53% = 7 420
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // posting-072 — invoice_issued — deal-022, inv-024
+  // DR ASSET_AR_AED (9) 36 750 | CR REV_AED (13) 35 000 + CR LIAB_VAT_AED (12) 1 750
+  { id: "pline-072-1", postingId: "posting-072", ledgerId: 9,  side: "DEBIT",  amount: 36750,  invoiceId: "inv-024" },
+  { id: "pline-072-2", postingId: "posting-072", ledgerId: 13, side: "CREDIT", amount: 35000 },
+  { id: "pline-072-3", postingId: "posting-072", ledgerId: 12, side: "CREDIT", amount: 1750 },
+
+  // posting-073 — bank_statement_inbound_matched — deal-022, inv-024 (ADIB pays)
+  // DR ASSET_BANK_AED (8) 36 750 | CR ASSET_AR_AED (9) 36 750
+  { id: "pline-073-1", postingId: "posting-073", ledgerId: 8,  side: "DEBIT",  amount: 36750 },
+  { id: "pline-073-2", postingId: "posting-073", ledgerId: 9,  side: "CREDIT", amount: 36750,  invoiceId: "inv-024" },
+
+  // posting-074 — commission_accrual Omar — deal-022
+  // DR EXP_COMMISSION_AED (14) 11 130 | CR BrokerLiability_broker-001 (40) 11 130
+  { id: "pline-074-1", postingId: "posting-074", ledgerId: 14, side: "DEBIT",  amount: 11130 },
+  { id: "pline-074-2", postingId: "posting-074", ledgerId: 40, side: "CREDIT", amount: 11130, invoiceId: "inv-025" },
+
+  // posting-075 — commission_accrual Khalid — deal-022
+  // DR EXP_COMMISSION_AED (14) 7 420 | CR BrokerLiability_broker-003 (42) 7 420
+  { id: "pline-075-1", postingId: "posting-075", ledgerId: 14, side: "DEBIT",  amount: 7420 },
+  { id: "pline-075-2", postingId: "posting-075", ledgerId: 42, side: "CREDIT", amount: 7420,  invoiceId: "inv-026" },
+
+  // posting-076 — agent_invoice_accrual Omar — deal-022, inv-025
+  // Clears broker subledger (40) + recognises input VAT; CREDIT LIAB_PAYABLE_AED (11)
+  // DR BrokerLiability_broker-001 (40) 11 130 + DR LIAB_VAT_AED (12) 556.50 | CR LIAB_PAYABLE_AED (11) 11 686.50
+  { id: "pline-076-1", postingId: "posting-076", ledgerId: 40, side: "DEBIT",  amount: 11130,    invoiceId: "inv-025" },
+  { id: "pline-076-2", postingId: "posting-076", ledgerId: 12, side: "DEBIT",  amount: 556.50 },
+  { id: "pline-076-3", postingId: "posting-076", ledgerId: 11, side: "CREDIT", amount: 11686.50, invoiceId: "inv-025" },
+
+  // posting-077 — bank_statement_outbound_matched — deal-022, inv-025 (Omar payout)
+  // DR LIAB_PAYABLE_AED (11) 11 686.50 | CR ASSET_BANK_AED (8) 11 686.50
+  { id: "pline-077-1", postingId: "posting-077", ledgerId: 11, side: "DEBIT",  amount: 11686.50, invoiceId: "inv-025" },
+  { id: "pline-077-2", postingId: "posting-077", ledgerId: 8,  side: "CREDIT", amount: 11686.50 },
+
+  // posting-078 — agent_invoice_accrual Khalid — deal-022, inv-026
+  // DR BrokerLiability_broker-003 (42) 7 420 + DR LIAB_VAT_AED (12) 371 | CR LIAB_PAYABLE_AED (11) 7 791
+  { id: "pline-078-1", postingId: "posting-078", ledgerId: 42, side: "DEBIT",  amount: 7420,    invoiceId: "inv-026" },
+  { id: "pline-078-2", postingId: "posting-078", ledgerId: 12, side: "DEBIT",  amount: 371 },
+  { id: "pline-078-3", postingId: "posting-078", ledgerId: 11, side: "CREDIT", amount: 7791,    invoiceId: "inv-026" },
+
+  // posting-079 — bank_statement_outbound_matched — deal-022, inv-026 (Khalid payout)
+  // DR LIAB_PAYABLE_AED (11) 7 791 | CR ASSET_BANK_AED (8) 7 791
+  { id: "pline-079-1", postingId: "posting-079", ledgerId: 11, side: "DEBIT",  amount: 7791,    invoiceId: "inv-026" },
+  { id: "pline-079-2", postingId: "posting-079", ledgerId: 8,  side: "CREDIT", amount: 7791 },
 
 ];

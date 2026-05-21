@@ -17,6 +17,7 @@ export { sharedDealDocumentRequirements } from "./dealDocumentRequirements";
 export { sharedAgentDocuments } from "./agentDocuments";
 export { sharedDealComments } from "./dealComments";
 export { sharedAgentFinancials, getAgentFinancialsByAgentId } from "./agentFinancials";
+export { sharedBrokerRateSlabs, getBrokerRateSlabForMonth, resolveBrokerRate } from "./brokerRateSlabs";
 export {
   generateMockScheduleActivities,
   sharedScheduleActivities,

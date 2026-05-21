@@ -86,6 +86,12 @@ export interface ProjectedPnLInput {
 
   currency: Currency;
   grossRevenue: number;
+  /**
+   * When set, agent allocations are computed as `agentPayoutBase × shareOfPool` instead of
+   * `commissionBase × shareOfPool`. Used for MBU MA/Broker channel where broker payout is
+   * a % of the disbursed mortgage amount, not of Huspy's gross revenue.
+   */
+  agentPayoutBase?: number;
   stakeholders: DealStakeholder[];
   agentFinancialsByAgentId: Record<string, AgentFinancials>;
   partyIdToAgentId: Record<string, string>;
@@ -202,7 +208,7 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
     if (!af) continue;
 
     const shareOfPool = (stake.splitPercentage ?? 100) / 100;
-    const allocatedNet = commissionBase * shareOfPool;
+    const allocatedNet = (input.agentPayoutBase ?? commissionBase) * shareOfPool;
     const agentGrossPayout = applyAgentStrategy(af.strategy, allocatedNet);
 
     // Agent-borne costs: child stakes whose parentStakeholderId points to this agent stake.

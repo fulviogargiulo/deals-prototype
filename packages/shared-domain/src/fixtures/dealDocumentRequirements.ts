@@ -4,7 +4,7 @@ import { sharedDocumentRequirementTemplates } from "./documentRequirementTemplat
 import { sharedDeals } from "./deals";
 
 // Derive status from deal status for mock data.
-// finalized / pending-receivables / pending-agent-approval → all approved
+// finalized / invoicing / pending-agent-approval → all approved
 //   (ops must have reviewed and approved docs to advance past under-review)
 // under-review                    → mix of uploaded and pending
 // pending-details                 → mostly pending, one or two uploaded
@@ -12,7 +12,7 @@ import { sharedDeals } from "./deals";
 function statusForIndex(dealStatus: string, index: number): DocumentRequirementStatus {
   switch (dealStatus) {
     case "finalized":
-    case "pending-receivables":
+    case "invoicing":
     case "pending-agent-approval":
     case "canceled":
       return "approved";

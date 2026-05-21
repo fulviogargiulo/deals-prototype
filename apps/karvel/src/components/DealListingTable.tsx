@@ -13,7 +13,7 @@ interface Props {
 type SortDir = "asc" | "desc" | null;
 type SortKey = "reportDate" | "id" | "businessUnit" | "status" | "country" | "market" | "grossRevenue" | "netRevenue" | "huspyMargin";
 
-const ALL_STATUSES: DealStatus[] = ["pending-details", "under-review", "pending-agent-approval", "pending-receivables", "finalized", "canceled"];
+const ALL_STATUSES: DealStatus[] = ["pending-details", "under-review", "pending-agent-approval", "invoicing", "finalized", "canceled"];
 const ALL_BUS: BusinessUnit[] = ["rebu", "mortgage"];
 const ALL_COUNTRIES: Country[] = ["ae", "es", "sa"];
 
@@ -135,7 +135,7 @@ export function DealListingTable({ deals, currency }: Props) {
     });
   }, [filtered, sortKey, sortDir, pnlByDealId]);
 
-  const perPage = 10;
+  const perPage = 15;
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
   const paginated = sorted.slice((page - 1) * perPage, page * perPage);
 

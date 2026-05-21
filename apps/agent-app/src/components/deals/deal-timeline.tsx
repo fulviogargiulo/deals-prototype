@@ -21,7 +21,7 @@ const statusSentences: Record<DealStatus, StatusSentence> = {
     actionText: 'confirm your commission',
     suffix: ' to proceed.',
   },
-  'pending-receivables': {
+  'invoicing': {
     text: "We\u2019ve sent the invoice to the client \u2014 waiting for payment to be received.",
   },
   finalized: {
@@ -36,7 +36,7 @@ const timelineSteps: { status: DealStatus; label: string }[] = [
   { status: 'pending-details', label: 'Pending Details' },
   { status: 'under-review', label: 'Under Review' },
   { status: 'pending-agent-approval', label: 'Approval' },
-  { status: 'pending-receivables', label: 'Receivables' },
+  { status: 'invoicing', label: 'Invoicing' },
   { status: 'finalized', label: 'Finalized' },
 ];
 

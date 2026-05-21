@@ -10,7 +10,7 @@ export function DealsSummaryWidget({ className }: { className?: string }) {
     ['pending-details', 'under-review'].includes(d.status)
   ).length;
 
-  const pendingPayment = agentDeals.filter(d => d.status === 'pending-receivables').length;
+  const pendingPayment = agentDeals.filter(d => d.status === 'invoicing').length;
 
   const now = new Date();
   const reportedThisMonth = agentDeals.filter(d => {

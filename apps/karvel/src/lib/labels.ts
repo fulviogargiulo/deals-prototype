@@ -35,7 +35,7 @@ export const dealStatusLabel: Record<DealStatus, string> = {
   "pending-details": "Pending Details",
   "under-review": "Under Review",
   "pending-agent-approval": "Pending Agent Approval",
-  "pending-receivables": "Pending Receivables",
+  "invoicing": "Invoicing",
   finalized: "Finalized",
   canceled: "Canceled",
 };

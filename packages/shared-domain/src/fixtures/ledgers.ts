@@ -131,4 +131,9 @@ export const sharedLedgers: Ledger[] = [
   // ══════════════════════════════════════════════════════════════════════════════
   { id: 37, name: "AgentLiability_ca-majid-sar",    description: "Agent Liability — Majid Al Harbi (SAR)", type: "liability", glId: 17, partyId: "party-ca-majid-sar",    currency: "SAR" },
   { id: 38, name: "AgentLiability_ca-karim-sar",    description: "Agent Liability — Karim Mourad (SAR)",  type: "liability", glId: 17, partyId: "party-ca-karim-sar",    currency: "SAR" },
+
+  // ── MBU broker subledgers — AED (UAE) ─────────────────────────────────────
+  { id: 40, name: "BrokerLiability_broker-001", description: "Broker Liability — Omar Rahman (AED)",        type: "liability", glId: 10, partyId: "party-broker-omar-rahman",  currency: "AED" },
+  { id: 41, name: "BrokerLiability_broker-002", description: "Broker Liability — Sara Mansoor (AED)",       type: "liability", glId: 10, partyId: "party-broker-sara-mansoor", currency: "AED" },
+  { id: 42, name: "BrokerLiability_broker-003", description: "Broker Liability — Khalid & Associates (AED)", type: "liability", glId: 10, partyId: "party-broker-khalid-assoc", currency: "AED" },
 ];

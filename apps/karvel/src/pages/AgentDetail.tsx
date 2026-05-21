@@ -622,7 +622,7 @@ export default function AgentDetail() {
                             <td className="px-4 py-3 text-center"><DealStatusBadge status={deal.status} /></td>
                             <td className={tdClass}>{deal.market ?? "—"}</td>
                             <td className={tdClass}>{deal.clientName ?? "—"}</td>
-                            <td className={tdClass}>{fmt(deal.dealAmount, deal.currency ?? "EUR")}</td>
+                            <td className={tdClass}>{fmt(deal.dealPrice ?? deal.dealAmount, deal.currency ?? "EUR")}</td>
                             <td className={tdClass}>
                               {entry ? fmt(entry.agentCommissionPayout, deal.currency ?? "EUR")
                                 : deal.agentCommissionPayout != null ? fmt(deal.agentCommissionPayout, deal.currency ?? "EUR")

@@ -11,4 +11,5 @@ export const sharedProperties: Property[] = [
   { id: "prop-008", name: "Al Waha Villa", country: "ae", currency: "AED", type: "villa", address: "Al Barsha South, Dubai", developmentName: "Al Waha" },
   { id: "prop-009", name: "Riyadh Hills Tower", country: "sa", currency: "SAR", type: "apartment", address: "King Fahd Road, Olaya, Riyadh", developmentName: "Riyadh Hills" },
   { id: "prop-010", name: "Lomas de Pozuelo Flat", country: "es", currency: "EUR", type: "apartment", address: "Avenida de Europa 18, Pozuelo de Alarcón" },
+  { id: "prop-011", name: "Creek Harbour Apartment", country: "ae", currency: "AED", type: "apartment", address: "Creek Harbour Boulevard, Dubai Creek Harbour, Dubai", developmentName: "Creek Harbour" },
 ];

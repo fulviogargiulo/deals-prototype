@@ -4,7 +4,17 @@ This document covers the foundational concepts and accounting model that power t
 
 ---
 
+## Key Problems To Solve
+
+Advisors/Collaborators don’t have visibility about the status of their payments and invoices. They constantly have to follow up with Huspy ops and finance teams which creates operational overhang and delays
+
+Invoice mismatches for Advisors/Collaborators because of stale data in Huspy systems
+
+Manual commission calculations, invoicing, and payments create possible delays and surface area for inaccuracies
+
 ## Scope
+
+Deals and Payments team scope starts from an offer getting closed and ends at Huspy successfully settling payments to all parties involved and accounting the same in its books.
 
 **The Deals ecosystem handles:**
 - Deal intake and validation (documents, stakeholder identity)
@@ -13,7 +23,7 @@ This document covers the foundational concepts and accounting model that power t
 - Accounting (double-entry ledgers for all financial events)
 
 **It does not handle:**
-- Property searching or CRM lead generation (handled upstream in Salesforce/Pipedrive)
+- Property searching or CRM lead generation (handled upstream)
 - Corporate payroll for salaried employees
 
 ---
@@ -21,13 +31,13 @@ This document covers the foundational concepts and accounting model that power t
 ## Goal
 
 - Standardize P&L and agent payout structures across all markets and business units
-- Eliminate manual spreadsheet tracking and reduce payout errors
-- Create fully auditable, double-entry financial records for every event
+- Reduce manual spreadsheet tracking and reduce payout errors
+- Create fully auditable, double-entry financial records for every event and clear deal financials data
 - Give agents real-time visibility into their deal pipeline, commission breakdowns, and invoice lifecycle
 
 ---
 
-## Accounting Primer
+## Accounting 101
 
 Every financial event in the Deals ecosystem creates a balanced double-entry posting. Two fundamental concepts underpin the model:
 
@@ -72,18 +82,18 @@ The ledger stays balanced; Finance knows exactly what Huspy owes the agent.
 
 The waterfall engine calculates deal profitability dynamically from its `DealStakeholders`. Applied in order:
 
-1. **Gross Revenue** — sum of `REVENUE_SOURCE` stakeholder amounts
+1. **Gross Revenue** — sum of `REVENUE_SOURCE` stakeholder amounts (all services charged by Huspy)
 2. **Minus Acquisition Deductions** — `ACQUISITION_DEDUCTION` stakeholders (external partners, referrals)
-3. **Minus Operational Deductions** — `OPERATIONAL_DEDUCTION` stakeholders (notary, conveyance, legal)
-4. **Net Revenue** = Gross − Acquisition − Operational
-5. **Minus Agent Payouts** — calculated from each agent's `AgentFinancials.strategy`
+3. **Net Revenue** = Gross − Acquisition − Operational
+4. **Minus Agent Payouts** — calculated from each agent's `AgentFinancials.strategy`
+5. **Minus Operational Deductions** — `OPERATIONAL_DEDUCTION` stakeholders (notary, conveyance, legal)
 6. **Huspy Margin** = Net Revenue − Agent Payouts
 
 A stakeholder can carry a `parentStakeholderId`, linking it to another stakeholder. This is used when a deduction is funded from an agent's own commission rather than from Huspy directly — e.g. a referral fee paid out of the referring agent's cut.
 
 Tax (Blueprint tax) is handled separately via country/BU configuration and never appears as a manually declared stakeholder.
 
-**Example — €500,000 property, Spain:**
+**Example — €500,000 property, Spain, Agent has 50% rate:**
 
 | Line | Amount |
 |---|---|
@@ -112,12 +122,12 @@ One set of GL accounts per currency (EUR, AED, SAR). Business unit attribution i
 | `ASSET_BANK_BankX_{CUR}` | Asset | Operating bank account |
 | `ASSET_AR_{CUR}` | Asset | Client accounts receivable |
 | `LIAB_AGENT_{CUR}` | Liability | Control account — GL parent for all agent subledgers |
+| `AgentLiability_agent-{slug}` | Liability | Subledger per agent |
 | `LIAB_PAYABLE_{CUR}` | Liability | External partner payable (vendors, co-brokers) |
 | `LIAB_VAT_{CUR}` | Liability | VAT collected and payable to tax authority |
 | `LIAB_WITHHOLDING_TAX_{CUR}` | Liability | Withholding tax payable (IRPF in Spain) |
 | `REV_{CUR}` | Revenue | All commission and fee revenue |
 | `EXP_COMMISSION_{CUR}` | Expense | Agent commission expense (gross) |
-| `AgentLiability_agent-{slug}` | Liability | Subledger per agent |
 
 ### Blueprint Tax (per country)
 

@@ -20,7 +20,7 @@ const statusLabels: Record<DealStatus, string> = {
   'pending-details': 'Pending Details',
   'under-review': 'Under Review',
   'pending-agent-approval': 'Pending Approval',
-  'pending-receivables': 'Pending Receivables',
+  'invoicing': 'Invoicing',
   finalized: 'Finalized',
   canceled: 'Canceled',
 };
@@ -188,7 +188,7 @@ export function DealDetails() {
 
 
         {/* Commission Breakdown — visible once deal is approved or further along */}
-        {['pending-agent-approval', 'pending-receivables', 'finalized'].includes(viewDeal.status) && (() => {
+        {['pending-agent-approval', 'invoicing', 'finalized'].includes(viewDeal.status) && (() => {
           const stake = agentStakeMap.get(viewDeal.id);
           const waterfallInput = buildWaterfallInput(viewDeal);
           const projection = waterfallInput ? calculateProjectedPnL(waterfallInput) : null;
@@ -224,13 +224,13 @@ export function DealDetails() {
                     className="h-7 rounded-full text-xs"
                     style={{ backgroundColor: 'hsl(var(--ds-green))', color: 'white' }}
                     onClick={() => {
-                      if (!canTransitionDealStatus(viewDeal.status, 'pending-receivables')) {
-                        toast.error('This deal cannot move to Pending Receivables from the current status.');
+                      if (!canTransitionDealStatus(viewDeal.status, 'invoicing')) {
+                        toast.error('This deal cannot move to Invoicing from the current status.');
                         return;
                       }
-                      setDealState(prev => prev ? { ...prev, status: 'pending-receivables' } : prev);
+                      setDealState(prev => prev ? { ...prev, status: 'invoicing' } : prev);
                       setConfirmedForInvoicing(true);
-                      toast.success('Deal confirmed and moved to Pending Receivables');
+                      toast.success('Deal confirmed and moved to Invoicing');
                     }}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
@@ -288,7 +288,7 @@ export function DealDetails() {
               )}
 
               {/* Confirmed message */}
-              {viewDeal.status === 'pending-receivables' && confirmedForInvoicing && (
+              {viewDeal.status === 'invoicing' && confirmedForInvoicing && (
                 <div className="border-t border-border-ds-primary px-4 py-3 flex items-center gap-2" style={{ backgroundColor: 'hsl(var(--ds-green) / 0.06)' }}>
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: 'hsl(var(--ds-green))' }} />
                   <p className="text-[12px] font-semibold leading-[140%]" style={{ color: 'hsl(var(--ds-green))' }}>

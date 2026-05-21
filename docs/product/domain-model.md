@@ -155,7 +155,7 @@ A `Deal` has no notion of "who is involved" by itself. All financial and identit
 
 ### Deal → Invoice → PostingLine
 
-When a deal reaches `pending-receivables`, an outbound `Invoice` is created linking the `Deal` to the receivable `Party`. When the agent submits a statement, an inbound `Invoice` is created linking back to the `Party` (the agent).
+When a deal reaches `invoicing`, an outbound `Invoice` is created linking the `Deal` to the receivable `Party`. When the agent submits a statement, an inbound `Invoice` is created linking back to the `Party` (the agent).
 
 `Invoice` is directional:
 
@@ -199,5 +199,5 @@ When a deal is created, `DealDocumentRequirement` rows are instantiated from the
 - Every `Party` is unique by `taxId`. Always look up before creating.
 - Every `Posting`'s lines must sum to zero. The system rejects unbalanced postings.
 - `DealStakeholder` financial entries are locked once the deal leaves `under-review`.
-- `pending-receivables → finalized` is automatic — triggered when the last outbound invoice is marked Paid, never by a manual status change.
+- `invoicing → finalized` is automatic — triggered when the last outbound invoice is marked Paid, never by a manual status change.
 - Agent subledger balance at any point = sum of all CREDIT lines minus DEBIT lines on that ledger = what Huspy currently owes the agent.

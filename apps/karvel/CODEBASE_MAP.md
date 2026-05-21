@@ -120,7 +120,7 @@ All data is **100% mocked — no backend, no Supabase, no API calls**.
 | `src/data/dealStore.ts` | Runtime only | Module-level `let allDeals` — changes survive navigation but are wiped on page refresh |
 
 ### Deal statuses (in workflow order)
-`pending-details → under-review → pending-agent-approval → pending-receivables → finalized`
+`pending-details → under-review → pending-agent-approval → invoicing → finalized`
 
 `canceled` is reachable from any state. `isDisputed` is a cross-cutting boolean, not a state.
 See `packages/shared-domain/DOMAIN_MODEL.md` for the full state machine.

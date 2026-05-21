@@ -31,6 +31,8 @@ export interface Party {
   legalType?: string;
   /** Deduplication key. Two Party records with the same taxId represent the same legal entity. */
   taxId?: string;
+  /** IBAN used for outbound payments to this party. */
+  iban?: string;
 }
 
 // ============================================================
@@ -437,7 +439,35 @@ export interface MaxAgentStrategy {
   capAmount: number;
 }
 
-export type AgentStrategy = FlatAgentStrategy | SlabAgentStrategy | MaxAgentStrategy;
+/**
+ * BrokerRateSlab: no fixed pct — rate is resolved at calculation time from BrokerRateSlab.
+ * Used for MBU MA/Broker channel agents. The actual pct depends on:
+ *   - the deal's reporting month
+ *   - the lending bank (SUPPLY stakeholder partyId)
+ *   - the broker's total monthly GMV across all banks (tier selector)
+ */
+export interface BrokerRateSlabStrategy {
+  kind: "broker-rate-slab";
+}
+
+export type AgentStrategy = FlatAgentStrategy | SlabAgentStrategy | MaxAgentStrategy | BrokerRateSlabStrategy;
+
+// ============================================================
+// BrokerRateSlab — MBU MA/Broker channel commission config.
+// Set monthly by BizOps. Tier is selected by the broker's total
+// disbursed amount across ALL banks in the reporting month.
+// Rate within the tier is per bank.
+// ============================================================
+export interface BrokerRateSlab {
+  id: string;
+  /** "YYYY-MM" — the reporting month this config applies to. */
+  reportingMonth: string;
+  /** Slabs ordered ascending by upTo. Last slab must have upTo: null. */
+  slabs: Array<{
+    upTo: number | null;
+    bankRates: Array<{ bankId: string; pct: number }>;
+  }>;
+}
 
 export interface ConnectedAgent {
   id: string;

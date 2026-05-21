@@ -114,4 +114,9 @@ export const sharedAgents: Agent[] = [
   { id: "agent-010", uid: 1010, partyId: "party-ca-leila-aed",    country: "ae", employmentStatus: "active" },
   { id: "agent-011", uid: 1011, partyId: "party-ca-karim-aed",    country: "ae", employmentStatus: "active" },
   { id: "agent-012", uid: 1012, partyId: "party-ca-majid-sar",    country: "sa", employmentStatus: "active" },
+
+  // ── MBU external brokers (UAE) ────────────────────────────────────────────
+  { id: "broker-001", uid: 2001, partyId: "party-broker-omar-rahman",  country: "ae", employmentStatus: "active" },
+  { id: "broker-002", uid: 2002, partyId: "party-broker-sara-mansoor", country: "ae", employmentStatus: "active" },
+  { id: "broker-003", uid: 2003, partyId: "party-broker-khalid-assoc", country: "ae", employmentStatus: "active" },
 ];

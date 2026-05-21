@@ -206,6 +206,16 @@ export const sharedOffers: Offer[] = [
     buyerAgentId: "agent-004", buyerAgentSplitPct: 100,
     createdAt: "2026-05-10T10:00:00.000Z", updatedAt: "2026-05-12T00:00:00.000Z",
   },
+  // offer-022 → deal-022 (ae/AED, primary/mortgage, ADIB, Hassan Khoury borrower, 1.25% bank slab)
+  {
+    id: "offer-022", status: "deal-created",
+    country: "ae", currency: "AED",
+    propertyId: "prop-011", propertyName: "Creek Harbour Apartment",
+    opportunityId: "opp-022", clientId: "client-012",
+    offerAmount: 2800000, commissionPayer: "buyer", totalCommissionPct: 1.25,
+    buyerAgentId: "agent-006", buyerAgentSplitPct: 100,
+    createdAt: "2026-04-28T10:00:00.000Z", updatedAt: "2026-05-05T00:00:00.000Z",
+  },
   // offer-021 → deal-021 (es/EUR, primary/buy, agent-002/Guilherme, referral Marta Sáez)
   {
     id: "offer-021", status: "deal-created",

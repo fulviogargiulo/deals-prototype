@@ -2,9 +2,14 @@ import { Deal } from "./types";
 import { mockDeals } from "./mockDeals";
 
 const STORAGE_KEY = "karvel-deals";
+const STORAGE_VERSION = "3"; // bump when fixture schema or recalculate logic changes
 
 function loadDeals(): Deal[] {
   try {
+    if (localStorage.getItem(STORAGE_KEY + "-v") !== STORAGE_VERSION) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(STORAGE_KEY + "-v", STORAGE_VERSION);
+    }
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw) as Deal[];
   } catch {}

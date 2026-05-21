@@ -535,7 +535,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
     return split.agentPayout + split.teamLeadPayout + split.managerPayout;
   };
 
-  if (isMBU) {
+  if (isMBU && !pnl) {
     return <p className="text-[13px] text-muted-foreground italic">P&L waterfall not available for mortgage deals.</p>;
   }
 
@@ -784,7 +784,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
         </>
       )}
 
-      {!pnl && !isMBU && (
+      {!pnl && (
         <p className="text-[12px] text-muted-foreground/60 italic mt-3">
           Add a primary agent with a commission strategy to see P&L projections.
         </p>

@@ -227,13 +227,13 @@ Central identity record. `Agent` and `Client` are sub-types that link to a `Part
 **Deduplication:** `taxId` is the canonical identity key for external parties. Before creating a new Party record, look up by `taxId`. If a match exists, reuse that Party and attach it as a `DealStakeholder` — do not create a duplicate. Agents are deduplicated by their account; `taxId` applies to all other party types.
 
 ### DealStakeholder and Party lifecycle
-`DealStakeholder` records (and their linked Parties) can be added at any point from deal creation up to — but not including — the transition to `pending-receivables`. Once the deal enters `pending-receivables`, all stakeholders must be set: invoices reference `Party.id` directly and cannot be created without a resolved Party record.
+`DealStakeholder` records (and their linked Parties) can be added at any point from deal creation up to — but not including — the transition to `invoicing`. Once the deal enters `invoicing`, all stakeholders must be set: invoices reference `Party.id` directly and cannot be created without a resolved Party record.
 
 Steps at deal creation or during ops review:
 1. Operator enters the external party's details and `taxId`.
 2. System looks up `taxId` — if found, link the existing Party; if not, create a new Party record.
 3. A `DealStakeholder` row is created linking the Party to the deal with the appropriate role.
-4. The deal may not advance to `pending-receivables` until all required stakeholders are present.
+4. The deal may not advance to `invoicing` until all required stakeholders are present.
 
 ### DealStakeholder
 Replaces the `agentId`/`clientId` FKs that used to be embedded on `Deal`. Each deal now has one or more stakeholder records, each linking a Party to a **financial role** (`StakeholderType`). This naturally supports multi-agent commission splits and mixed revenue/cost structures.
@@ -266,7 +266,7 @@ Today only agent subledgers (e.g. `AgentLiability_agent-felicia`) set it, becaus
 Implemented in `src/dealWorkflow.ts` — `DEAL_WORKFLOW_TRANSITIONS` is authoritative. Use `canTransitionDealStatus(from, to)` to validate any transition before applying it.
 
 ```
-pending-details ⇄ under-review → pending-agent-approval → pending-receivables → finalized
+pending-details ⇄ under-review → pending-agent-approval → invoicing → finalized
                                           ↑          ↘
                                    under-review    (back if agent input needed)
                                 
@@ -279,8 +279,8 @@ Allowed transitions (from `dealWorkflow.ts`):
 |---|---|
 | `pending-details` | `under-review`, `canceled` |
 | `under-review` | `pending-details`, `pending-agent-approval`, `canceled` |
-| `pending-agent-approval` | `under-review`, `pending-receivables`, `canceled` |
-| `pending-receivables` | `finalized`, `canceled` |
+| `pending-agent-approval` | `under-review`, `invoicing`, `canceled` |
+| `invoicing` | `finalized`, `canceled` |
 | `finalized` | _(terminal)_ |
 | `canceled` | _(terminal)_ |
 
@@ -289,7 +289,7 @@ Allowed transitions (from `dealWorkflow.ts`):
 | `pending-details` | Deal logged; ops awaiting required info from agent |
 | `under-review` | Ops verifying deal details |
 | `pending-agent-approval` | Ops has finalised commission terms; agent must confirm before invoicing begins |
-| `pending-receivables` | Invoice sent to client; waiting for payment |
+| `invoicing` | Invoice sent to client; waiting for payment |
 | `finalized` | Client payment confirmed; `invoice_issued` posting created, agent liability subledger credited |
 | `canceled` | Deal voided — reachable from any state |
 
@@ -319,7 +319,7 @@ cancelled → issued  (restore — for op error recovery)
 
 **Entry point by invoice type:**
 
-| Type | Auto-created on deal → `pending-receivables`? | Entry state | Advances to `issued` when… |
+| Type | Auto-created on deal → `invoicing`? | Entry state | Advances to `issued` when… |
 |---|---|---|---|
 | Outbound (Huspy → client/developer/bank) | Yes | `draft` | Finance completes (due date, VAT) and sends PDF |
 | Inbound — external vendor (conveyance, legal, co-broker) | Yes | `draft` | Vendor submits their invoice; Finance validates and updates details |
@@ -332,10 +332,10 @@ cancelled → issued  (restore — for op error recovery)
 | Deal status | Outbound invoice constraint |
 |---|---|
 | `finalized` | ALL outbound invoices linked to the deal must be `paid` |
-| `pending-receivables` | At least 1 outbound invoice must be `issued` |
+| `invoicing` | At least 1 outbound invoice must be `issued` |
 | Any other status | No outbound invoice should be in `paid`, `issued`, or `draft` |
 
-`pending-receivables → finalized` is gated on all outbound invoices being `paid`. Inbound invoice payment is never a gating condition for deal status.
+`invoicing → finalized` is gated on all outbound invoices being `paid`. Inbound invoice payment is never a gating condition for deal status.
 
 ### Invoice ↔ PostingLines accounting invariants
 
