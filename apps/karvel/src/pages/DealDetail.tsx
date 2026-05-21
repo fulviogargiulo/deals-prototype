@@ -5,7 +5,7 @@ import { saveDocumentRequirements } from "@/data/sharedEntityStore";
 import { Deal, DealStatus } from "@/data/types";
 import { DealStatusBadge } from "@/components/DealBadges";
 import { ArrowLeft, CheckCircle2, Circle, ExternalLink, Download, AlertTriangle, CheckCheck, Undo2, ChevronDown } from "lucide-react";
-import { computeDealPnL, createCommissionAccrualPosting } from "@/lib/dealCalculations";
+import { computeDealPnL, createCommissionAccrualPosting, getDealEngine } from "@/lib/dealCalculations";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/contexts/UserContext";
 import {
@@ -351,6 +351,7 @@ const DealDetail = () => {
                       <ReadRow label="Offer ID" value={deal.offerId ?? "—"} />
                       <ReadRow label="Client" value={clientDisplay} />
                       <ReadRow label="Channel" value={deal.channel ?? "—"} />
+                      <ReadRow label="P&L Engine" value={getDealEngine(deal)} />
                     </div>
                   </div>
                 );

@@ -39,11 +39,9 @@ import {
 //
 // mbu-b2c         mortgage       B2C       [TO BE DETERMINED]
 // mbu-bbg         mortgage       BBG       [TO BE DETERMINED]
-// mbu-legacy      mortgage       other/—   Legacy field-based path (recalculateMBU).
-//                                          Deals lacking a channel fall here until migrated.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type DealEngineKey = "rebu" | "mbu-ma-broker" | "mbu-b2c" | "mbu-bbg" | "mbu-legacy";
+export type DealEngineKey = "rebu" | "mbu-ma-broker" | "mbu-b2c" | "mbu-bbg";
 
 export function getDealEngine(deal: Pick<Deal, "businessUnit" | "channel">): DealEngineKey {
   if (deal.businessUnit !== "mortgage") return "rebu";
@@ -51,7 +49,7 @@ export function getDealEngine(deal: Pick<Deal, "businessUnit" | "channel">): Dea
     case "MA":  return "mbu-ma-broker";
     case "B2C": return "mbu-b2c";
     case "BBG": return "mbu-bbg";
-    default:    return "mbu-legacy";
+    default:    return "mbu-b2c"; // unrecognised mortgage channel → B2C path until defined
   }
 }
 
@@ -422,38 +420,6 @@ function recalculateREBU(deal: Deal): Deal {
   };
 }
 
-function recalculateMBU(deal: Deal): Deal {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const d = deal as any; // MBU fixture fields not typed on shared Deal
-  const huspyRevenue = ((d.bankSlab ?? 0) / 100) * (deal.disbursedAmount ?? 0);
-  const rmPayout = ((d.rmCommissionRate ?? 0) / 100) * huspyRevenue;
-  const tlPayout = ((d.tlCommissionRate ?? 0) / 100) * huspyRevenue;
-  const dsPayout = ((d.dsCommissionRate ?? 0) / 100) * huspyRevenue;
-  const brokerPayout = ((d.brokerCommissionRate ?? 0) / 100) * (deal.disbursedAmount ?? 0);
-  const externalPayout = ((deal.externalCommissionRate ?? 0) / 100) * huspyRevenue;
-
-  const netHuspyRevenue = huspyRevenue - rmPayout - tlPayout - dsPayout - brokerPayout - externalPayout;
-
-  const payableEntries: { entityType: PayableEntry["entityType"]; entityLabel: string; expectedAmount: number }[] = [];
-  if (d.rmName || rmPayout > 0) payableEntries.push({ entityType: "rm", entityLabel: `RM${d.rmName ? ` — ${d.rmName}` : ""}`, expectedAmount: rmPayout });
-  if (d.tlName || tlPayout > 0) payableEntries.push({ entityType: "tl", entityLabel: `TL${d.tlName ? ` — ${d.tlName}` : ""}`, expectedAmount: tlPayout });
-  if (d.dsName || dsPayout > 0) payableEntries.push({ entityType: "ds", entityLabel: `DS${d.dsName ? ` — ${d.dsName}` : ""}`, expectedAmount: dsPayout });
-  if (brokerPayout > 0) payableEntries.push({ entityType: "broker", entityLabel: "Broker", expectedAmount: brokerPayout });
-  if (externalPayout > 0) payableEntries.push({ entityType: "external_partner", entityLabel: "External", expectedAmount: externalPayout });
-
-  const payables = buildPayables(deal, payableEntries);
-  const firstPayable = payables[0];
-
-  return {
-    ...deal,
-    huspyRevenue,
-    netHuspyRevenue,
-    externalPayout,
-    payables,
-    payableRefNumber: firstPayable?.refNumber,
-    payableStatus: firstPayable?.status,
-  };
-}
 
 export function recalculateDeal(deal: Deal): Deal {
   switch (getDealEngine(deal)) {
@@ -466,10 +432,8 @@ export function recalculateDeal(deal: Deal): Deal {
       return applyWaterfallEngine(deal) ?? deal;
     case "mbu-b2c":
     case "mbu-bbg":
-      // [TO BE DETERMINED] — return unchanged until engine is built.
-      return deal;
-    case "mbu-legacy":
-      return recalculateMBU(deal);
+      // Waterfall engine works for internal-agent mortgage deals; no legacy fallback.
+      return applyWaterfallEngine(deal) ?? deal;
   }
 }
 

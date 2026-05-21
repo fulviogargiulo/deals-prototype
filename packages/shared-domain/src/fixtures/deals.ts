@@ -301,7 +301,7 @@ export const sharedDeals: Deal[] = [
   expand({
     id: "deal-014", offerId: "offer-014",
     status: "invoicing", market: "secondary", country: "es", currency: "EUR",
-    businessUnit: "mortgage",
+    businessUnit: "mortgage", channel: "B2C",
     dealAmount: 496000, reportDate: "2026-04-10",
     createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-15T10:00:00.000Z",
     commissionPercentage: 0.5,
@@ -314,7 +314,7 @@ export const sharedDeals: Deal[] = [
   expand({
     id: "deal-015", offerId: "offer-015",
     status: "invoicing", market: "primary", country: "sa", currency: "SAR",
-    businessUnit: "mortgage",
+    businessUnit: "mortgage", channel: "B2C",
     dealAmount: 920000, reportDate: "2026-04-28",
     createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-05-02T09:00:00.000Z",
     commissionPercentage: 0.5,
