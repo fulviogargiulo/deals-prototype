@@ -10,7 +10,7 @@ Read-only plan. **No file moves yet.**
 
 ---
 
-## 1. Current state of each app
+## 1. Current state of each app 
 
 ### apps/karvel ← `Deals Management On Karvel/`
 

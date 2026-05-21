@@ -192,7 +192,7 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
   };
 }
 
-function applyEngineToREBU(deal: Deal): Deal | null {
+function applyWaterfallEngine(deal: Deal): Deal | null {
   const input = buildEngineInput(deal);
   if (!input) return null;
   const projection = calculateProjectedPnL(input);
@@ -290,7 +290,7 @@ function buildPayables(deal: Deal, entries: { entityType: PayableEntry["entityTy
     });
 }
 
-export function recalculateAgentEntry(agent: AgentEntry, huspyRevenue: number, extPayout: number): AgentEntry {
+function recalculateAgentEntry(agent: AgentEntry, huspyRevenue: number, extPayout: number): AgentEntry {
   const netRevenuePerAgent = (huspyRevenue - extPayout) * (agent.agentShare / 100);
   const baseCommission = (agent.agentCommissionRate / 100) * netRevenuePerAgent;
   const agentTotalAmount = baseCommission + agent.agentIncentive - agent.agentDeductions;
@@ -308,7 +308,7 @@ export function recalculateAgentEntry(agent: AgentEntry, huspyRevenue: number, e
   };
 }
 
-export function recalculateREBU(deal: Deal): Deal {
+function recalculateREBU(deal: Deal): Deal {
   const huspyRevenue = deal.dealPrice * (deal.takeRate / 100);
 
   // Recalculate external partners
@@ -351,7 +351,6 @@ export function recalculateREBU(deal: Deal): Deal {
   // Conveyance fee is Huspy additional revenue only in legacy (non-stakeholder) model.
   const conveyanceAsRevenue = opDeductionStakes.length > 0 ? 0 : conveyanceFeeTotal;
   const netHuspyRevenue = huspyRevenue + conveyanceAsRevenue - totalCOGS;
-  const amount = huspyRevenue + conveyanceAsRevenue;
 
   // Build payable entries from all COGS entities
   const payableEntries: { entityType: PayableEntry["entityType"]; entityLabel: string; expectedAmount: number }[] = [];
@@ -423,7 +422,7 @@ export function recalculateREBU(deal: Deal): Deal {
   };
 }
 
-export function recalculateMBU(deal: Deal): Deal {
+function recalculateMBU(deal: Deal): Deal {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = deal as any; // MBU fixture fields not typed on shared Deal
   const huspyRevenue = ((d.bankSlab ?? 0) / 100) * (deal.disbursedAmount ?? 0);
@@ -461,10 +460,10 @@ export function recalculateDeal(deal: Deal): Deal {
     case "rebu":
       // Try waterfall engine first; fall back to legacy field-based calc for
       // deals that predate the stakeholder migration (no grossRevenue/blueprintId).
-      return applyEngineToREBU(deal) ?? recalculateREBU(deal);
+      return applyWaterfallEngine(deal) ?? recalculateREBU(deal);
     case "mbu-ma-broker":
       // Waterfall engine handles MA/Broker via BrokerRateSlab; no legacy fallback.
-      return applyEngineToREBU(deal) ?? deal;
+      return applyWaterfallEngine(deal) ?? deal;
     case "mbu-b2c":
     case "mbu-bbg":
       // [TO BE DETERMINED] — return unchanged until engine is built.
@@ -635,7 +634,7 @@ export function createCommissionAccrualPosting(deal: Deal): void {
   }
 }
 
-export function createEmptyAgent(index: number): AgentEntry {
+export function createEmptyAgent(_index: number): AgentEntry {
   return {
     agentName: "",
     agentShare: 0,
