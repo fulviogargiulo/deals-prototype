@@ -2,32 +2,20 @@ import { Deal } from "@/data/types";
 import { DealListingTable } from "./DealListingTable";
 import { Search } from "lucide-react";
 import { useState } from "react";
-import { DateRange } from "./DateRangePicker";
-import {
-  isWithinInterval, startOfDay, endOfDay
-} from "date-fns";
 
 interface Props {
   deals: Deal[];
-  currency?: string;
-  dateRange: DateRange;
 }
 
-export function DealListingView({ deals, currency = "EUR", dateRange }: Props) {
+export function DealListingView({ deals }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const dateFiltered = deals.filter((deal) => {
-    if (!dateRange.from || !dateRange.to) return true;
-    const dealDate = startOfDay(new Date(deal.reportDate));
-    return isWithinInterval(dealDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
-  });
-
-  const filtered = dateFiltered.filter((deal) => {
+  const filtered = deals.filter((deal) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
       deal.agentName.toLowerCase().includes(q) ||
-      deal.market.toLowerCase().includes(q) ||
+      deal.market?.toLowerCase().includes(q) ||
       deal.clientName.toLowerCase().includes(q) ||
       deal.id.toLowerCase().includes(q)
     );
@@ -49,9 +37,7 @@ export function DealListingView({ deals, currency = "EUR", dateRange }: Props) {
         </div>
       </div>
 
-      {/* Deal Listing Table */}
-      <DealListingTable deals={filtered} currency={currency} />
+      <DealListingTable deals={filtered} />
     </div>
   );
 }
-

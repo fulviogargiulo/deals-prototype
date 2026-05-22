@@ -131,12 +131,12 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
             {/* Note for Ops */}
             <div className="space-y-1.5">
               <label className="text-[12px] font-semibold leading-[140%] text-[hsl(var(--fg-secondary))]">
-                Add a note for Ops <span style={{ color: 'hsl(var(--ds-orange))' }}>*</span>
+                Add a note for Huspy <span style={{ color: 'hsl(var(--ds-orange))' }}>*</span>
               </label>
               <textarea
                 value={submitNote}
                 onChange={(e) => setSubmitNote(e.target.value)}
-                placeholder="Describe what you've completed or any context Ops should know..."
+                placeholder="Describe what you've completed or any context Huspy Ops should know..."
                 rows={2}
                 className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border-ds-primary))] bg-transparent text-[13px] leading-[140%] text-foreground placeholder:text-[hsl(var(--fg-secondary))] resize-none focus:outline-none focus:ring-2 focus:ring-[hsl(var(--fg-primary))]"
               />

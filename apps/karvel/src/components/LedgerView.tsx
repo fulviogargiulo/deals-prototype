@@ -1,19 +1,13 @@
-import { useState } from "react";
-import { ChevronRight, ArrowLeft, Plus, Upload } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight, ArrowLeft, Plus, Upload, Filter, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { sharedLedgers, sharedPostings, sharedPostingLines } from "@huspy/shared-domain";
 import type { Ledger, Posting, PostingLine } from "@huspy/shared-domain";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CreatePostingDialog } from "@/components/CreatePostingDialog";
+import { thBase, SortDir, SortIcon, FilterDropdown } from "./TableFilters";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -49,8 +43,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 const TYPE_ORDER: Record<string, number> = { asset: 0, liability: 1, revenue: 2, expense: 3 };
 
-
-function computeBalance(ledgerId: number, allLines: PostingLine[], includeSubledgers = false) {
+function computeBalance(ledgerId: number, type: string, allLines: PostingLine[], includeSubledgers = false) {
   const ids = new Set([ledgerId]);
   if (includeSubledgers) {
     sharedLedgers.filter((l) => l.glId === ledgerId).forEach((l) => ids.add(l.id));
@@ -58,14 +51,9 @@ function computeBalance(ledgerId: number, allLines: PostingLine[], includeSubled
   const lines = allLines.filter((l) => ids.has(l.ledgerId));
   const credits = lines.filter((l) => l.side === "CREDIT").reduce((s, l) => s + l.amount, 0);
   const debits = lines.filter((l) => l.side === "DEBIT").reduce((s, l) => s + l.amount, 0);
-  return credits - debits;
+  // Asset & Expense normal balance is Debit; Liability & Revenue normal balance is Credit
+  return (type === "asset" || type === "expense") ? debits - credits : credits - debits;
 }
-
-const thClass = "text-left px-4 py-2.5 text-[12px] font-medium text-muted-foreground uppercase tracking-wide";
-const tdClass = "px-4 py-3 text-[13px] text-foreground";
-
-const CURRENCIES = ["EUR", "AED", "SAR"] as const;
-type Currency = (typeof CURRENCIES)[number];
 
 // ─── Drilldown state ──────────────────────────────────────────────────────────
 
@@ -79,19 +67,97 @@ type DrilldownState =
 export function LedgerView() {
   const navigate = useNavigate();
   const [drilldown, setDrilldown] = useState<DrilldownState>({ level: "gl" });
-  const [currencyFilter, setCurrencyFilter] = useState<Currency | null>(null);
   const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
 
   const [manualPostings, setManualPostings] = useState<Posting[]>([]);
   const [manualPostingLines, setManualPostingLines] = useState<PostingLine[]>([]);
   const [postingOverrides, setPostingOverrides] = useState<Record<string, Partial<Posting>>>({});
-
   const [createPostingOpen, setCreatePostingOpen] = useState(false);
 
-  const allPostings: Posting[] = [...sharedPostings, ...manualPostings].map((p) =>
-    postingOverrides[p.id] ? { ...p, ...postingOverrides[p.id] } : p,
+  // GL filters & sort
+  const [glTypeFilter, setGLTypeFilter] = useState<Set<string>>(new Set());
+  const [glCurrencyFilter, setGLCurrencyFilter] = useState<Set<string>>(new Set());
+  const [glSortKey, setGLSortKey] = useState<"name" | "balance" | null>(null);
+  const [glSortDir, setGLSortDir] = useState<SortDir>(null);
+
+  // Subledger sort
+  const [subSortKey, setSubSortKey] = useState<"name" | "balance" | null>(null);
+  const [subSortDir, setSubSortDir] = useState<SortDir>(null);
+
+  // Lines sort & filter
+  const [linesSortKey, setLinesSortKey] = useState<"createdAt" | "valueDate" | null>("valueDate");
+  const [linesSortDir, setLinesSortDir] = useState<SortDir>("asc");
+  const [linesProcessFilter, setLinesProcessFilter] = useState<Set<string>>(new Set());
+  const [linesPage, setLinesPage] = useState(1);
+
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
+
+  const allPostings: Posting[] = useMemo(
+    () => [...sharedPostings, ...manualPostings].map((p) =>
+      postingOverrides[p.id] ? { ...p, ...postingOverrides[p.id] } : p,
+    ),
+    [manualPostings, postingOverrides],
   );
-  const allLines: PostingLine[] = [...sharedPostingLines, ...manualPostingLines];
+  const allLines: PostingLine[] = useMemo(
+    () => [...sharedPostingLines, ...manualPostingLines],
+    [manualPostingLines],
+  );
+
+  // GL ledgers (filtered + sorted)
+  const glLedgers = useMemo(() => {
+    const base = sharedLedgers.filter((l) =>
+      !l.glId &&
+      (glTypeFilter.size === 0 || glTypeFilter.has(l.type)) &&
+      (glCurrencyFilter.size === 0 || glCurrencyFilter.has(l.currency ?? "EUR"))
+    );
+    if (glSortKey && glSortDir) {
+      const dir = glSortDir === "asc" ? 1 : -1;
+      return [...base].sort((a, b) => {
+        if (glSortKey === "name") return a.name.localeCompare(b.name) * dir;
+        return (computeBalance(a.id, a.type, allLines, true) - computeBalance(b.id, b.type, allLines, true)) * dir;
+      });
+    }
+    return [...base].sort((a, b) => {
+      const ta = TYPE_ORDER[a.type] ?? 99;
+      const tb = TYPE_ORDER[b.type] ?? 99;
+      return ta !== tb ? ta - tb : a.id - b.id;
+    });
+  }, [glTypeFilter, glCurrencyFilter, glSortKey, glSortDir, allLines]);
+
+  // Subledgers for current drilldown (sorted)
+  const subledgers = useMemo(() => {
+    if (drilldown.level !== "subledger") return [];
+    const base = sharedLedgers.filter((l) => l.glId === drilldown.glLedger.id);
+    if (subSortKey && subSortDir) {
+      const dir = subSortDir === "asc" ? 1 : -1;
+      return [...base].sort((a, b) => {
+        if (subSortKey === "name") return a.name.localeCompare(b.name) * dir;
+        return (computeBalance(a.id, a.type, allLines) - computeBalance(b.id, b.type, allLines)) * dir;
+      });
+    }
+    return base;
+  }, [drilldown, subSortKey, subSortDir, allLines]);
+
+  // Posting lines for current drilldown (filtered + sorted)
+  const postingLines = useMemo(() => {
+    if (drilldown.level !== "lines") return [];
+    const base = allLines
+      .filter((l) => l.ledgerId === drilldown.ledger.id)
+      .map((l) => ({ ...l, posting: allPostings.find((p) => p.id === l.postingId) }));
+    const filtered = linesProcessFilter.size > 0
+      ? base.filter((l) => linesProcessFilter.has(l.posting?.businessProcess ?? ""))
+      : base;
+    if (linesSortKey && linesSortDir) {
+      const dir = linesSortDir === "asc" ? 1 : -1;
+      return [...filtered].sort((a, b) => {
+        if (linesSortKey === "createdAt") return (a.posting?.createdAt ?? "").localeCompare(b.posting?.createdAt ?? "") * dir;
+        return (a.posting?.valueDate ?? "").localeCompare(b.posting?.valueDate ?? "") * dir;
+      });
+    }
+    return filtered;
+  }, [drilldown, allLines, allPostings, linesProcessFilter, linesSortKey, linesSortDir]);
+
+  useEffect(() => { setLinesPage(1); }, [postingLines]);
 
   function handleReversePosting(posting: Posting, lines: PostingLine[]) {
     const reversalId = `reversal-${posting.id}-${Date.now()}`;
@@ -121,43 +187,51 @@ export function LedgerView() {
     setSelectedPostingId(reversalId);
   }
 
-  const glLedgers = sharedLedgers
-    .filter((l) => !l.glId && (!currencyFilter || l.currency === currencyFilter))
-    .sort((a, b) => {
-      const ta = TYPE_ORDER[a.type] ?? 99;
-      const tb = TYPE_ORDER[b.type] ?? 99;
-      return ta !== tb ? ta - tb : a.id - b.id;
-    });
+  function handleGLSort(key: "name" | "balance") {
+    if (glSortKey === key) {
+      const next = glSortDir === "asc" ? "desc" : glSortDir === "desc" ? null : "asc";
+      setGLSortDir(next as SortDir);
+      if (!next) setGLSortKey(null);
+    } else { setGLSortKey(key); setGLSortDir("asc"); }
+  }
 
-  const currencySelect = (
-    <div className="flex items-center gap-2">
-      <span className="text-[12px] text-muted-foreground font-medium">Currency</span>
-      <Select
-        value={currencyFilter ?? "all"}
-        onValueChange={(v) => setCurrencyFilter(v === "all" ? null : v as Currency)}
-      >
-        <SelectTrigger className="w-[150px] h-8 text-[13px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All currencies</SelectItem>
-          <SelectItem value="EUR">EUR</SelectItem>
-          <SelectItem value="AED">AED</SelectItem>
-          <SelectItem value="SAR">SAR</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-  );
+  function handleSubSort(key: "name" | "balance") {
+    if (subSortKey === key) {
+      const next = subSortDir === "asc" ? "desc" : subSortDir === "desc" ? null : "asc";
+      setSubSortDir(next as SortDir);
+      if (!next) setSubSortKey(null);
+    } else { setSubSortKey(key); setSubSortDir("asc"); }
+  }
+
+  function handleLinesSort(key: "createdAt" | "valueDate") {
+    if (linesSortKey === key) {
+      const next = linesSortDir === "asc" ? "desc" : linesSortDir === "desc" ? null : "asc";
+      setLinesSortDir(next as SortDir);
+      if (!next) setLinesSortKey(null);
+    } else { setLinesSortKey(key); setLinesSortDir("asc"); }
+  }
+
+  const glActiveFilters = [glTypeFilter, glCurrencyFilter].filter((f) => f.size > 0).length;
 
   // ── GL ledger list ──────────────────────────────────────────────────────────
   const glContent = (
     <div>
       <div className="flex items-center justify-between mb-4">
-        {currencySelect}
+        {glActiveFilters > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-muted-foreground">
+              {glActiveFilters} filter{glActiveFilters > 1 ? "s" : ""} active · {glLedgers.length} ledger{glLedgers.length !== 1 ? "s" : ""}
+            </span>
+            <button
+              onClick={() => { setGLTypeFilter(new Set()); setGLCurrencyFilter(new Set()); }}
+              className="text-[12px] text-primary hover:underline"
+            >
+              Clear all
+            </button>
+          </div>
+        ) : <div />}
         <div className="flex items-center gap-2">
-          <button
-            className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-md text-[13px] font-medium text-foreground bg-card hover:bg-muted transition-colors"
-          >
+          <button className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-md text-[13px] font-medium text-foreground bg-card hover:bg-muted transition-colors">
             <Upload className="h-4 w-4" />
             Upload CSV
           </button>
@@ -173,19 +247,64 @@ export function LedgerView() {
       <div className="bg-card rounded-xl overflow-hidden border border-border">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border">
-              <th className={thClass}>Type</th>
-              <th className={thClass}>Ledger</th>
-              <th className={thClass}>Description</th>
-              <th className={thClass}>Currency</th>
-              <th className={`${thClass} text-right`}>Balance</th>
-              <th className={thClass} />
+            <tr className="border-b border-border bg-muted/20">
+              <th className={`${thBase} text-left relative`}>
+                <div className="flex items-center gap-1">
+                  <span>Type</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "glType" ? null : "glType"); }}
+                    className={`p-0.5 rounded transition-colors ${glTypeFilter.size > 0 ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {glTypeFilter.size > 0 ? <X className="h-3 w-3" /> : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "glType" && (
+                  <FilterDropdown
+                    options={["asset", "liability", "revenue", "expense"]}
+                    selected={glTypeFilter}
+                    labels={TYPE_LABEL}
+                    onChange={(s) => setGLTypeFilter(s)}
+                    onClose={() => setOpenFilter(null)}
+                  />
+                )}
+              </th>
+              <th className={`${thBase} text-left`}>
+                <button onClick={() => handleGLSort("name")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                  Ledger <SortIcon dir={glSortKey === "name" ? glSortDir : null} />
+                </button>
+              </th>
+              <th className={`${thBase} text-left`}>Description</th>
+              <th className={`${thBase} text-left relative`}>
+                <div className="flex items-center gap-1">
+                  <span>Currency</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "glCurrency" ? null : "glCurrency"); }}
+                    className={`p-0.5 rounded transition-colors ${glCurrencyFilter.size > 0 ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {glCurrencyFilter.size > 0 ? <X className="h-3 w-3" /> : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "glCurrency" && (
+                  <FilterDropdown
+                    options={["EUR", "AED", "SAR"]}
+                    selected={glCurrencyFilter}
+                    onChange={(s) => setGLCurrencyFilter(s)}
+                    onClose={() => setOpenFilter(null)}
+                  />
+                )}
+              </th>
+              <th className={`${thBase} text-right`}>
+                <button onClick={() => handleGLSort("balance")} className="flex items-center gap-1 ml-auto hover:text-foreground transition-colors">
+                  Balance <SortIcon dir={glSortKey === "balance" ? glSortDir : null} />
+                </button>
+              </th>
+              <th className={thBase} />
             </tr>
           </thead>
           <tbody>
             {glLedgers.map((ledger) => {
               const hasSubledgers = sharedLedgers.some((l) => l.glId === ledger.id);
-              const net = computeBalance(ledger.id, allLines, true);
+              const net = computeBalance(ledger.id, ledger.type, allLines, true);
               const currency = ledger.currency ?? "EUR";
               return (
                 <tr
@@ -199,22 +318,17 @@ export function LedgerView() {
                   }}
                   className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
                 >
-                  <td className={tdClass}>
+                  <td className="px-4 py-3 text-[13px]">
                     <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
                       {TYPE_LABEL[ledger.type] ?? ledger.type}
                     </span>
                   </td>
-                  <td className={`${tdClass} font-mono text-[12px] font-semibold`}>{ledger.name}</td>
-                  <td className={`${tdClass} text-muted-foreground`}>{ledger.description ?? "—"}</td>
-                  <td className={tdClass}>
+                  <td className="px-4 py-3 font-mono text-[12px] font-semibold">{ledger.name}</td>
+                  <td className="px-4 py-3 text-[13px] text-muted-foreground">{ledger.description ?? "—"}</td>
+                  <td className="px-4 py-3 text-[13px]">
                     <span className="text-[12px] font-mono text-muted-foreground">{currency}</span>
                   </td>
-                  <td
-                    className={cn(
-                      `${tdClass} text-right tabular-nums font-semibold`,
-                      net > 0 ? "text-emerald-600" : net < 0 ? "text-red-500" : "text-muted-foreground/40",
-                    )}
-                  >
+                  <td className="px-4 py-3 text-[13px] text-right tabular-nums font-semibold text-foreground">
                     {net === 0 ? "—" : `${net > 0 ? "+" : "−"}${fmt(Math.abs(net), currency)}`}
                   </td>
                   <td className="px-4 py-3 w-8">
@@ -232,10 +346,7 @@ export function LedgerView() {
   // ── Subledger list ──────────────────────────────────────────────────────────
   const subledgerContent = drilldown.level === "subledger" ? (() => {
     const { glLedger } = drilldown;
-    const subledgers = sharedLedgers.filter(
-      (l) => l.glId === glLedger.id && (!currencyFilter || l.currency === currencyFilter),
-    );
-    const glNet = computeBalance(glLedger.id, allLines, true);
+    const glNet = computeBalance(glLedger.id, glLedger.type, allLines, true);
     const currency = glLedger.currency ?? "EUR";
 
     return (
@@ -249,37 +360,41 @@ export function LedgerView() {
         </button>
 
         <div className="flex items-center justify-between mb-4">
-          {currencySelect}
-          <div className="flex items-center justify-end">
-            <div>
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5 text-right">Balance</p>
-              <p className={cn("text-[20px] font-bold tabular-nums", glNet >= 0 ? "text-emerald-600" : "text-red-500")}>
-                {glNet >= 0 ? "+" : "−"}{fmt(Math.abs(glNet), currency)}
-              </p>
-            </div>
+          <div>
+            <h2 className="text-[15px] font-semibold text-foreground font-mono">{glLedger.name}</h2>
+            {glLedger.description && (
+              <p className="text-[12px] text-muted-foreground mt-0.5">{glLedger.description}</p>
+            )}
           </div>
-        </div>
-
-        <div className="mb-4">
-          <h2 className="text-[15px] font-semibold text-foreground font-mono">{glLedger.name}</h2>
-          {glLedger.description && (
-            <p className="text-[12px] text-muted-foreground mt-0.5">{glLedger.description}</p>
-          )}
+          <div className="text-right">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Balance</p>
+            <p className="text-[20px] font-bold tabular-nums text-foreground">
+              {glNet >= 0 ? "+" : "−"}{fmt(Math.abs(glNet), currency)}
+            </p>
+          </div>
         </div>
 
         <div className="bg-card rounded-xl overflow-hidden border border-border">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border">
-                <th className={thClass}>Subledger</th>
-                <th className={thClass}>Description</th>
-                <th className={`${thClass} text-right`}>Balance</th>
-                <th className={thClass} />
+              <tr className="border-b border-border bg-muted/20">
+                <th className={`${thBase} text-left`}>
+                  <button onClick={() => handleSubSort("name")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Subledger <SortIcon dir={subSortKey === "name" ? subSortDir : null} />
+                  </button>
+                </th>
+                <th className={`${thBase} text-left`}>Description</th>
+                <th className={`${thBase} text-right`}>
+                  <button onClick={() => handleSubSort("balance")} className="flex items-center gap-1 ml-auto hover:text-foreground transition-colors">
+                    Balance <SortIcon dir={subSortKey === "balance" ? subSortDir : null} />
+                  </button>
+                </th>
+                <th className={thBase} />
               </tr>
             </thead>
             <tbody>
               {subledgers.map((sub) => {
-                const net = computeBalance(sub.id, allLines);
+                const net = computeBalance(sub.id, sub.type, allLines);
                 const subCurrency = sub.currency ?? currency;
                 return (
                   <tr
@@ -287,13 +402,9 @@ export function LedgerView() {
                     onClick={() => setDrilldown({ level: "lines", ledger: sub, glLedger })}
                     className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
                   >
-                    <td className={`${tdClass} font-mono text-[12px] font-semibold`}>{sub.name}</td>
-                    <td className={`${tdClass} text-muted-foreground`}>{sub.description ?? "—"}</td>
-                    <td
-                      className={cn(
-                        `${tdClass} text-right tabular-nums font-semibold`,
-                        net > 0 ? "text-emerald-600" : net < 0 ? "text-red-500" : "text-muted-foreground/40",
-                      )}
+                    <td className="px-4 py-3 font-mono text-[12px] font-semibold">{sub.name}</td>
+                    <td className="px-4 py-3 text-[13px] text-muted-foreground">{sub.description ?? "—"}</td>
+                    <td className="px-4 py-3 text-[13px] text-right tabular-nums font-semibold text-foreground"
                     >
                       {net === 0 ? "—" : `${net > 0 ? "+" : "−"}${fmt(Math.abs(net), subCurrency)}`}
                     </td>
@@ -315,13 +426,13 @@ export function LedgerView() {
     const { ledger, glLedger } = drilldown;
     const currency = ledger.currency ?? "EUR";
 
-    const lines = allLines
+    const allLedgerLines = allLines
       .filter((l) => l.ledgerId === ledger.id)
-      .map((l) => ({ ...l, posting: allPostings.find((p) => p.id === l.postingId) }))
-      .sort((a, b) => (a.posting?.valueDate ?? "").localeCompare(b.posting?.valueDate ?? ""));
+      .map((l) => ({ ...l, posting: allPostings.find((p) => p.id === l.postingId) }));
 
-    const net = lines.filter((l) => l.side === "CREDIT").reduce((s, l) => s + l.amount, 0)
-              - lines.filter((l) => l.side === "DEBIT").reduce((s, l) => s + l.amount, 0);
+    const net = computeBalance(ledger.id, ledger.type, allLines);
+
+    const linesActiveFilters = linesProcessFilter.size > 0 ? 1 : 0;
 
     return (
       <div>
@@ -353,32 +464,70 @@ export function LedgerView() {
           </div>
           <div className="text-right">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Balance</p>
-            <p className={cn("text-[20px] font-bold tabular-nums", net >= 0 ? "text-emerald-600" : "text-red-500")}>
+            <p className="text-[20px] font-bold tabular-nums text-foreground">
               {net >= 0 ? "+" : "−"}{fmt(Math.abs(net), currency)}
             </p>
           </div>
         </div>
 
+        {linesActiveFilters > 0 && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[12px] text-muted-foreground">
+              1 filter active · {postingLines.length} line{postingLines.length !== 1 ? "s" : ""}
+            </span>
+            <button onClick={() => setLinesProcessFilter(new Set())} className="text-[12px] text-primary hover:underline">
+              Clear all
+            </button>
+          </div>
+        )}
+
         <div className="bg-card rounded-xl overflow-hidden border border-border">
-          {lines.length === 0 ? (
+          {allLedgerLines.length === 0 ? (
             <div className="px-4 py-10 text-center text-muted-foreground text-[14px]">No ledger entries found</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className={thClass}>Created At</th>
-                    <th className={thClass}>Value Date</th>
-                    <th className={thClass}>Description</th>
-                    <th className={thClass}>Deal</th>
-                    <th className={thClass}>Type</th>
-                    <th className={thClass}>Invoice</th>
-                    <th className={`${thClass} text-right`}>Debit</th>
-                    <th className={`${thClass} text-right`}>Credit</th>
+                  <tr className="border-b border-border bg-muted/20">
+                    <th className={`${thBase} text-left`}>Posting ID</th>
+                    <th className={`${thBase} text-left`}>
+                      <button onClick={() => handleLinesSort("createdAt")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                        Created At <SortIcon dir={linesSortKey === "createdAt" ? linesSortDir : null} />
+                      </button>
+                    </th>
+                    <th className={`${thBase} text-left`}>
+                      <button onClick={() => handleLinesSort("valueDate")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                        Value Date <SortIcon dir={linesSortKey === "valueDate" ? linesSortDir : null} />
+                      </button>
+                    </th>
+                    <th className={`${thBase} text-left`}>Description</th>
+                    <th className={`${thBase} text-left`}>Deal</th>
+                    <th className={`${thBase} text-left relative`}>
+                      <div className="flex items-center gap-1">
+                        <span>Type</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "linesProcess" ? null : "linesProcess"); }}
+                          className={`p-0.5 rounded transition-colors ${linesProcessFilter.size > 0 ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                        >
+                          {linesProcessFilter.size > 0 ? <X className="h-3 w-3" /> : <Filter className="h-3 w-3" />}
+                        </button>
+                      </div>
+                      {openFilter === "linesProcess" && (
+                        <FilterDropdown
+                          options={Object.keys(PROCESS_LABELS)}
+                          selected={linesProcessFilter}
+                          labels={PROCESS_LABELS}
+                          onChange={(s) => setLinesProcessFilter(s)}
+                          onClose={() => setOpenFilter(null)}
+                        />
+                      )}
+                    </th>
+                    <th className={`${thBase} text-right`}>Debit</th>
+                    <th className={`${thBase} text-right`}>Credit</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {lines.map((line) => {
+                  {postingLines.slice((linesPage - 1) * 15, linesPage * 15).map((line) => {
                     const postingCurrency = line.posting?.currency ?? currency;
                     return (
                       <tr
@@ -386,16 +535,17 @@ export function LedgerView() {
                         onClick={() => setSelectedPostingId(line.postingId)}
                         className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
                       >
-                        <td className={tdClass}>
+                        <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">{line.postingId}</td>
+                        <td className="px-4 py-3 text-[13px]">
                           {line.posting?.createdAt ? fmtTimestamp(line.posting.createdAt) : "—"}
                         </td>
-                        <td className={tdClass}>
+                        <td className="px-4 py-3 text-[13px]">
                           {line.posting ? fmtDate(line.posting.valueDate) : "—"}
                         </td>
-                        <td className={`${tdClass} max-w-[220px] truncate text-muted-foreground text-[13px]`}>
+                        <td className="px-4 py-3 text-[13px] max-w-[220px] truncate text-muted-foreground">
                           {line.posting?.description ?? "—"}
                         </td>
-                        <td className={tdClass}>
+                        <td className="px-4 py-3 text-[13px]">
                           {line.posting?.dealId ? (
                             <button
                               onClick={(e) => { e.stopPropagation(); navigate(`/deals/${line.posting!.dealId}`); }}
@@ -409,9 +559,6 @@ export function LedgerView() {
                           <Badge variant="secondary" className="capitalize text-[11px]">
                             {PROCESS_LABELS[line.posting?.businessProcess ?? ""] ?? line.posting?.businessProcess ?? "—"}
                           </Badge>
-                        </td>
-                        <td className={`${tdClass} font-mono text-[12px] text-muted-foreground`}>
-                          {line.invoiceId ?? "—"}
                         </td>
                         <td className="px-4 py-3 text-right text-[14px] tabular-nums font-semibold">
                           {line.side === "DEBIT" ? fmt(line.amount, postingCurrency) : <span className="text-muted-foreground/30">—</span>}
@@ -427,6 +574,30 @@ export function LedgerView() {
             </div>
           )}
         </div>
+
+        {postingLines.length > 15 && (() => {
+          const totalPages = Math.ceil(postingLines.length / 15);
+          return (
+            <div className="flex items-center justify-center gap-2 py-5">
+              <button onClick={() => setLinesPage(1)} disabled={linesPage === 1} className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card disabled:opacity-30 hover:bg-muted transition-colors">
+                <ChevronsLeft className="h-4 w-4 text-foreground" />
+              </button>
+              <button onClick={() => setLinesPage((p) => Math.max(1, p - 1))} disabled={linesPage === 1} className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card disabled:opacity-30 hover:bg-muted transition-colors">
+                <ChevronLeft className="h-4 w-4 text-foreground" />
+              </button>
+              <div className="flex items-center gap-2 text-[14px] mx-1">
+                <input type="number" value={linesPage} onChange={(e) => { const v = parseInt(e.target.value); if (v >= 1 && v <= totalPages) setLinesPage(v); }} className="w-12 h-8 text-center border border-border rounded px-1 text-[14px] bg-card focus:outline-none focus:ring-1 focus:ring-ring" />
+                <span className="text-muted-foreground">of {totalPages}</span>
+              </div>
+              <button onClick={() => setLinesPage((p) => Math.min(totalPages, p + 1))} disabled={linesPage === totalPages} className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card disabled:opacity-30 hover:bg-muted transition-colors">
+                <ChevronRight className="h-4 w-4 text-foreground" />
+              </button>
+              <button onClick={() => setLinesPage(totalPages)} disabled={linesPage === totalPages} className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card disabled:opacity-30 hover:bg-muted transition-colors">
+                <ChevronsRight className="h-4 w-4 text-foreground" />
+              </button>
+            </div>
+          );
+        })()}
       </div>
     );
   })() : null;

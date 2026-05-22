@@ -63,48 +63,12 @@ export const sharedPostingLines: PostingLine[] = [
   // DEAL-008  (ES/EUR · REBU · sell · invoicing)
   // ─────────────────────────────────────────────────────────────────────────
 
-  // posting-017 — invoice_issued — deal-008, inv-002 (seller split)
-  // Triggered: outbound invoice draft → issued (Finance finalizes and sends PDF to client)
-  // subtotal 3 700 + IVA 21% 777 = gross 4 477
-  { id: "pline-017-1", postingId: "posting-017", ledgerId: 2,  side: "DEBIT",  amount: 4477,   invoiceId: "inv-002" },
-  { id: "pline-017-2", postingId: "posting-017", ledgerId: 6,  side: "CREDIT", amount: 3700 },
-  { id: "pline-017-3", postingId: "posting-017", ledgerId: 5,  side: "CREDIT", amount: 777 },
-
   // posting-018 — invoice_issued — deal-008, inv-003 (developer split)
   // Triggered: outbound invoice draft → issued (Finance finalizes and sends PDF to developer)
   // subtotal 5 800 + IVA 21% 1 218 = gross 7 018
   { id: "pline-018-1", postingId: "posting-018", ledgerId: 2,  side: "DEBIT",  amount: 7018,   invoiceId: "inv-003" },
   { id: "pline-018-2", postingId: "posting-018", ledgerId: 6,  side: "CREDIT", amount: 5800 },
   { id: "pline-018-3", postingId: "posting-018", ledgerId: 5,  side: "CREDIT", amount: 1218 },
-
-  // posting-025 — external_cost_accrual — deal-008, inv-014 (Gestoría López EUR 800)
-  // Triggered: inbound vendor invoice draft → issued (Finance receives vendor invoice and marks as issued)
-  // subtotal 800 + IVA 21% 168 = gross 968
-  { id: "pline-025-1", postingId: "posting-025", ledgerId: 7,  side: "DEBIT",  amount: 800 },
-  { id: "pline-025-2", postingId: "posting-025", ledgerId: 5,  side: "DEBIT",  amount: 168 },
-  { id: "pline-025-3", postingId: "posting-025", ledgerId: 4,  side: "CREDIT", amount: 968,    invoiceId: "inv-014" },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // DEAL-014  (ES/EUR · MBU · mortgage · invoicing)
-  // ─────────────────────────────────────────────────────────────────────────
-
-  // posting-019 — invoice_issued — deal-014, inv-004
-  // Triggered: outbound invoice draft → issued (Finance finalizes and sends PDF to CaixaBank)
-  // subtotal 2 480 + IVA 21% 520.8 = gross 3 000.8
-  { id: "pline-019-1", postingId: "posting-019", ledgerId: 2,  side: "DEBIT",  amount: 3000.8, invoiceId: "inv-004" },
-  { id: "pline-019-2", postingId: "posting-019", ledgerId: 6,  side: "CREDIT", amount: 2480 },
-  { id: "pline-019-3", postingId: "posting-019", ledgerId: 5,  side: "CREDIT", amount: 520.8 },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // DEAL-015  (SA/SAR · MBU · mortgage · invoicing)
-  // ─────────────────────────────────────────────────────────────────────────
-
-  // posting-020 — invoice_issued — deal-015, inv-005
-  // Triggered: outbound invoice draft → issued (Finance finalizes and sends PDF to SNB)
-  // subtotal 4 600 + VAT 15% 690 = gross 5 290
-  { id: "pline-020-1", postingId: "posting-020", ledgerId: 16, side: "DEBIT",  amount: 5290,   invoiceId: "inv-005" },
-  { id: "pline-020-2", postingId: "posting-020", ledgerId: 20, side: "CREDIT", amount: 4600 },
-  { id: "pline-020-3", postingId: "posting-020", ledgerId: 19, side: "CREDIT", amount: 690 },
 
   // ─────────────────────────────────────────────────────────────────────────
   // DEAL-016  (AE/AED · REBU · sell · finalized)

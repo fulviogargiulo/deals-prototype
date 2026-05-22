@@ -22,6 +22,7 @@ import {
   type StatusHistoryEntry,
 } from "@huspy/shared-domain";
 import { PartyPicker } from "@/components/PartyPicker";
+import { recalculateDeal } from "@/lib/dealCalculations";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -30,39 +31,19 @@ interface Props {
   onDealCreated: (deal: Deal) => void;
 }
 
-type WizardStep = "context" | "revenue" | "costs" | "success";
+type WizardStep = "context" | "parties" | "costs" | "success";
+type MortgageChannel = "MA" | "B2C" | "BBG";
 
-interface ConfirmedParty {
-  partyId: string;
-  displayName: string;
-  amount: number | undefined;
-  additionalCharges: AdditionalCharge[];
-}
-
-interface AdditionalCharge {
-  description: string;
-  amount: number;
-}
-
-interface CostEntry {
-  partyId: string;
-  displayName: string;
-  amount: number;
-  chargedToAgentPartyId?: string;
-}
-
-interface ReferralEntry {
-  partyId: string;
-  displayName: string;
-  amount: number;
-  chargedToAgentPartyId?: string;
-}
+interface IdentityParty { partyId: string; displayName: string; }
+interface RevenueLine { id: string; partyId: string; displayName: string; amount: number; description: string; }
+interface CostEntry { partyId: string; displayName: string; amount: number; chargedToAgentPartyId?: string; }
+interface ReferralEntry { partyId: string; displayName: string; amount: number; chargedToAgentPartyId?: string; }
 
 const COUNTRY_TO_CURRENCY = { ae: "AED", es: "EUR", sa: "SAR" } as const;
 
-const agentOptions = sharedAgents.map((a) => {
+const allAgentOptions = sharedAgents.map((a) => {
   const party = sharedParties.find((p) => p.id === a.partyId);
-  return { agentId: a.id, partyId: a.partyId, displayName: party?.displayName ?? a.id };
+  return { agentId: a.id, partyId: a.partyId, displayName: party?.displayName ?? a.id, isBroker: a.id.startsWith("broker-") };
 });
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -86,111 +67,132 @@ function AddSlotButton({ label, onClick }: { label: string; onClick: () => void 
   );
 }
 
-function ConfirmedSlot({
-  label,
-  party,
-  currency,
-  onClear,
-  onAddCharge,
-  onRemoveCharge,
-}: {
-  label: string;
-  party: ConfirmedParty;
-  currency: string;
-  onClear: () => void;
-  onAddCharge: (charge: AdditionalCharge) => void;
-  onRemoveCharge: (index: number) => void;
-}) {
-  const [showChargeForm, setShowChargeForm] = useState(false);
-  const [chargeDesc, setChargeDesc] = useState("Conveyance Fee");
-  const [chargeAmount, setChargeAmount] = useState("");
-
-  const handleAddCharge = () => {
-    const amt = parseFloat(chargeAmount);
-    if (!chargeDesc.trim() || isNaN(amt) || amt <= 0) return;
-    onAddCharge({ description: chargeDesc.trim(), amount: amt });
-    setChargeAmount("");
-    setChargeDesc("Conveyance Fee");
-    setShowChargeForm(false);
-  };
-
+function IdentitySlot({ label, party, onClear }: { label: string; party: IdentityParty; onClear: () => void }) {
   return (
-    <div className="rounded-md border border-border bg-accent/10">
-      <div className="flex items-center justify-between px-3 py-2.5">
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-0.5">{label}</p>
-          <p className="text-[13px] font-medium text-foreground">{party.displayName}</p>
-          {(party.amount ?? 0) > 0 ? (
-            <p className="text-[12px] text-muted-foreground">
-              Commission: {currency} {party.amount!.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-            </p>
-          ) : (
-            <p className="text-[12px] text-muted-foreground italic">No commission</p>
-          )}
-        </div>
-        <button onClick={onClear} className="text-[11px] text-muted-foreground hover:text-foreground underline">
-          Change
-        </button>
+    <div className="flex items-center justify-between px-3 py-2.5 rounded-md border border-border bg-accent/10">
+      <div>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-0.5">{label}</p>
+        <p className="text-[13px] font-medium text-foreground">{party.displayName}</p>
       </div>
-
-      {/* Additional charges */}
-      {party.additionalCharges.length > 0 && (
-        <div className="border-t border-border/40 px-3 py-1.5 space-y-1">
-          {party.additionalCharges.map((c, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <span className="text-[12px] text-muted-foreground">{c.description}: {currency} {c.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-              <button onClick={() => onRemoveCharge(i)} className="p-0.5 hover:text-destructive text-muted-foreground transition-colors">
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Add charge form */}
-      {showChargeForm ? (
-        <div className="border-t border-border/40 px-3 py-2 flex items-center gap-2 flex-wrap">
-          <input
-            type="text"
-            value={chargeDesc}
-            onChange={(e) => setChargeDesc(e.target.value)}
-            placeholder="e.g. Conveyance Fee"
-            className="flex-1 min-w-[120px] px-2 py-1 border border-border rounded text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-          <input
-            type="number"
-            min={0}
-            value={chargeAmount}
-            onChange={(e) => setChargeAmount(e.target.value)}
-            placeholder="Amount"
-            className="w-24 px-2 py-1 border border-border rounded text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-          <button
-            onClick={handleAddCharge}
-            disabled={!chargeDesc.trim() || !chargeAmount || parseFloat(chargeAmount) <= 0}
-            className="px-2 py-1 bg-primary text-primary-foreground rounded text-[12px] font-medium disabled:opacity-40"
-          >
-            Add
-          </button>
-          <button onClick={() => setShowChargeForm(false)} className="text-[12px] text-muted-foreground hover:text-foreground">
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <div className="border-t border-border/40 px-3 py-1.5">
-          <button
-            onClick={() => setShowChargeForm(true)}
-            className="flex items-center gap-1 text-[11px] text-primary hover:underline font-medium"
-          >
-            <Plus className="h-3 w-3" /> Add charge (e.g. conveyance, admin fee)
-          </button>
-        </div>
-      )}
+      <button onClick={onClear} className="text-[11px] text-muted-foreground hover:text-foreground underline">Change</button>
     </div>
   );
 }
 
-// ─── Simple party picker for costs/referrals ────────────────────────────────
+function RevenueLinePicker({
+  currency,
+  demandParty,
+  supplyParty,
+  hintAmount,
+  onConfirm,
+  onCancel,
+}: {
+  currency: string;
+  demandParty: IdentityParty | null;
+  supplyParty: IdentityParty | null;
+  hintAmount: number;
+  onConfirm: (partyId: string, displayName: string, amount: number, description: string) => void;
+  onCancel: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
+  const [amountStr, setAmountStr] = useState(hintAmount > 0 ? String(Math.round(hintAmount * 100) / 100) : "");
+  const [description, setDescription] = useState("Commission");
+
+  const eligible = sharedParties.filter((p) => !p.id.startsWith("party-agent-") && !p.id.startsWith("party-conv-"));
+  const results = search.length >= 2
+    ? eligible.filter((p) => p.displayName.toLowerCase().includes(search.toLowerCase()) || p.taxId?.toLowerCase().startsWith(search.toLowerCase())).slice(0, 6)
+    : [];
+
+  const amt = parseFloat(amountStr);
+  const canConfirm = selected != null && !isNaN(amt) && amt !== 0;
+
+  const quickParties = [
+    demandParty ? { ...demandParty, tag: "DEMAND" } : null,
+    supplyParty ? { ...supplyParty, tag: "SUPPLY" } : null,
+  ].filter(Boolean) as Array<IdentityParty & { tag: string }>;
+
+  return (
+    <div className="mt-2 bg-muted/30 border border-border/60 rounded-md px-3 py-3 space-y-2">
+      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Add Revenue Line</p>
+      {!selected ? (
+        <div className="space-y-1.5">
+          {quickParties.map((p) => (
+            <button
+              key={p.partyId}
+              onMouseDown={() => setSelected({ id: p.partyId, name: p.displayName })}
+              className="w-full text-left px-3 py-2 text-[13px] rounded border border-dashed border-border hover:bg-muted flex items-center justify-between"
+            >
+              <span>{p.displayName}</span>
+              <span className="text-[11px] text-muted-foreground">{p.tag}</span>
+            </button>
+          ))}
+          <div className="relative">
+            <input
+              autoFocus
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={supplyParty ? "Or search another party…" : "Search by name or Tax ID…"}
+              className="w-full px-2 py-1.5 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            {results.length > 0 && (
+              <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden">
+                {results.map((p) => (
+                  <button key={p.id} onMouseDown={() => setSelected({ id: p.id, name: p.displayName })}
+                    className="w-full text-left px-3 py-2 text-[13px] hover:bg-muted flex items-center justify-between gap-4">
+                    <span>{p.displayName}</span>
+                    <span className="text-[11px] text-muted-foreground shrink-0">{p.taxId}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-[13px] font-medium">{selected.name}</p>
+            <button onClick={() => setSelected(null)} className="text-[11px] text-muted-foreground hover:text-foreground underline">Change</button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[11px] text-muted-foreground">Amount ({currency})</label>
+              <input
+                autoFocus
+                type="number"
+                value={amountStr}
+                onChange={(e) => setAmountStr(e.target.value)}
+                placeholder="e.g. 18000"
+                className="w-full px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-0.5"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground">Description</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Commission"
+                className="w-full px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring mt-0.5"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onCancel} className="px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground">Cancel</button>
+        <button
+          onClick={() => selected && onConfirm(selected.id, selected.name, amt, description || "Commission")}
+          disabled={!canConfirm}
+          className="px-4 py-1.5 bg-primary text-primary-foreground rounded text-[13px] font-semibold hover:opacity-90 disabled:opacity-40"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function InlinePartyPicker({
   label,
@@ -235,23 +237,18 @@ function InlinePartyPicker({
   return (
     <div className="mt-2 bg-muted/30 border border-border/60 rounded-md px-3 py-3 space-y-2">
       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
-
       {!selected ? (
         <>
           {!newPartyMode ? (
             <div className="relative">
-              <input
-                autoFocus
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+              <input autoFocus type="text" value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name or Tax ID…"
-                className="w-full px-2 py-1.5 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-              />
+                className="w-full px-2 py-1.5 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
               {results.length > 0 && (
                 <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden">
                   {results.map((p) => (
-                    <button key={p.id} onMouseDown={() => setSelected({ id: p.id, name: p.displayName })} className="w-full text-left px-3 py-2 text-[13px] hover:bg-muted flex items-center justify-between gap-4">
+                    <button key={p.id} onMouseDown={() => setSelected({ id: p.id, name: p.displayName })}
+                      className="w-full text-left px-3 py-2 text-[13px] hover:bg-muted flex items-center justify-between gap-4">
                       <span>{p.displayName}</span>
                       <span className="text-[11px] text-muted-foreground shrink-0">{p.taxId}</span>
                     </button>
@@ -259,16 +256,20 @@ function InlinePartyPicker({
                 </div>
               )}
               {search.length >= 2 && results.length === 0 && (
-                <button onMouseDown={() => { setNewPartyMode(true); setNewTaxId(search); }} className="mt-1 text-[12px] text-primary hover:underline">
+                <button onMouseDown={() => { setNewPartyMode(true); setNewTaxId(search); }}
+                  className="mt-1 text-[12px] text-primary hover:underline">
                   No match — create new party for "{search}"
                 </button>
               )}
             </div>
           ) : (
             <div className="flex items-center gap-2 flex-wrap">
-              <input autoFocus type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Full name / company" className="flex-1 min-w-[140px] px-2 py-1.5 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
-              <input type="text" value={newTaxId} onChange={(e) => setNewTaxId(e.target.value)} placeholder="Tax ID" className="w-28 px-2 py-1.5 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
-              <button onClick={handleCreateParty} disabled={!newName || !newTaxId} className="px-3 py-1.5 bg-primary text-primary-foreground rounded text-[13px] font-medium disabled:opacity-40">Next</button>
+              <input autoFocus type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Full name / company"
+                className="flex-1 min-w-[140px] px-2 py-1.5 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+              <input type="text" value={newTaxId} onChange={(e) => setNewTaxId(e.target.value)} placeholder="Tax ID"
+                className="w-28 px-2 py-1.5 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+              <button onClick={handleCreateParty} disabled={!newName || !newTaxId}
+                className="px-3 py-1.5 bg-primary text-primary-foreground rounded text-[13px] font-medium disabled:opacity-40">Next</button>
             </div>
           )}
         </>
@@ -280,24 +281,14 @@ function InlinePartyPicker({
           </div>
           <div className="flex items-center gap-3">
             <label className="text-[12px] text-muted-foreground w-[160px] shrink-0">{amountLabel} ({currency})</label>
-            <input
-              autoFocus
-              type="number"
-              min={0}
-              placeholder="e.g. 1 500"
-              value={amountStr}
-              onChange={(e) => setAmountStr(e.target.value)}
-              className="w-36 px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+            <input autoFocus type="number" min={0} placeholder="e.g. 1 500" value={amountStr} onChange={(e) => setAmountStr(e.target.value)}
+              className="w-36 px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
           </div>
           {agents && agents.length > 0 && (
             <div className="flex items-center gap-3">
               <label className="text-[12px] text-muted-foreground w-[160px] shrink-0">Charge to</label>
-              <select
-                value={chargedToAgentPartyId ?? "__huspy__"}
-                onChange={(e) => setChargedToAgentPartyId(e.target.value === "__huspy__" ? undefined : e.target.value)}
-                className="flex-1 px-2 py-1 border border-border rounded text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-              >
+              <select value={chargedToAgentPartyId ?? "__huspy__"} onChange={(e) => setChargedToAgentPartyId(e.target.value === "__huspy__" ? undefined : e.target.value)}
+                className="flex-1 px-2 py-1 border border-border rounded text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring">
                 <option value="__huspy__">Huspy (deduct from gross revenue)</option>
                 {agents.map((a) => (
                   <option key={a.partyId} value={a.partyId}>{a.name} (deduct from their commission)</option>
@@ -307,14 +298,10 @@ function InlinePartyPicker({
           )}
         </div>
       )}
-
       <div className="flex items-center justify-end gap-2">
         <button onClick={onCancel} className="px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground">Cancel</button>
-        <button
-          onClick={() => selected && onConfirm(selected.id, selected.name, amt, chargedToAgentPartyId)}
-          disabled={!canConfirm}
-          className="px-4 py-1.5 bg-primary text-primary-foreground rounded text-[13px] font-semibold hover:opacity-90 disabled:opacity-40"
-        >
+        <button onClick={() => selected && onConfirm(selected.id, selected.name, amt, chargedToAgentPartyId)} disabled={!canConfirm}
+          className="px-4 py-1.5 bg-primary text-primary-foreground rounded text-[13px] font-semibold hover:opacity-90 disabled:opacity-40">
           Add
         </button>
       </div>
@@ -330,6 +317,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
 
   // ─── Step 1: Context ──────────────────────────────────────────────────────
   const [businessUnit, setBusinessUnit] = useState<BusinessUnit>("rebu");
+  const [channel, setChannel] = useState<MortgageChannel>("B2C");
   const [country, setCountry] = useState<Country>("ae");
   const [market, setMarket] = useState<Market>("primary");
   const [propertyName, setPropertyName] = useState("");
@@ -338,16 +326,21 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
   const [listerSplitPct, setListerSplitPct] = useState("100");
   const [closerSplitPct, setCloserSplitPct] = useState("0");
 
-  // ─── Step 2: Revenue ──────────────────────────────────────────────────────
+  // ─── Step 2: Commission helper inputs (informational — pre-fill revenue lines) ──
   const [dealPrice, setDealPrice] = useState("");
   const [takeRate, setTakeRate] = useState("3");
   const [disbursedAmount, setDisbursedAmount] = useState("");
   const [bankSlab, setBankSlab] = useState("0.5");
 
-  const [buyerSlot, setBuyerSlot] = useState<ConfirmedParty | null>(null);
-  const [counterpartySlot, setCounterpartySlot] = useState<ConfirmedParty | null>(null);
-  const [showBuyerPicker, setShowBuyerPicker] = useState(false);
-  const [showCounterpartyPicker, setShowCounterpartyPicker] = useState(false);
+  // ─── Step 2: Deal Parties (DEMAND / SUPPLY — identity only) ──────────────
+  const [demandParty, setDemandParty] = useState<IdentityParty | null>(null);
+  const [supplyParty, setSupplyParty] = useState<IdentityParty | null>(null);
+  const [showDemandPicker, setShowDemandPicker] = useState(false);
+  const [showSupplyPicker, setShowSupplyPicker] = useState(false);
+
+  // ─── Step 2: Revenue Lines (REVENUE_SOURCE) ───────────────────────────────
+  const [revenueLines, setRevenueLines] = useState<RevenueLine[]>([]);
+  const [showRevenuePicker, setShowRevenuePicker] = useState(false);
 
   // ─── Step 3: Costs & Referrals ────────────────────────────────────────────
   const [costs, setCosts] = useState<CostEntry[]>([]);
@@ -356,39 +349,35 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
   const [showReferralPicker, setShowReferralPicker] = useState(false);
 
   const currency = COUNTRY_TO_CURRENCY[country];
+  const isBrokerChannel = businessUnit === "mortgage" && channel === "MA";
+
+  const agentOptionsForBU = useMemo(
+    () => allAgentOptions.filter((a) => isBrokerChannel ? a.isBroker : !a.isBroker),
+    [isBrokerChannel]
+  );
 
   const listerAgent = useMemo(() => sharedAgents.find((a) => a.id === listerAgentId), [listerAgentId]);
   const closerAgent = useMemo(() => sharedAgents.find((a) => a.id === closerAgentId), [closerAgentId]);
 
   const dealAgentOptions = useMemo(() => {
     const opts: Array<{ partyId: string; name: string }> = [];
-    if (listerAgent) {
-      const name = agentOptions.find((a) => a.agentId === listerAgentId)?.displayName ?? listerAgentId;
-      opts.push({ partyId: listerAgent.partyId, name });
-    }
-    if (closerAgent && closerAgentId) {
-      const name = agentOptions.find((a) => a.agentId === closerAgentId)?.displayName ?? closerAgentId;
-      opts.push({ partyId: closerAgent.partyId, name });
-    }
+    if (listerAgent) opts.push({ partyId: listerAgent.partyId, name: agentOptionsForBU.find((a) => a.agentId === listerAgentId)?.displayName ?? listerAgentId });
+    if (closerAgent && closerAgentId) opts.push({ partyId: closerAgent.partyId, name: agentOptionsForBU.find((a) => a.agentId === closerAgentId)?.displayName ?? closerAgentId });
     return opts;
-  }, [listerAgent, closerAgent, listerAgentId, closerAgentId]);
+  }, [listerAgent, closerAgent, listerAgentId, closerAgentId, agentOptionsForBU]);
 
-  const commissionRevenue = useMemo(() => {
+  // Commission helper: informational — pre-fills the "Add revenue line" amount
+  const commissionHint = useMemo(() => {
     if (businessUnit === "mortgage") return (parseFloat(disbursedAmount) || 0) * ((parseFloat(bankSlab) || 0) / 100);
     return (parseFloat(dealPrice) || 0) * ((parseFloat(takeRate) || 0) / 100);
   }, [businessUnit, dealPrice, takeRate, disbursedAmount, bankSlab]);
 
-  // Total additional charges across both party slots
-  const additionalChargesTotal = useMemo(() => {
-    const buyerExtra = (buyerSlot?.additionalCharges ?? []).reduce((s, c) => s + c.amount, 0);
-    const cpExtra = (counterpartySlot?.additionalCharges ?? []).reduce((s, c) => s + c.amount, 0);
-    return buyerExtra + cpExtra;
-  }, [buyerSlot, counterpartySlot]);
+  const grossRevenue = useMemo(() => revenueLines.reduce((s, l) => s + l.amount, 0), [revenueLines]);
 
-  const grossRevenue = commissionRevenue + additionalChargesTotal;
-
-  const buyerLabel = businessUnit === "mortgage" ? "Borrower" : market === "leasing" ? "Tenant" : "Buyer";
-  const counterpartyLabel = businessUnit === "mortgage" ? "Bank / Lender" : market === "primary" ? "Developer" : market === "leasing" ? "Landlord" : "Seller";
+  const demandLabel = businessUnit === "mortgage" ? "Borrower" : market === "leasing" ? "Tenant" : "Buyer";
+  const supplyLabel = businessUnit === "mortgage" ? "Bank / Lender" : market === "primary" ? "Developer" : market === "leasing" ? "Landlord" : "Seller";
+  const listerLabel = isBrokerChannel ? "Primary Broker *" : "Lister (Seller-side) *";
+  const closerLabel = isBrokerChannel ? "Co-Broker — optional" : "Closer (Buyer-side) — optional";
 
   const handleListerSplitChange = (val: string) => {
     setListerSplitPct(val);
@@ -411,9 +400,13 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     }
   };
 
+  const addRevenueLine = (partyId: string, displayName: string, amount: number, description: string) => {
+    setRevenueLines((prev) => [...prev, { id: `rl-${Date.now()}`, partyId, displayName, amount, description }]);
+    setShowRevenuePicker(false);
+  };
+
   const handleCreate = () => {
     const id = `DEAL-${String(Date.now()).slice(-6)}`;
-
     const primaryAgent = listerAgent ?? closerAgent;
     const primaryParty = primaryAgent ? sharedParties.find((p) => p.id === primaryAgent.partyId) : undefined;
 
@@ -422,6 +415,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       status: "under-review",
       market: businessUnit === "mortgage" ? "primary" : market,
       businessUnit,
+      channel: businessUnit === "mortgage" ? channel : undefined,
       country,
       currency,
       blueprintId: getBlueprint(country, businessUnit).id,
@@ -434,7 +428,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       agentName: primaryParty?.displayName ?? "Unknown Agent",
-      clientName: buyerSlot?.displayName ?? counterpartySlot?.displayName,
+      clientName: demandParty?.displayName,
       title: propertyName || "Untitled Property",
       buildingName: propertyName || "Untitled Property",
       ofCaseNumber: `CASE-${String(Date.now()).slice(-6)}`,
@@ -445,12 +439,11 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       payables: [],
     };
 
-    // Build partyId → agent stake ID map for resolving parentStakeholderId on child costs.
     const agentStakeIdByPartyId: Record<string, string> = {};
     if (listerAgent) agentStakeIdByPartyId[listerAgent.partyId] = `ds-${id}-lister`;
     if (closerAgent) agentStakeIdByPartyId[closerAgent.partyId] = `ds-${id}-closer`;
 
-    // AGENT_PAYOUT stakeholders
+    // AGENT_PAYOUT
     if (listerAgent) {
       sharedDealStakeholders.push({
         id: `ds-${id}-lister`,
@@ -471,63 +464,19 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       });
     }
 
-    // REVENUE_SOURCE stakeholders — commission lines + additional charges per party
-    if (businessUnit === "mortgage" && counterpartySlot && commissionRevenue > 0) {
+    // REVENUE_SOURCE (from revenue lines)
+    revenueLines.forEach((line, i) => {
       sharedDealStakeholders.push({
-        id: `ds-${id}-bank-revenue`,
+        id: `ds-${id}-rev-${i}`,
         dealId: id,
-        partyId: counterpartySlot.partyId,
+        partyId: line.partyId,
         role: "REVENUE_SOURCE",
-        financialAmount: commissionRevenue,
-        description: "Commission",
+        financialAmount: line.amount,
+        description: line.description,
       });
-    }
+    });
 
-    if (businessUnit === "rebu") {
-      if (buyerSlot && (buyerSlot.amount ?? 0) > 0) {
-        sharedDealStakeholders.push({
-          id: `ds-${id}-buyer`,
-          dealId: id,
-          partyId: buyerSlot.partyId,
-          role: "REVENUE_SOURCE",
-          financialAmount: buyerSlot.amount!,
-          description: "Commission",
-        });
-      }
-      buyerSlot?.additionalCharges.forEach((c, i) => {
-        sharedDealStakeholders.push({
-          id: `ds-${id}-buyer-extra-${i}`,
-          dealId: id,
-          partyId: buyerSlot!.partyId,
-          role: "REVENUE_SOURCE",
-          financialAmount: c.amount,
-          description: c.description,
-        });
-      });
-
-      if (counterpartySlot && (counterpartySlot.amount ?? 0) > 0) {
-        sharedDealStakeholders.push({
-          id: `ds-${id}-counterparty`,
-          dealId: id,
-          partyId: counterpartySlot.partyId,
-          role: "REVENUE_SOURCE",
-          financialAmount: counterpartySlot.amount!,
-          description: "Commission",
-        });
-      }
-      counterpartySlot?.additionalCharges.forEach((c, i) => {
-        sharedDealStakeholders.push({
-          id: `ds-${id}-cp-extra-${i}`,
-          dealId: id,
-          partyId: counterpartySlot!.partyId,
-          role: "REVENUE_SOURCE",
-          financialAmount: c.amount,
-          description: c.description,
-        });
-      });
-    }
-
-    // OPERATIONAL_DEDUCTION stakeholders
+    // OPERATIONAL_DEDUCTION
     costs.forEach((c, i) => {
       sharedDealStakeholders.push({
         id: `ds-${id}-cost-${i}`,
@@ -540,7 +489,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       });
     });
 
-    // ACQUISITION_DEDUCTION stakeholders (referrals)
+    // ACQUISITION_DEDUCTION
     referrals.forEach((r, i) => {
       sharedDealStakeholders.push({
         id: `ds-${id}-ref-${i}`,
@@ -553,42 +502,25 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       });
     });
 
-    // DEMAND stakeholder (buyer / tenant / borrower)
-    if (buyerSlot) {
-      sharedDealStakeholders.push({
-        id: `ds-${id}-demand`,
-        dealId: id,
-        partyId: buyerSlot.partyId,
-        role: "DEMAND",
-        isPrimary: true,
-      });
+    // DEMAND (identity only)
+    if (demandParty) {
+      sharedDealStakeholders.push({ id: `ds-${id}-demand`, dealId: id, partyId: demandParty.partyId, role: "DEMAND", isPrimary: true });
     }
 
-    // SUPPLY stakeholder (seller / developer / landlord / bank)
-    if (counterpartySlot) {
-      sharedDealStakeholders.push({
-        id: `ds-${id}-supply`,
-        dealId: id,
-        partyId: counterpartySlot.partyId,
-        role: "SUPPLY",
-        isPrimary: true,
-      });
+    // SUPPLY (identity only)
+    if (supplyParty) {
+      sharedDealStakeholders.push({ id: `ds-${id}-supply`, dealId: id, partyId: supplyParty.partyId, role: "SUPPLY", isPrimary: true });
     }
 
     // Document requirements
     sharedDocumentRequirementTemplates
       .filter((t) => t.market === deal.market && t.businessUnit === deal.businessUnit && t.country === deal.country)
       .forEach((t, i) => {
-        sharedDealDocumentRequirements.push({
-          id: `ddr-${id}-${i}`,
-          dealId: id,
-          label: t.label,
-          required: t.required,
-          status: "pending",
-        });
+        sharedDealDocumentRequirements.push({ id: `ddr-${id}-${i}`, dealId: id, label: t.label, required: t.required, status: "pending" });
       });
 
-    onDealCreated(deal);
+    const calculated = recalculateDeal(deal);
+    onDealCreated(calculated);
     setCreatedDealId(id);
     setStep("success");
     toast({ title: "Deal Created", description: `Deal ${id} has been created.` });
@@ -597,6 +529,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
   const reset = () => {
     setStep("context");
     setBusinessUnit("rebu");
+    setChannel("B2C");
     setCountry("ae");
     setMarket("primary");
     setPropertyName("");
@@ -608,10 +541,12 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     setTakeRate("3");
     setDisbursedAmount("");
     setBankSlab("0.5");
-    setBuyerSlot(null);
-    setCounterpartySlot(null);
-    setShowBuyerPicker(false);
-    setShowCounterpartyPicker(false);
+    setDemandParty(null);
+    setSupplyParty(null);
+    setShowDemandPicker(false);
+    setShowSupplyPicker(false);
+    setRevenueLines([]);
+    setShowRevenuePicker(false);
     setCosts([]);
     setReferrals([]);
     setShowCostPicker(false);
@@ -621,21 +556,17 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
 
   const handleClose = () => { reset(); onClose(); };
 
-  // ─── Step gating ──────────────────────────────────────────────────────────
+  // ─── Validation ───────────────────────────────────────────────────────────
   const splitSum = (parseFloat(listerSplitPct) || 0) + (closerAgentId ? (parseFloat(closerSplitPct) || 0) : 0);
   const splitsValid = !closerAgentId
     ? (parseFloat(listerSplitPct) || 0) === 100
     : Math.abs(splitSum - 100) < 0.01;
   const canLeaveContext = !!listerAgentId && !!propertyName && splitsValid;
+  const revenueShortfall = commissionHint > 0 && grossRevenue < commissionHint;
+  const canLeaveParties = grossRevenue > 0 && !revenueShortfall && demandParty !== null && supplyParty !== null;
 
-  const slotCommissionSum = (buyerSlot?.amount ?? 0) + (counterpartySlot?.amount ?? 0);
-  // Both DEMAND and SUPPLY are mandatory for every deal. Amounts are optional (balance check is informational only).
-  const partySlotsValid = buyerSlot !== null && counterpartySlot !== null;
-
-  const canLeaveRevenue = canLeaveContext && commissionRevenue > 0 && partySlotsValid;
-
-  const stepNum = step === "context" ? 1 : step === "revenue" ? 2 : step === "costs" ? 3 : 3;
-  const stepLabel = step === "context" ? "Context" : step === "revenue" ? "Revenue" : step === "costs" ? "Costs & Referrals" : "Done";
+  const stepNum = step === "context" ? 1 : step === "parties" ? 2 : step === "costs" ? 3 : 3;
+  const stepLabel = step === "context" ? "Context" : step === "parties" ? "Parties & Revenue" : step === "costs" ? "Costs & Referrals" : "Done";
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
@@ -646,8 +577,8 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
               {step === "success" ? "Deal Created" : `New Deal — Step ${stepNum} of 3: ${stepLabel}`}
             </DialogTitle>
             <DialogDescription>
-              {step === "context" && "Declare the property, country, market, and agent splits."}
-              {step === "revenue" && "Declare gross commission and the parties on each side of the deal."}
+              {step === "context" && "Declare the property, country, market, channel, and agent splits."}
+              {step === "parties" && "Link transaction parties to the deal and declare revenue lines."}
               {step === "costs" && "Optional: declare service costs Huspy will pay, and any referral partners."}
               {step === "success" && "Your deal has been created and is now available across all views."}
             </DialogDescription>
@@ -662,7 +593,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-3">Header Data</p>
                 <div className="grid grid-cols-3 gap-4">
                   <Field label="Business Unit">
-                    <Select value={businessUnit} onValueChange={(v) => setBusinessUnit(v as BusinessUnit)}>
+                    <Select value={businessUnit} onValueChange={(v) => { setBusinessUnit(v as BusinessUnit); setListerAgentId(""); setCloserAgentId(""); }}>
                       <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="rebu">REBU</SelectItem>
@@ -670,6 +601,18 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                       </SelectContent>
                     </Select>
                   </Field>
+                  {businessUnit === "mortgage" && (
+                    <Field label="Channel">
+                      <Select value={channel} onValueChange={(v) => { setChannel(v as MortgageChannel); setListerAgentId(""); setCloserAgentId(""); }}>
+                        <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="B2C">B2C (Huspy direct)</SelectItem>
+                          <SelectItem value="MA">MA / Broker</SelectItem>
+                          <SelectItem value="BBG">BBG</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  )}
                   <Field label="Country">
                     <Select value={country} onValueChange={(v) => setCountry(v as Country)}>
                       <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
@@ -711,15 +654,17 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
               </div>
 
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-3">Agent Splits</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-3">
+                  {isBrokerChannel ? "Broker" : "Agent Splits"}
+                </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-3 p-3 rounded-md border border-border bg-accent/10">
-                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Lister (Seller-side) *</p>
-                    <Field label="Agent">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{listerLabel}</p>
+                    <Field label={isBrokerChannel ? "Broker" : "Agent"}>
                       <Select value={listerAgentId} onValueChange={handleListerAgentChange}>
-                        <SelectTrigger className="h-9 text-[13px]"><SelectValue placeholder="Select agent…" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-[13px]"><SelectValue placeholder={`Select ${isBrokerChannel ? "broker" : "agent"}…`} /></SelectTrigger>
                         <SelectContent>
-                          {agentOptions.map((a) => (
+                          {agentOptionsForBU.map((a) => (
                             <SelectItem key={a.agentId} value={a.agentId} disabled={a.agentId === closerAgentId}>
                               {a.displayName}
                             </SelectItem>
@@ -733,19 +678,21 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                     {listerAgentId && (() => {
                       const af = sharedAgentFinancials.find((f) => f.agentId === listerAgentId);
                       return af
-                        ? <p className="text-[11px] text-muted-foreground">Strategy: <span className="font-medium text-foreground">{af.strategy.kind}{af.strategy.kind === "flat" ? ` ${af.strategy.pct}%` : ""}</span></p>
+                        ? <p className="text-[11px] text-muted-foreground">Strategy: <span className="font-medium text-foreground">
+                            {af.strategy.kind === "broker-rate-slab" ? "broker-rate-slab (resolved at calculation time)" : `${af.strategy.kind}${af.strategy.kind === "flat" ? ` ${af.strategy.pct}%` : ""}`}
+                          </span></p>
                         : <p className="text-[11px] text-amber-500">No AgentFinancials record</p>;
                     })()}
                   </div>
 
                   <div className="space-y-3 p-3 rounded-md border border-border bg-accent/10">
-                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Closer (Buyer-side) — optional</p>
-                    <Field label="Agent">
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{closerLabel}</p>
+                    <Field label={isBrokerChannel ? "Co-Broker" : "Agent"}>
                       <Select value={closerAgentId} onValueChange={handleCloserAgentChange}>
-                        <SelectTrigger className="h-9 text-[13px]"><SelectValue placeholder="None (single agent)" /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-[13px]"><SelectValue placeholder="None" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">None</SelectItem>
-                          {agentOptions.map((a) => (
+                          {agentOptionsForBU.map((a) => (
                             <SelectItem key={a.agentId} value={a.agentId} disabled={a.agentId === listerAgentId}>
                               {a.displayName}
                             </SelectItem>
@@ -776,156 +723,153 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
           </ScrollArea>
         )}
 
-        {/* ─── Step 2: Revenue ─── */}
-        {step === "revenue" && (
+        {/* ─── Step 2: Parties & Revenue ─── */}
+        {step === "parties" && (
           <ScrollArea className="max-h-[calc(90vh-220px)]">
-            <div className="px-6 py-5 space-y-5">
-              {businessUnit === "rebu" ? (
-                <>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-3">Commission</p>
-                    <div className="grid grid-cols-3 gap-4">
-                      <Field label={`Property Price (${currency})`}>
-                        <Input type="number" value={dealPrice} onChange={(e) => setDealPrice(e.target.value)} className="h-9 text-[13px]" />
-                      </Field>
-                      <Field label="Take Rate %">
-                        <Input type="number" step="0.1" value={takeRate} onChange={(e) => setTakeRate(e.target.value)} className="h-9 text-[13px]" />
-                      </Field>
-                      <Field label={`Commission (${currency}) — derived`}>
-                        <Input readOnly value={commissionRevenue > 0 ? commissionRevenue.toFixed(2) : ""} className="h-9 text-[13px] bg-muted font-mono" />
-                      </Field>
-                    </div>
-                  </div>
+            <div className="px-6 py-5 space-y-6">
 
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-3">
-                      Deal Parties
-                      <span className="ml-2 text-muted-foreground/60 normal-case">— link transaction parties; amount optional (leave blank if this side doesn't pay commission)</span>
-                    </p>
-                    <div className="space-y-3">
-                      {buyerSlot ? (
-                        <ConfirmedSlot
-                          label={buyerLabel}
-                          party={buyerSlot}
-                          currency={currency}
-                          onClear={() => setBuyerSlot(null)}
-                          onAddCharge={(c) => setBuyerSlot((p) => p ? { ...p, additionalCharges: [...p.additionalCharges, c] } : p)}
-                          onRemoveCharge={(i) => setBuyerSlot((p) => p ? { ...p, additionalCharges: p.additionalCharges.filter((_, idx) => idx !== i) } : p)}
-                        />
-                      ) : showBuyerPicker ? (
-                        <PartyPicker
-                          label={buyerLabel}
-                          currency={currency}
-                          amountLabel="Commission owed to Huspy"
-                          excludePartyIds={counterpartySlot ? [counterpartySlot.partyId] : []}
-                          onConfirm={(partyId, displayName, amount) => {
-                            setBuyerSlot({ partyId, displayName, amount, additionalCharges: [] });
-                            setShowBuyerPicker(false);
-                          }}
-                          onCancel={() => setShowBuyerPicker(false)}
-                        />
-                      ) : (
-                        <AddSlotButton label={buyerLabel} onClick={() => setShowBuyerPicker(true)} />
-                      )}
+              {/* Deal Parties — identity only */}
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Deal Parties — required</p>
+                <p className="text-[12px] text-muted-foreground/70 mb-3">Who is on each side of the transaction? Identity only — revenue is declared separately below.</p>
+                <div className="space-y-2">
+                  {demandParty ? (
+                    <IdentitySlot label={`DEMAND — ${demandLabel}`} party={demandParty} onClear={() => setDemandParty(null)} />
+                  ) : showDemandPicker ? (
+                    <PartyPicker
+                      label={demandLabel}
+                      currency={currency}
+                      amountLabel=""
+                      showAmount={false}
+                      excludePartyIds={supplyParty ? [supplyParty.partyId] : []}
+                      onConfirm={(partyId, displayName) => { setDemandParty({ partyId, displayName }); setShowDemandPicker(false); }}
+                      onCancel={() => setShowDemandPicker(false)}
+                    />
+                  ) : (
+                    <AddSlotButton label={`${demandLabel} (DEMAND)`} onClick={() => setShowDemandPicker(true)} />
+                  )}
 
-                      {counterpartySlot ? (
-                        <ConfirmedSlot
-                          label={counterpartyLabel}
-                          party={counterpartySlot}
-                          currency={currency}
-                          onClear={() => setCounterpartySlot(null)}
-                          onAddCharge={(c) => setCounterpartySlot((p) => p ? { ...p, additionalCharges: [...p.additionalCharges, c] } : p)}
-                          onRemoveCharge={(i) => setCounterpartySlot((p) => p ? { ...p, additionalCharges: p.additionalCharges.filter((_, idx) => idx !== i) } : p)}
-                        />
-                      ) : showCounterpartyPicker ? (
-                        <PartyPicker
-                          label={counterpartyLabel}
-                          currency={currency}
-                          amountLabel="Commission owed to Huspy"
-                          excludePartyIds={buyerSlot ? [buyerSlot.partyId] : []}
-                          onConfirm={(partyId, displayName, amount) => {
-                            setCounterpartySlot({ partyId, displayName, amount, additionalCharges: [] });
-                            setShowCounterpartyPicker(false);
-                          }}
-                          onCancel={() => setShowCounterpartyPicker(false)}
-                        />
-                      ) : (
-                        <AddSlotButton label={counterpartyLabel} onClick={() => setShowCounterpartyPicker(true)} />
-                      )}
-                    </div>
+                  {supplyParty ? (
+                    <IdentitySlot label={`SUPPLY — ${supplyLabel}`} party={supplyParty} onClear={() => setSupplyParty(null)} />
+                  ) : showSupplyPicker ? (
+                    <PartyPicker
+                      label={supplyLabel}
+                      currency={currency}
+                      amountLabel=""
+                      showAmount={false}
+                      excludePartyIds={demandParty ? [demandParty.partyId] : []}
+                      onConfirm={(partyId, displayName) => { setSupplyParty({ partyId, displayName }); setShowSupplyPicker(false); }}
+                      onCancel={() => setShowSupplyPicker(false)}
+                    />
+                  ) : (
+                    <AddSlotButton label={`${supplyLabel} (SUPPLY)`} onClick={() => setShowSupplyPicker(true)} />
+                  )}
+                </div>
+              </div>
 
-                    {/* Balance indicator — commission only */}
-                    {commissionRevenue > 0 && buyerSlot && counterpartySlot && (
-                      <p className={`mt-3 text-[12px] font-mono ${Math.abs(slotCommissionSum - commissionRevenue) < 0.01 ? "text-emerald-600" : "text-destructive"}`}>
-                        Commission assigned: {currency} {slotCommissionSum.toLocaleString(undefined, { maximumFractionDigits: 2 })} / {currency} {commissionRevenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                        {Math.abs(slotCommissionSum - commissionRevenue) < 0.01
-                          ? " ✓"
-                          : ` — ${Math.abs(commissionRevenue - slotCommissionSum).toLocaleString(undefined, { maximumFractionDigits: 2 })} unassigned`}
-                      </p>
+              {/* Revenue Lines */}
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Revenue Lines — REVENUE_SOURCE</p>
+                <p className="text-[12px] text-muted-foreground/70 mb-3">
+                  {isBrokerChannel
+                    ? "Enter the bank commission Huspy earns. Broker payout is computed from Broker Rate Slabs at calculation time."
+                    : "All sources of Huspy revenue on this deal (commissions, conveyance fees, etc.)."}
+                </p>
+
+                {/* Commission helper */}
+                <div className="bg-accent/50 rounded-md px-3 py-2.5 mb-3">
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Commission helper</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {businessUnit === "mortgage" ? (
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-[12px] text-muted-foreground whitespace-nowrap">Principal ({currency})</label>
+                          <input type="number" value={disbursedAmount} onChange={(e) => setDisbursedAmount(e.target.value)} placeholder="e.g. 1500000"
+                            className="w-32 px-2 py-1 border border-border rounded text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                        </div>
+                        <span className="text-muted-foreground text-[12px]">×</span>
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-[12px] text-muted-foreground whitespace-nowrap">Bank rate %</label>
+                          <input type="number" step="0.01" value={bankSlab} onChange={(e) => setBankSlab(e.target.value)} placeholder="1.2"
+                            className="w-20 px-2 py-1 border border-border rounded text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-[12px] text-muted-foreground whitespace-nowrap">Property price ({currency})</label>
+                          <input type="number" value={dealPrice} onChange={(e) => setDealPrice(e.target.value)} placeholder="e.g. 1500000"
+                            className="w-32 px-2 py-1 border border-border rounded text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                        </div>
+                        <span className="text-muted-foreground text-[12px]">×</span>
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-[12px] text-muted-foreground whitespace-nowrap">Take rate %</label>
+                          <input type="number" step="0.1" value={takeRate} onChange={(e) => setTakeRate(e.target.value)} placeholder="3"
+                            className="w-20 px-2 py-1 border border-border rounded text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                        </div>
+                      </>
                     )}
-                    {additionalChargesTotal > 0 && (
-                      <p className="mt-1 text-[12px] text-muted-foreground font-mono">
-                        Additional charges: {currency} {additionalChargesTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                        {" · "}Total gross: {currency} {grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                      </p>
+                    <span className="text-muted-foreground text-[12px]">=</span>
+                    <span className="font-mono text-[13px] font-semibold text-foreground">
+                      {currency} {commissionHint > 0 ? commissionHint.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"}
+                    </span>
+                    {commissionHint > 0 && (
+                      <button
+                        onClick={() => setShowRevenuePicker(true)}
+                        className="text-[12px] text-primary hover:underline font-medium"
+                      >
+                        ↳ Add as revenue line
+                      </button>
                     )}
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-5">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-3">Commission</p>
-                    <div className="grid grid-cols-3 gap-4">
-                      <Field label={`Disbursed Amount (${currency})`}>
-                        <Input type="number" value={disbursedAmount} onChange={(e) => setDisbursedAmount(e.target.value)} className="h-9 text-[13px]" />
-                      </Field>
-                      <Field label="Bank Slab %">
-                        <Input type="number" step="0.01" value={bankSlab} onChange={(e) => setBankSlab(e.target.value)} className="h-9 text-[13px]" />
-                      </Field>
-                      <Field label={`Gross Commission (${currency}) — derived`}>
-                        <Input readOnly value={commissionRevenue.toFixed(2)} className="h-9 text-[13px] bg-muted font-mono" />
-                      </Field>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-3">
-                      Deal Parties
-                      <span className="ml-2 text-muted-foreground/60 normal-case">— both required</span>
-                    </p>
-                    <div className="space-y-3">
-                      {buyerSlot ? (
-                        <ConfirmedSlot label={buyerLabel} party={buyerSlot} currency={currency} onClear={() => setBuyerSlot(null)} onAddCharge={() => {}} onRemoveCharge={() => {}} />
-                      ) : showBuyerPicker ? (
-                        <PartyPicker
-                          label={buyerLabel}
-                          currency={currency}
-                          amountLabel="Commission owed to Huspy"
-                          onConfirm={(partyId, displayName, amount) => { setBuyerSlot({ partyId, displayName, amount, additionalCharges: [] }); setShowBuyerPicker(false); }}
-                          onCancel={() => setShowBuyerPicker(false)}
-                        />
-                      ) : (
-                        <AddSlotButton label={buyerLabel} onClick={() => setShowBuyerPicker(true)} />
-                      )}
-
-                      {counterpartySlot ? (
-                        <ConfirmedSlot label={counterpartyLabel} party={counterpartySlot} currency={currency} onClear={() => setCounterpartySlot(null)} onAddCharge={() => {}} onRemoveCharge={() => {}} />
-                      ) : showCounterpartyPicker ? (
-                        <PartyPicker
-                          label={counterpartyLabel}
-                          currency={currency}
-                          amountLabel="Commission owed to Huspy"
-                          excludePartyIds={buyerSlot ? [buyerSlot.partyId] : []}
-                          onConfirm={(partyId, displayName, amount) => { setCounterpartySlot({ partyId, displayName, amount, additionalCharges: [] }); setShowCounterpartyPicker(false); }}
-                          onCancel={() => setShowCounterpartyPicker(false)}
-                        />
-                      ) : (
-                        <AddSlotButton label={counterpartyLabel} onClick={() => setShowCounterpartyPicker(true)} />
-                      )}
-                    </div>
                   </div>
                 </div>
-              )}
+
+                {/* Revenue lines list */}
+                {revenueLines.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {revenueLines.map((line) => (
+                      <div key={line.id} className="flex items-center justify-between px-3 py-2 rounded-md border border-border bg-accent/10">
+                        <div>
+                          <p className="text-[13px] font-medium">{line.displayName}</p>
+                          <p className="text-[12px] text-muted-foreground">{line.description}: {currency} {line.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+                        </div>
+                        <button onClick={() => setRevenueLines((prev) => prev.filter((l) => l.id !== line.id))} className="p-1 hover:text-destructive text-muted-foreground transition-colors">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <p className="text-[12px] font-mono text-right text-muted-foreground">
+                      Gross Revenue: <span className="text-foreground font-semibold">{currency} {grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    </p>
+                    {revenueShortfall && (
+                      <p className="text-[12px] text-destructive text-right">
+                        Below expected commission of {currency} {commissionHint.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({businessUnit === "mortgage" ? "principal × bank rate" : "deal price × take rate"}). Add more lines or adjust the helper.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {revenueShortfall && revenueLines.length === 0 && (
+                  <p className="text-[12px] text-destructive mb-2">
+                    Expected commission: {currency} {commissionHint.toLocaleString(undefined, { maximumFractionDigits: 2 })}. Add at least one revenue line to match or exceed it.
+                  </p>
+                )}
+
+                {showRevenuePicker ? (
+                  <RevenueLinePicker
+                    currency={currency}
+                    demandParty={demandParty}
+                    supplyParty={supplyParty}
+                    hintAmount={commissionHint}
+                    onConfirm={addRevenueLine}
+                    onCancel={() => setShowRevenuePicker(false)}
+                  />
+                ) : (
+                  <button onClick={() => setShowRevenuePicker(true)} className="flex items-center gap-1 text-[13px] text-primary hover:underline font-medium">
+                    <Plus className="h-3.5 w-3.5" /> Add revenue line
+                  </button>
+                )}
+              </div>
             </div>
           </ScrollArea>
         )}
@@ -935,16 +879,13 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
           <ScrollArea className="max-h-[calc(90vh-220px)]">
             <div className="px-6 py-5 space-y-6">
 
-              {/* Operating Costs */}
               <div>
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Operating Costs — Huspy Pays</p>
                 <p className="text-[12px] text-muted-foreground/70 mb-3">Notary, conveyance agent, legal fees paid by Huspy. Deducted from net revenue.</p>
                 {costs.length > 0 && (
                   <div className="space-y-2 mb-3">
                     {costs.map((c, i) => {
-                      const absorber = c.chargedToAgentPartyId
-                        ? dealAgentOptions.find((a) => a.partyId === c.chargedToAgentPartyId)?.name ?? c.chargedToAgentPartyId
-                        : null;
+                      const absorber = c.chargedToAgentPartyId ? dealAgentOptions.find((a) => a.partyId === c.chargedToAgentPartyId)?.name ?? c.chargedToAgentPartyId : null;
                       return (
                         <div key={i} className="flex items-center justify-between px-3 py-2 rounded-md border border-border bg-accent/10">
                           <div>
@@ -963,37 +904,23 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                   </div>
                 )}
                 {showCostPicker ? (
-                  <InlinePartyPicker
-                    label="Add service cost"
-                    amountLabel="Cost amount"
-                    currency={currency}
-                    agents={dealAgentOptions}
-                    onConfirm={(partyId, displayName, amount, chargedToAgentPartyId) => {
-                      setCosts((prev) => [...prev, { partyId, displayName, amount, chargedToAgentPartyId }]);
-                      setShowCostPicker(false);
-                    }}
-                    onCancel={() => setShowCostPicker(false)}
-                  />
+                  <InlinePartyPicker label="Add service cost" amountLabel="Cost amount" currency={currency} agents={dealAgentOptions}
+                    onConfirm={(partyId, displayName, amount, chargedToAgentPartyId) => { setCosts((prev) => [...prev, { partyId, displayName, amount, chargedToAgentPartyId }]); setShowCostPicker(false); }}
+                    onCancel={() => setShowCostPicker(false)} />
                 ) : (
-                  <button
-                    onClick={() => setShowCostPicker(true)}
-                    className="flex items-center gap-1 text-[13px] text-primary hover:underline font-medium"
-                  >
+                  <button onClick={() => setShowCostPicker(true)} className="flex items-center gap-1 text-[13px] text-primary hover:underline font-medium">
                     <Plus className="h-3.5 w-3.5" /> Add service cost
                   </button>
                 )}
               </div>
 
-              {/* Referrals */}
               <div>
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Referrals</p>
                 <p className="text-[12px] text-muted-foreground/70 mb-3">Referral fee paid to external partner. Deducted from agent commission pool before splits.</p>
                 {referrals.length > 0 && (
                   <div className="space-y-2 mb-3">
                     {referrals.map((r, i) => {
-                      const absorber = r.chargedToAgentPartyId
-                        ? dealAgentOptions.find((a) => a.partyId === r.chargedToAgentPartyId)?.name ?? r.chargedToAgentPartyId
-                        : null;
+                      const absorber = r.chargedToAgentPartyId ? dealAgentOptions.find((a) => a.partyId === r.chargedToAgentPartyId)?.name ?? r.chargedToAgentPartyId : null;
                       return (
                         <div key={i} className="flex items-center justify-between px-3 py-2 rounded-md border border-border bg-accent/10">
                           <div>
@@ -1012,28 +939,16 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                   </div>
                 )}
                 {showReferralPicker ? (
-                  <InlinePartyPicker
-                    label="Add referral partner"
-                    amountLabel="Referral fee"
-                    currency={currency}
-                    agents={dealAgentOptions}
-                    onConfirm={(partyId, displayName, amount, chargedToAgentPartyId) => {
-                      setReferrals((prev) => [...prev, { partyId, displayName, amount, chargedToAgentPartyId }]);
-                      setShowReferralPicker(false);
-                    }}
-                    onCancel={() => setShowReferralPicker(false)}
-                  />
+                  <InlinePartyPicker label="Add referral partner" amountLabel="Referral fee" currency={currency} agents={dealAgentOptions}
+                    onConfirm={(partyId, displayName, amount, chargedToAgentPartyId) => { setReferrals((prev) => [...prev, { partyId, displayName, amount, chargedToAgentPartyId }]); setShowReferralPicker(false); }}
+                    onCancel={() => setShowReferralPicker(false)} />
                 ) : (
-                  <button
-                    onClick={() => setShowReferralPicker(true)}
-                    className="flex items-center gap-1 text-[13px] text-primary hover:underline font-medium"
-                  >
+                  <button onClick={() => setShowReferralPicker(true)} className="flex items-center gap-1 text-[13px] text-primary hover:underline font-medium">
                     <Plus className="h-3.5 w-3.5" /> Add referral
                   </button>
                 )}
               </div>
 
-              {/* Summary of what will be created */}
               <div className="rounded-md border border-border/60 bg-muted/20 px-4 py-3 space-y-1">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">P&L Summary</p>
                 <SummaryRow label="Gross Revenue" value={`${currency} ${grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`} />
@@ -1054,8 +969,8 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
             <Button
               variant="outline"
               onClick={() => {
-                if (step === "revenue") setStep("context");
-                else if (step === "costs") setStep("revenue");
+                if (step === "parties") setStep("context");
+                else if (step === "costs") setStep("parties");
               }}
               disabled={step === "context"}
             >
@@ -1064,14 +979,14 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleClose}>Cancel</Button>
               {step === "context" && (
-                <Button onClick={() => setStep("revenue")} disabled={!canLeaveContext}>Next</Button>
+                <Button onClick={() => setStep("parties")} disabled={!canLeaveContext}>Next</Button>
               )}
-              {step === "revenue" && (
+              {step === "parties" && (
                 <>
-                  <Button variant="outline" onClick={handleCreate} disabled={!canLeaveRevenue}>
+                  <Button variant="outline" onClick={handleCreate} disabled={!canLeaveParties}>
                     Create (skip costs)
                   </Button>
-                  <Button onClick={() => setStep("costs")} disabled={!canLeaveRevenue}>Next</Button>
+                  <Button onClick={() => setStep("costs")} disabled={!canLeaveParties}>Next</Button>
                 </>
               )}
               {step === "costs" && (

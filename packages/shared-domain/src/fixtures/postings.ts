@@ -327,20 +327,6 @@ export const sharedPostings: Posting[] = [
   // ── deal-008 — seller + developer split (REBU, EUR) ───────────────────────
 
   {
-    id: "posting-017",
-    dealId: "deal-008",
-    businessUnit: "rebu",
-    externalRef: "P0017",
-    businessProcess: "invoice_issued",
-    createdBy: "system",
-    createdAt: "2026-03-05T10:00:00.000Z",
-    valueDate: "2026-03-05",
-    currency: "EUR",
-
-    description: "Invoice to seller — deal-008 (EUR 3 700 net of subsidy)",
-  },
-
-  {
     id: "posting-018",
     dealId: "deal-008",
     businessUnit: "rebu",
@@ -352,38 +338,6 @@ export const sharedPostings: Posting[] = [
     currency: "EUR",
 
     description: "Invoice to developer — deal-008 (EUR 5 800)",
-  },
-
-  // ── deal-014 — MBU, bank invoice (MBU, EUR) ─────────────────────────────
-
-  {
-    id: "posting-019",
-    dealId: "deal-014",
-    businessUnit: "mortgage",
-    externalRef: "P0019",
-    businessProcess: "invoice_issued",
-    createdBy: "system",
-    createdAt: "2026-04-15T10:00:00.000Z",
-    valueDate: "2026-04-15",
-    currency: "EUR",
-
-    description: "Invoice to bank — deal-014 (EUR 2 480)",
-  },
-
-  // ── deal-015 — MBU, bank invoice (MBU, SAR) ─────────────────────────────
-
-  {
-    id: "posting-020",
-    dealId: "deal-015",
-    businessUnit: "mortgage",
-    externalRef: "P0020",
-    businessProcess: "invoice_issued",
-    createdBy: "system",
-    createdAt: "2026-05-02T10:00:00.000Z",
-    valueDate: "2026-05-02",
-    currency: "SAR",
-
-    description: "Invoice to bank — deal-015 (SAR 4 600)",
   },
 
   // ── Conveyance invoices + payments ────────────────────────────────────────
@@ -412,20 +366,6 @@ export const sharedPostings: Posting[] = [
     valueDate: "2026-01-10",
     currency: "EUR",
     description: "Payment — Gestoría López & Asociados, deal-001",
-  },
-
-  // deal-008 — Gestoría López accrual (EUR 800, pending payment)
-  {
-    id: "posting-025",
-    dealId: "deal-008",
-    businessUnit: "rebu",
-    externalRef: "CONV-2026-008",
-    businessProcess: "external_cost_accrual",
-    createdBy: "user-ops-finance",
-    createdAt: "2026-03-05T10:00:00.000Z",
-    valueDate: "2026-03-05",
-    currency: "EUR",
-    description: "Conveyance fee — deal-008 (Gestoría López & Asociados)",
   },
 
   // deal-016 — TAMM Legal accrual (AED 3 000)

@@ -4,26 +4,12 @@ import { Settings, Upload, Plus, UserRound, DollarSign, List, Receipt, Clipboard
 import { getDeals, setDeals as setStoreDeals, addDeals as addStoreDeals } from "@/data/dealStore";
 import { DealListingView } from "@/components/DealListingView";
 import { InvoicesView } from "@/components/InvoicesView";
-import { Deal, DealMarket, DealStatus, BusinessUnit, Country } from "@/data/types";
-import { MultiSelectFilter } from "@/components/MultiSelectFilter";
-import { DateRangePicker, DateRange, TimePeriod, getPresetRange } from "@/components/DateRangePicker";
+import { Deal } from "@/data/types";
 import { BulkUploadDialog } from "@/components/BulkUploadDialog";
 import { AddDealDialog } from "@/components/AddDealDialog";
 import { DocRequirementsView } from "@/components/DocRequirementsView";
 import { LedgerView } from "@/components/LedgerView";
 import { BrokerRateSlabsView } from "@/components/BrokerRateSlabsView";
-
-const COUNTRIES: Country[] = ["ae", "es", "sa"];
-const BUSINESS_UNITS: BusinessUnit[] = ["rebu", "mortgage"];
-const MARKET_TYPES: DealMarket[] = ["primary", "secondary", "leasing"];
-const CHANNELS = ["MA/Broker", "BBG/Commercial", "B2C/Digital", "REA", "REA Purchase", "BYOB", "Direct Sales"];
-const DEAL_STATUSES: DealStatus[] = ["pending-details", "under-review", "pending-agent-approval", "invoicing", "finalized", "canceled"];
-
-export const countryCurrencyMap: Record<Country, string> = {
-  ae: "AED",
-  es: "EUR",
-  sa: "SAR",
-};
 
 type ViewMode = "listing" | "invoices" | "ledger" | "deal-config";
 type DealConfigSubTab = "doc-requirements" | "broker-rate-slabs";
@@ -40,11 +26,6 @@ const Deals = () => {
   const viewMode = (searchParams.get("tab") as ViewMode) ?? "listing";
   const setViewMode = (mode: ViewMode) => setSearchParams({ tab: mode });
   const [dealConfigTab, setDealConfigTab] = useState<DealConfigSubTab>("doc-requirements");
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([...COUNTRIES]);
-  const [selectedBUs, setSelectedBUs] = useState<string[]>([...BUSINESS_UNITS]);
-  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([...MARKET_TYPES]);
-  const [selectedChannels, setSelectedChannels] = useState<string[]>([...CHANNELS]);
-  
   const [allDeals, setAllDealsState] = useState<Deal[]>(getDeals());
   const setAllDeals = (updater: Deal[] | ((prev: Deal[]) => Deal[])) => {
     setAllDealsState(prev => {
@@ -56,10 +37,6 @@ const Deals = () => {
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [addDealOpen, setAddDealOpen] = useState(false);
 
-  // Shared date range state
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("YTD");
-  const [dateRange, setDateRange] = useState<DateRange>(getPresetRange("YTD"));
-
   const handleDealUpdate = (updated: Deal) => {
     setAllDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
   };
@@ -67,28 +44,6 @@ const Deals = () => {
   const handleBulkDealsUpdate = (updatedDeals: Deal[]) => {
     setAllDeals(updatedDeals);
   };
-
-  const currency = selectedCountries.length > 0
-    ? countryCurrencyMap[selectedCountries[0] as Country]
-    : "EUR";
-
-  const showChannel = selectedBUs.includes("mortgage") && selectedCountries.includes("ae");
-
-  const filtered = allDeals.filter((deal) => {
-    if (selectedCountries.length > 0 && selectedCountries.length < COUNTRIES.length) {
-      if (!selectedCountries.includes(deal.country)) return false;
-    }
-    if (selectedBUs.length > 0 && selectedBUs.length < BUSINESS_UNITS.length) {
-      if (!selectedBUs.includes(deal.businessUnit)) return false;
-    }
-    if (selectedMarkets.length > 0 && selectedMarkets.length < MARKET_TYPES.length) {
-      if (!selectedMarkets.includes(deal.market)) return false;
-    }
-    if (showChannel && selectedChannels.length > 0 && selectedChannels.length < CHANNELS.length) {
-      if (deal.channel && !selectedChannels.includes(deal.channel)) return false;
-    }
-    return true;
-  });
 
   return (
     <div className="flex-1 min-w-0 flex flex-col min-h-screen bg-background overflow-x-hidden">
@@ -159,47 +114,9 @@ const Deals = () => {
             )}
           </div>
 
-          {/* Filter selectors + Date picker */}
-          {viewMode === "listing" && (
-            <div className="flex items-center gap-3 mb-6 flex-wrap">
-              <MultiSelectFilter
-                label="Country"
-                options={COUNTRIES}
-                selected={selectedCountries}
-                onChange={setSelectedCountries}
-              />
-              <MultiSelectFilter
-                label="Business Unit"
-                options={BUSINESS_UNITS}
-                selected={selectedBUs}
-                onChange={setSelectedBUs}
-              />
-              <MultiSelectFilter
-                label="Market Type"
-                options={MARKET_TYPES}
-                selected={selectedMarkets}
-                onChange={setSelectedMarkets}
-              />
-              {showChannel && (
-                <MultiSelectFilter
-                  label="Channel"
-                  options={CHANNELS}
-                  selected={selectedChannels}
-                  onChange={setSelectedChannels}
-                />
-              )}
-              <DateRangePicker
-                dateRange={dateRange}
-                timePeriod={timePeriod}
-                onDateRangeChange={setDateRange}
-                onTimePeriodChange={setTimePeriod}
-              />
-            </div>
-          )}
-
           {/* View */}
           {viewMode === "listing" ? (
-            <DealListingView deals={filtered} currency={currency} dateRange={dateRange} />
+            <DealListingView deals={allDeals} />
           ) : viewMode === "invoices" ? (
             <InvoicesView />
           ) : viewMode === "ledger" ? (

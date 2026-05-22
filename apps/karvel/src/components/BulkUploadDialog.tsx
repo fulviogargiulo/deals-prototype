@@ -16,7 +16,7 @@ interface Props {
 
 // One row per stakeholder. Deal metadata (columns 1-7) only needed on the first row of each offerId group.
 const CSV_HEADERS = [
-  "offerId", "propertyName", "market", "businessUnit", "country", "currency", "dealPrice",
+  "offerId", "propertyName", "market", "businessUnit", "channel", "country", "currency", "dealPrice",
   "stakeRole", "partyId", "amount", "description", "chargedTo", "splitPct",
 ];
 
@@ -34,36 +34,36 @@ const CSV_HEADERS = [
 //   No TL/Manager rows — external broker, no connected agents
 const TEMPLATE_ROWS = [
   // ── REBU example ──────────────────────────────────────────────────────────
-  // row 1: deal header + primary agent (lister, 60%)
-  ["DEAL-BULK-001", "Dubai Marina Tower Apt 2204", "primary", "rebu", "ae", "AED", "1500000", "AGENT_PAYOUT", "party-agent-004", "", "", "", "60"],
+  // row 1: deal header + primary agent (lister, 60%) — channel blank for REBU
+  ["DEAL-BULK-001", "Dubai Marina Tower Apt 2204", "primary", "rebu", "", "ae", "AED", "1500000", "AGENT_PAYOUT", "party-agent-004", "", "", "", "60"],
   // row 2: co-agent (closer, 40%)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "AGENT_PAYOUT", "party-agent-005", "", "", "", "40"],
-  // row 3: DEMAND — the buyer
-  ["DEAL-BULK-001", "", "", "", "", "", "", "DEMAND", "party-client-008", "", "", "", ""],
-  // row 4: SUPPLY — the developer/seller
-  ["DEAL-BULK-001", "", "", "", "", "", "", "SUPPLY", "party-third-emaar", "", "", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "AGENT_PAYOUT", "party-agent-005", "", "", "", "40"],
+  // row 3: DEMAND — the buyer (identity only, no amount)
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "DEMAND", "party-client-008", "", "", "", ""],
+  // row 4: SUPPLY — the developer/seller (identity only, no amount)
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "SUPPLY", "party-third-emaar", "", "", "", ""],
   // rows 5-7: revenue lines (buyer commission + conveyance + rebate)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "30000", "Commission", "", ""],
-  ["DEAL-BULK-001", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "1500", "Conveyance Fee", "", ""],
-  ["DEAL-BULK-001", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "-2000", "Rebate", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "30000", "Commission", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "1500", "Conveyance Fee", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "-2000", "Rebate", "", ""],
   // row 8: developer revenue line
-  ["DEAL-BULK-001", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-007", "20000", "Commission", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-007", "20000", "Commission", "", ""],
   // row 9: Huspy-borne service cost (D)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "OPERATIONAL_DEDUCTION", "party-third-snb", "800", "Admin Cost", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "OPERATIONAL_DEDUCTION", "party-third-snb", "800", "Admin Cost", "", ""],
   // row 10: co-broker cost charged to agent1's pool (C with chargedTo)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "ACQUISITION_DEDUCTION", "party-third-inmobiliaria-grupo-norte", "3500", "Co-broker", "party-agent-004", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "ACQUISITION_DEDUCTION", "party-third-inmobiliaria-grupo-norte", "3500", "Co-broker", "party-agent-004", ""],
 
   // ── MBU MA/Broker example ─────────────────────────────────────────────────
-  // dealPrice = mortgage principal. Broker payout resolved at runtime from
-  // BrokerRateSlab(reportingMonth, bankId, brokerMonthlyGmv). No TL/Manager rows.
+  // channel = "MA". dealPrice = mortgage principal.
+  // Broker payout resolved at runtime from BrokerRateSlab(reportingMonth, bankId, brokerMonthlyGmv).
   // row 11: deal header + sole broker (100% pool share)
-  ["DEAL-MBU-001", "Creek Harbour Apartment", "primary", "mortgage", "ae", "AED", "1500000", "AGENT_PAYOUT", "party-broker-omar-rahman", "", "", "", "100"],
-  // row 12: DEMAND — the borrower
-  ["DEAL-MBU-001", "", "", "", "", "", "", "DEMAND", "party-client-011", "", "", "", ""],
-  // row 13: SUPPLY — the lending bank (non-financial role)
-  ["DEAL-MBU-001", "", "", "", "", "", "", "SUPPLY", "party-third-dib", "", "", "", ""],
+  ["DEAL-MBU-001", "Creek Harbour Apartment", "primary", "mortgage", "MA", "ae", "AED", "1500000", "AGENT_PAYOUT", "party-broker-omar-rahman", "", "", "", "100"],
+  // row 12: DEMAND — the borrower (identity only)
+  ["DEAL-MBU-001", "", "", "", "", "", "", "", "DEMAND", "party-client-011", "", "", "", ""],
+  // row 13: SUPPLY — the lending bank (identity only)
+  ["DEAL-MBU-001", "", "", "", "", "", "", "", "SUPPLY", "party-third-dib", "", "", "", ""],
   // row 14: REVENUE_SOURCE — bank commission to Huspy (1.2% × 1,500,000 = 18,000)
-  ["DEAL-MBU-001", "", "", "", "", "", "", "REVENUE_SOURCE", "party-third-dib", "18000", "Bank commission 1.2%", "", ""],
+  ["DEAL-MBU-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-third-dib", "18000", "Bank commission 1.2%", "", ""],
 ];
 
 function downloadTemplate(): void {
@@ -99,6 +99,7 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
   const header = rows[0];
   const country = (header.country as Deal["country"]) || "ae";
   const businessUnit = (header.businessUnit as Deal["businessUnit"]) || "rebu";
+  const channel = header.channel || undefined;
   const currency = (header.currency as Deal["currency"]) || "AED";
   const blueprint = getBlueprint(country, businessUnit);
 
@@ -117,6 +118,7 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
     status: "under-review",
     market: (header.market as Deal["market"]) || "primary",
     businessUnit,
+    channel,
     country,
     currency,
     blueprintId: blueprint.id,
@@ -332,7 +334,7 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
 
             <div className="bg-accent/50 rounded-md p-4 space-y-2 text-[11px]">
               <p className="font-medium text-foreground text-[12px]">Format — one row per stakeholder</p>
-              <p className="font-mono text-muted-foreground">offerId, propertyName, market, businessUnit, country, currency, dealPrice, <span className="text-foreground font-semibold">stakeRole</span>, partyId, amount, description, chargedTo, splitPct</p>
+              <p className="font-mono text-muted-foreground">offerId, propertyName, market, businessUnit, <span className="text-foreground font-semibold">channel</span>, country, currency, dealPrice, <span className="text-foreground font-semibold">stakeRole</span>, partyId, amount, description, chargedTo, splitPct</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-2 text-muted-foreground">
                 <p><span className="text-foreground">AGENT_PAYOUT</span> — agent (use splitPct)</p>
                 <p><span className="text-foreground">REVENUE_SOURCE</span> — commission/fee/rebate (negative = rebate)</p>

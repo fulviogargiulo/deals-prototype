@@ -25,6 +25,7 @@ interface Props {
   currency: string;
   amountLabel: string;
   requireAmount?: boolean;
+  showAmount?: boolean;
   excludePartyIds?: string[];
   onConfirm: (partyId: string, displayName: string, amount: number | undefined) => void;
   onCancel: () => void;
@@ -35,6 +36,7 @@ export function PartyPicker({
   currency,
   amountLabel,
   requireAmount = false,
+  showAmount = true,
   excludePartyIds = [],
   onConfirm,
   onCancel,
@@ -97,7 +99,7 @@ export function PartyPicker({
 
   const canConfirm =
     form.selectedParty != null &&
-    (!requireAmount || (form.amountStr !== "" && parseFloat(form.amountStr) > 0));
+    (!showAmount || !requireAmount || (form.amountStr !== "" && parseFloat(form.amountStr) > 0));
 
   return (
     <div className="bg-muted/30 border border-border/60 rounded-md px-3 py-3 space-y-2.5">
@@ -192,20 +194,22 @@ export function PartyPicker({
               Change
             </button>
           </div>
-          <div className="flex items-center gap-3">
-            <label className="text-[12px] text-muted-foreground shrink-0">
-              {amountLabel} ({currency})
-            </label>
-            <input
-              autoFocus
-              type="number"
-              min={0}
-              placeholder="0"
-              value={form.amountStr}
-              onChange={(e) => setForm((f) => ({ ...f, amountStr: e.target.value }))}
-              className="w-36 px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
+          {showAmount && (
+            <div className="flex items-center gap-3">
+              <label className="text-[12px] text-muted-foreground shrink-0">
+                {amountLabel} ({currency})
+              </label>
+              <input
+                autoFocus
+                type="number"
+                min={0}
+                placeholder="0"
+                value={form.amountStr}
+                onChange={(e) => setForm((f) => ({ ...f, amountStr: e.target.value }))}
+                className="w-36 px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          )}
         </div>
       )}
 

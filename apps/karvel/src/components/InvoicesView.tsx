@@ -1,13 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { sharedInvoices, sharedParties } from "@huspy/shared-domain";
 import type { InvoiceStatus } from "@huspy/shared-domain";
-import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type Direction = "all" | "outbound" | "inbound";
-type StatusFilter = "all" | InvoiceStatus;
-type CurrencyFilter = "all" | "EUR" | "AED" | "SAR";
+import { thBase, SortDir, SortIcon, FilterDropdown, SearchDropdown, DateRangeDropdown } from "./TableFilters";
 
 const STATUS_LABEL: Record<InvoiceStatus, string> = {
   draft: "Draft",
@@ -35,190 +33,288 @@ function resolveParty(partyId: string): string {
   return sharedParties.find((p) => p.id === partyId)?.displayName ?? partyId;
 }
 
-interface TileProps {
-  label: string;
-  count: number;
-  amount?: number;
-  currency?: string;
-  colorClass: string;
-}
-
-function Tile({ label, count, amount, currency, colorClass }: TileProps) {
-  return (
-    <div className="bg-card border border-border rounded-lg px-4 py-3 space-y-1">
-      <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{label}</p>
-      <p className={cn("text-[22px] font-semibold tabular-nums", colorClass)}>{count}</p>
-      {amount != null && currency && (
-        <p className="text-[12px] text-muted-foreground font-mono">{fmt(amount, currency)}</p>
-      )}
-    </div>
-  );
-}
+type SortKey = "invoiceNumber" | "amount" | "party" | "dealId" | "issueDate" | "dueDate";
 
 export function InvoicesView() {
   const navigate = useNavigate();
-  const [direction, setDirection] = useState<Direction>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [currencyFilter, setCurrencyFilter] = useState<CurrencyFilter>("all");
+  const [directionFilter, setDirectionFilter] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
+  const [currencyFilter, setCurrencyFilter] = useState<Set<string>>(new Set());
+  const [partySearch, setPartySearch] = useState("");
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [dealSearch, setDealSearch] = useState("");
+  const [issueDateRange, setIssueDateRange] = useState<{ from: string; to: string }>({ from: "", to: "" });
+  const [dueDateRange, setDueDateRange] = useState<{ from: string; to: string }>({ from: "", to: "" });
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>(null);
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     return sharedInvoices.filter((inv) => {
-      if (direction !== "all" && inv.direction !== direction) return false;
-      if (statusFilter !== "all" && inv.status !== statusFilter) return false;
-      if (currencyFilter !== "all" && inv.currency !== currencyFilter) return false;
+      if (directionFilter.size > 0 && !directionFilter.has(inv.direction)) return false;
+      if (statusFilter.size > 0 && !statusFilter.has(inv.status)) return false;
+      if (currencyFilter.size > 0 && !currencyFilter.has(inv.currency)) return false;
+      if (partySearch && !resolveParty(inv.partyId).toLowerCase().includes(partySearch.toLowerCase())) return false;
+      if (invoiceSearch && !inv.invoiceNumber.toLowerCase().includes(invoiceSearch.toLowerCase())) return false;
+      if (dealSearch && !(inv.dealId ?? "").toLowerCase().includes(dealSearch.toLowerCase())) return false;
+      if (issueDateRange.from && inv.issueDate < issueDateRange.from) return false;
+      if (issueDateRange.to && inv.issueDate > issueDateRange.to) return false;
+      if (dueDateRange.from && (inv.dueDate ?? "") < dueDateRange.from) return false;
+      if (dueDateRange.to && (inv.dueDate ?? "") > dueDateRange.to) return false;
       return true;
     });
-  }, [direction, statusFilter, currencyFilter]);
+  }, [directionFilter, statusFilter, currencyFilter, partySearch, invoiceSearch, dealSearch, issueDateRange, dueDateRange]);
 
-  // Tiles — always based on full dataset (unfiltered), split by direction + status
-  const outboundDraft = sharedInvoices.filter((i) => i.direction === "outbound" && i.status === "draft");
-  const outboundIssued = sharedInvoices.filter((i) => i.direction === "outbound" && i.status === "issued");
-  const outboundPaid = sharedInvoices.filter((i) => i.direction === "outbound" && i.status === "paid");
-  const inboundIssued = sharedInvoices.filter((i) => i.direction === "inbound" && i.status === "issued");
-  const inboundPaid = sharedInvoices.filter((i) => i.direction === "inbound" && i.status === "paid");
+  const sorted = useMemo(() => {
+    if (!sortKey || !sortDir) return filtered;
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      switch (sortKey) {
+        case "invoiceNumber": return a.invoiceNumber.localeCompare(b.invoiceNumber) * dir;
+        case "amount": return ((a.subtotal + (a.vatAmount ?? 0)) - (b.subtotal + (b.vatAmount ?? 0))) * dir;
+        case "party": return resolveParty(a.partyId).localeCompare(resolveParty(b.partyId)) * dir;
+        case "dealId": return (a.dealId ?? "").localeCompare(b.dealId ?? "") * dir;
+        case "issueDate": return a.issueDate.localeCompare(b.issueDate) * dir;
+        case "dueDate": return (a.dueDate ?? "").localeCompare(b.dueDate ?? "") * dir;
+        default: return 0;
+      }
+    });
+  }, [filtered, sortKey, sortDir]);
 
-  // For tile amounts: only show when a single currency is selected
-  const singleCurrency = currencyFilter !== "all" ? currencyFilter : undefined;
-  const sumFor = (list: typeof sharedInvoices) =>
-    singleCurrency
-      ? list.filter((i) => i.currency === singleCurrency).reduce((s, i) => s + i.subtotal + (i.vatAmount ?? 0), 0)
-      : undefined;
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      const next = sortDir === "asc" ? "desc" : sortDir === "desc" ? null : "asc";
+      setSortDir(next as SortDir);
+      if (!next) setSortKey(null);
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const getSortDir = (key: SortKey): SortDir => sortKey === key ? sortDir : null;
+
+  useEffect(() => { setPage(1); }, [filtered, sortKey, sortDir]);
+
+  const perPage = 15;
+  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
+  const paginated = sorted.slice((page - 1) * perPage, page * perPage);
+
+  const activeFilterCount =
+    [directionFilter, statusFilter, currencyFilter].filter((f) => f.size > 0).length +
+    [partySearch, invoiceSearch, dealSearch].filter(Boolean).length +
+    [issueDateRange.from || issueDateRange.to, dueDateRange.from || dueDateRange.to].filter(Boolean).length;
+
+  function clearAll() {
+    setDirectionFilter(new Set());
+    setStatusFilter(new Set());
+    setCurrencyFilter(new Set());
+    setPartySearch("");
+    setInvoiceSearch("");
+    setDealSearch("");
+    setIssueDateRange({ from: "", to: "" });
+    setDueDateRange({ from: "", to: "" });
+  }
 
   return (
     <div className="space-y-6">
-      {/* KPI tiles */}
-      <div className="grid grid-cols-5 gap-4">
-        <Tile
-          label="Outbound — Draft"
-          count={outboundDraft.length}
-          amount={sumFor(outboundDraft)}
-          currency={singleCurrency}
-          colorClass="text-muted-foreground"
-        />
-        <Tile
-          label="Outbound — Awaiting payment"
-          count={outboundIssued.length}
-          amount={sumFor(outboundIssued)}
-          currency={singleCurrency}
-          colorClass="text-amber-600"
-        />
-        <Tile
-          label="Outbound — Collected"
-          count={outboundPaid.length}
-          amount={sumFor(outboundPaid)}
-          currency={singleCurrency}
-          colorClass="text-emerald-600"
-        />
-        <Tile
-          label="Agent invoices — Pending"
-          count={inboundIssued.length}
-          amount={sumFor(inboundIssued)}
-          currency={singleCurrency}
-          colorClass="text-blue-600"
-        />
-        <Tile
-          label="Agent invoices — Paid"
-          count={inboundPaid.length}
-          amount={sumFor(inboundPaid)}
-          currency={singleCurrency}
-          colorClass="text-emerald-600"
-        />
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex rounded-lg overflow-hidden border border-border">
-          {(["all", "outbound", "inbound"] as Direction[]).map((d) => (
-            <button
-              key={d}
-              onClick={() => setDirection(d)}
-              className={cn(
-                "px-3 py-1.5 text-[13px] font-medium transition-colors",
-                direction === d
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {d === "all" ? "All" : d === "outbound" ? "Outbound" : "Inbound"}
-            </button>
-          ))}
+      {activeFilterCount > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] text-muted-foreground">
+            {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active · {sorted.length} invoice{sorted.length !== 1 ? "s" : ""}
+          </span>
+          <button onClick={clearAll} className="text-[12px] text-primary hover:underline">
+            Clear all
+          </button>
         </div>
-
-        <div className="flex rounded-lg overflow-hidden border border-border">
-          {(["all", "draft", "issued", "paid", "cancelled"] as StatusFilter[]).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={cn(
-                "px-3 py-1.5 text-[13px] font-medium transition-colors",
-                statusFilter === s
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {s === "all" ? "All statuses" : STATUS_LABEL[s as InvoiceStatus]}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex rounded-lg overflow-hidden border border-border">
-          {(["all", "EUR", "AED", "SAR"] as CurrencyFilter[]).map((c) => (
-            <button
-              key={c}
-              onClick={() => setCurrencyFilter(c)}
-              className={cn(
-                "px-3 py-1.5 text-[13px] font-medium transition-colors",
-                currencyFilter === c
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {c === "all" ? "All currencies" : c}
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Invoice #
+            <tr className="border-b border-border bg-muted/20">
+              <th className={`${thBase} text-left relative`}>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleSort("invoiceNumber")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Invoice # <SortIcon dir={getSortDir("invoiceNumber")} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "invoice" ? null : "invoice"); }}
+                    className={`p-0.5 rounded transition-colors ${invoiceSearch ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {invoiceSearch ? <X className="h-3 w-3" onClick={(e) => { e.stopPropagation(); setInvoiceSearch(""); }} /> : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "invoice" && (
+                  <SearchDropdown
+                    value={invoiceSearch}
+                    onChange={setInvoiceSearch}
+                    onClose={() => setOpenFilter(null)}
+                    placeholder="Search invoice #..."
+                  />
+                )}
               </th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Direction
+              <th className={`${thBase} text-left relative`}>
+                <div className="flex items-center gap-1">
+                  <span>Direction</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "direction" ? null : "direction"); }}
+                    className={`p-0.5 rounded transition-colors ${directionFilter.size > 0 ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {directionFilter.size > 0 ? <X className="h-3 w-3" /> : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "direction" && (
+                  <FilterDropdown
+                    options={["outbound", "inbound"]}
+                    selected={directionFilter}
+                    labels={{ outbound: "Outbound", inbound: "Inbound" }}
+                    onChange={(s) => setDirectionFilter(s)}
+                    onClose={() => setOpenFilter(null)}
+                  />
+                )}
               </th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Party
+              <th className={`${thBase} text-left relative`}>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleSort("party")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Party <SortIcon dir={getSortDir("party")} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "party" ? null : "party"); }}
+                    className={`p-0.5 rounded transition-colors ${partySearch ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {partySearch ? <X className="h-3 w-3" onClick={(e) => { e.stopPropagation(); setPartySearch(""); }} /> : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "party" && (
+                  <SearchDropdown
+                    value={partySearch}
+                    onChange={setPartySearch}
+                    onClose={() => setOpenFilter(null)}
+                    placeholder="Search party..."
+                  />
+                )}
               </th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Deal
+              <th className={`${thBase} text-left relative`}>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleSort("dealId")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Deal <SortIcon dir={getSortDir("dealId")} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "deal" ? null : "deal"); }}
+                    className={`p-0.5 rounded transition-colors ${dealSearch ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {dealSearch ? <X className="h-3 w-3" onClick={(e) => { e.stopPropagation(); setDealSearch(""); }} /> : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "deal" && (
+                  <SearchDropdown
+                    value={dealSearch}
+                    onChange={setDealSearch}
+                    onClose={() => setOpenFilter(null)}
+                    placeholder="Search deal ID..."
+                  />
+                )}
               </th>
-              <th className="text-right px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Amount
+              <th className={`${thBase} text-right relative`}>
+                <div className="flex items-center gap-1 justify-end">
+                  <button onClick={() => handleSort("amount")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Amount <SortIcon dir={getSortDir("amount")} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "currency" ? null : "currency"); }}
+                    className={`p-0.5 rounded transition-colors ${currencyFilter.size > 0 ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {currencyFilter.size > 0 ? <X className="h-3 w-3" /> : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "currency" && (
+                  <FilterDropdown
+                    options={["EUR", "AED", "SAR"]}
+                    selected={currencyFilter}
+                    onChange={(s) => setCurrencyFilter(s)}
+                    onClose={() => setOpenFilter(null)}
+                    className="right-0 left-auto"
+                  />
+                )}
               </th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Status
+              <th className={`${thBase} text-left relative`}>
+                <div className="flex items-center gap-1">
+                  <span>Status</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "status" ? null : "status"); }}
+                    className={`p-0.5 rounded transition-colors ${statusFilter.size > 0 ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {statusFilter.size > 0 ? <X className="h-3 w-3" /> : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "status" && (
+                  <FilterDropdown
+                    options={["draft", "issued", "paid", "cancelled"]}
+                    selected={statusFilter}
+                    labels={STATUS_LABEL}
+                    onChange={(s) => setStatusFilter(s)}
+                    onClose={() => setOpenFilter(null)}
+                  />
+                )}
               </th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Issue Date
+              <th className={`${thBase} text-left relative`}>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleSort("issueDate")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Issue Date <SortIcon dir={getSortDir("issueDate")} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "issueDate" ? null : "issueDate"); }}
+                    className={`p-0.5 rounded transition-colors ${issueDateRange.from || issueDateRange.to ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {issueDateRange.from || issueDateRange.to
+                      ? <X className="h-3 w-3" onClick={(e) => { e.stopPropagation(); setIssueDateRange({ from: "", to: "" }); }} />
+                      : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "issueDate" && (
+                  <DateRangeDropdown
+                    value={issueDateRange}
+                    onChange={setIssueDateRange}
+                    onClose={() => setOpenFilter(null)}
+                  />
+                )}
               </th>
-              <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">
-                Due Date
+              <th className={`${thBase} text-left relative`}>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleSort("dueDate")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Due Date <SortIcon dir={getSortDir("dueDate")} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenFilter(openFilter === "dueDate" ? null : "dueDate"); }}
+                    className={`p-0.5 rounded transition-colors ${dueDateRange.from || dueDateRange.to ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  >
+                    {dueDateRange.from || dueDateRange.to
+                      ? <X className="h-3 w-3" onClick={(e) => { e.stopPropagation(); setDueDateRange({ from: "", to: "" }); }} />
+                      : <Filter className="h-3 w-3" />}
+                  </button>
+                </div>
+                {openFilter === "dueDate" && (
+                  <DateRangeDropdown
+                    value={dueDateRange}
+                    onChange={setDueDateRange}
+                    onClose={() => setOpenFilter(null)}
+                  />
+                )}
               </th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <tr>
                 <td colSpan={8} className="text-center py-10 text-muted-foreground text-[13px]">
                   No invoices match the current filters.
                 </td>
               </tr>
             )}
-            {filtered.map((inv) => (
+            {paginated.map((inv) => (
               <tr
                 key={inv.id}
                 onClick={() => navigate(`/invoices/${inv.id}`)}
@@ -244,10 +340,7 @@ export function InvoicesView() {
                 <td className="px-4 py-3 text-muted-foreground font-mono text-[11px]">
                   {inv.dealId ? (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/deals/${inv.dealId}`);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/deals/${inv.dealId}`); }}
                       className="text-primary hover:underline transition-colors"
                     >
                       {inv.dealId}
@@ -260,12 +353,7 @@ export function InvoicesView() {
                   {fmt(inv.subtotal + (inv.vatAmount ?? 0), inv.currency)}
                 </td>
                 <td className="px-4 py-3">
-                  <span
-                    className={cn(
-                      "px-2 py-0.5 rounded-full text-[11px] font-medium",
-                      STATUS_CLASSES[inv.status]
-                    )}
-                  >
+                  <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-medium", STATUS_CLASSES[inv.status])}>
                     {STATUS_LABEL[inv.status]}
                   </span>
                 </td>
@@ -275,6 +363,25 @@ export function InvoicesView() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center justify-center gap-2 py-5">
+        <button onClick={() => setPage(1)} disabled={page === 1} className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card disabled:opacity-30 hover:bg-muted transition-colors">
+          <ChevronsLeft className="h-4 w-4 text-foreground" />
+        </button>
+        <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card disabled:opacity-30 hover:bg-muted transition-colors">
+          <ChevronLeft className="h-4 w-4 text-foreground" />
+        </button>
+        <div className="flex items-center gap-2 text-[14px] mx-1">
+          <input type="number" value={page} onChange={(e) => { const v = parseInt(e.target.value); if (v >= 1 && v <= totalPages) setPage(v); }} className="w-12 h-8 text-center border border-border rounded px-1 text-[14px] bg-card focus:outline-none focus:ring-1 focus:ring-ring" />
+          <span className="text-muted-foreground">of {totalPages}</span>
+        </div>
+        <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card disabled:opacity-30 hover:bg-muted transition-colors">
+          <ChevronRight className="h-4 w-4 text-foreground" />
+        </button>
+        <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card disabled:opacity-30 hover:bg-muted transition-colors">
+          <ChevronsRight className="h-4 w-4 text-foreground" />
+        </button>
       </div>
     </div>
   );
