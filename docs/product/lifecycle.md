@@ -8,7 +8,7 @@ This process flow aims to support all type of deals across all geographies and b
 
 | State | Description | Can go to | Trigger |
 | --- | --- | --- | --- |
-| **Under Review** | Starting state. Ops is actively reviewing. Stakeholders and deal data can be edited. | Pending Details · Pending Agent Approval · Canceled | Ops on Karvel |
+| **Under Review** | Starting state. Ops is actively reviewing. Stakeholders and deal data can be edited. | Pending Details · Pending Agent Approval · Canceled | Ops on Karvel → Pending Agent Approval all documents must be approved or waived |
 | **Pending Details** | Ops sent the deal back to the agent. Agent must provide missing documents or information. | Under Review · Canceled | Ops on Karvel / Agent in app |
 | **Pending Agent Approval** | Commission terms are set. Agent must confirm before invoicing starts. | Under Review · Invoicing · Canceled | Ops on Karvel / Agent in app |
 | **Invoicing** | Deal locked. Finance is collecting the commission payment from receivable parties. | Finalized · Canceled | auto → Finalized when all invoices paid |

@@ -197,7 +197,7 @@ A `Deal` has no notion of "who is involved" by itself. All financial and identit
 
 ### Deal → Invoice → PostingLine
 
-When a deal reaches `invoicing`, an outbound `Invoice` is created linking the `Deal` to the receivable `Party`. When the agent submits a statement, an inbound `Invoice` is created linking back to the `Party` (the agent).
+When a deal reaches `invoicing`, an outbound `Invoice` is created linking the `Deal` to the receivable `Party`. When the agent submits a statement, an inbound `Invoice` is created linking back to the `Party` (the agent). Not all invoices are linked to specific deals (e.g. agent invoice can group multiple deals related postinglines and non)
 
 `Invoice` is directional:
 

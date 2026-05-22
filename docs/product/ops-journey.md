@@ -1,207 +1,267 @@
 <!-- Confluence: https://huspy.atlassian.net/wiki/spaces/corp/pages/2412085272 -->
 
-# Ops & Finance Journey — Karvel
+# 1. User Stories
 
- is Huspy's internal back-office — an existing product being expanded. It is not visible to agents. Ops and Finance use it to manage the full deal pipeline, handle invoicing on both sides (client and agent), and maintain agent profiles including their accounting ledger and commission structures.
+* **As** an Ops team member, **I want to** create and review incoming deals **so that** only complete, accurate deals move to commission approval.
+* **As** an Ops team member, **I want to** request missing information from the agent and track what's been submitted **so that** nothing falls through the cracks.
+* **As** an Ops team member, **I want to** manage deal stakeholders and review the P&L waterfall **so that** commission terms are correct before being sent to the agent.
+* **As** a Finance team member, **I want to** issue client invoices and record incoming payments **so that** revenue is recognized correctly.
+* **As** a Finance team member, **I want to** review agent invoices and confirm payment **so that** agents are compensated accurately and on time.
+* **As** an Ops/Finance team member, **I want to** configure document requirement templates per market and business unit so that every deal has the right compliance checklist from day one.
+* **As** a Finance team member, **I want to** see which invoices are linked to a deal and what accounting entries they generated **so that** I can reconcile financial records accurately.
 
-> **Current scope:** Deals, invoices, and payments functionality is live for **Spain REBU** only. Expansion to UAE, Saudi Arabia, and Mortgage is the target scope of this buildout.
+# 2. What Karvel is for
 
-## Karvel has four main tabs: **Deals**, **Invoices**, **Ledger**, and **Document Requirements**.
+[Karvel](https://ops.huspy.net/) is Huspy's internal back-office — an existing product being expanded. It is not visible to agents. Goal is to get Ops and Finance use it to manage the full deal pipeline, handle invoicing on both sides (client and agent), and maintain agent profiles including their accounting ledger and commission structures.
 
-## User Stories
+Deals and Payments product aim to add to Karvel four main tabs under the Deal section: **Deals**, **Invoices**, **Ledger**, and **Deal Configuration**.
 
-- As an Ops team member, I want to create and review incoming deals so that only complete, accurate deals move to commission approval.
-- As an Ops team member, I want to request missing information from the agent and track what's been submitted so that nothing falls through the cracks.
-- As an Ops team member, I want to manage deal stakeholders and review the P&L waterfall so that commission terms are correct before being sent to the agent.
-- As a Finance team member, I want to issue client invoices and record incoming payments so that revenue is recognized correctly.
-- As a Finance team member, I want to review agent invoices and confirm payment so that agents are compensated accurately and on time.
-- As an Ops/Finance team member, I want to configure document requirement templates per market and business unit so that every deal has the right compliance checklist from day one.
-- As a Finance team member, I want to see which invoices are linked to a deal and what accounting entries they generated so that I can reconcile financial records accurately.
-
----
-
-## How Deals Enter the System
+# 3. How Deals Enter the System
 
 Deals always start in **Under Review**. There are currently two creation paths, with a third planned:
 
-- **Manual** — Ops clicks "Add Deal" in the Deals tab and fills in the form.
-- **Bulk CSV upload** — Ops uploads a CSV to create multiple deals at once.
-- **Offer entity (planned)** — An offer submission flow is being built for REBU agents. When an agent's offer is accepted, a deal will be created automatically without Ops having to enter it manually.
+* **Manual** — Ops clicks "Add Deal" in the Deals tab and fills in the form.
+* **Bulk CSV upload** — Ops uploads a CSV to create multiple deals at once. A template is provided
+* **Offer entity (planned)** — An offer submission flow is being built for REBU agents. When an agent's offer is accepted, a deal will be created automatically without Ops having to enter it manually.
+
+<!-- SCREENSHOT -->
+<!-- SCREENSHOT -->
 
 From Under Review, Ops has two paths:
 
-- **Everything looks complete** → advance to Pending Agent Approval
-- **Information or documents are missing** → send to Pending Details to request input from the agent
+* **Everything looks complete** → advance to Pending Agent Approval
+* **Information or documents are missing** → send to Pending Details to request input from the agent
 
 Once the agent submits their information, the deal returns to Under Review automatically. This loop can repeat.
 
----
+A deal has multiple deal stakeholders, check the domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692/Domain+Model+Entity+Relationships#2.-Key-Entities). When adding a stakeholder, Ops verifies the `Party` record using `taxId` (NIE in Spain, Emirates ID in UAE…). If the `taxId` already exists in the system, the existing Party record is reused — no duplicate is created. This keeps the ledger accurate across multiple deals involving the same buyer, developer, or other third parties.
 
-## The Deals Pipeline
+# 4. The Deals Tab
 
-<!-- SCREENSHOT: Karvel deals pipeline table — full list view with filters and status badges -->
+<!-- SCREENSHOT -->
 
-The Deals tab is a paginated, searchable table of all deals across all statuses and markets.
+The Deals tab is a paginated, searchable table of all deals across all statuses, markets, business units and all table headers.
 
-- **Search** by agent name, client name, deal ID, or market
-- **Filter** by status, business unit, and country — individually or in combination
-- **Sort** by any column (deal ID, status, gross revenue, net revenue, Huspy margin, created date)
-- **Add Deal** and **Bulk Upload** (CSV) buttons for deal creation
+* **Search** by agent name, client name, deal ID, or market
+* **Filter and sort** by status, business unit, country, deal ID, status, gross revenue, net revenue, Huspy margin, created date
+* **Add Deal** and **Bulk Upload** (CSV) buttons for deal creation
 
 Each row shows: Deal ID, status, BU, country, market, gross revenue, net revenue, Huspy margin, and creation date.
 
----
+## 4.1. Inside a Deal — What Ops Does
 
-## Inside a Deal — What Ops Does
-
-<!-- SCREENSHOT: Karvel deal detail page — header with status dropdown, stakeholders panel, P&L waterfall -->
+<!-- SCREENSHOT -->
 
 ### Status Transitions
 
-The deal status is changed via a dropdown in the deal detail header. One hard constraint is enforced:
-
-> A deal cannot move from **Under Review** to **Pending Agent Approval** unless all document requirements on the deal are either Approved or Waived.
-
-Every status change is timestamped and recorded in the deal's history.
+The deal status is changed via a dropdown in the deal detail header. Every status change is timestamped and recorded in the deal's history. Check the deal state machine [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911/Process+Flow+Deal+Lifecycle#1.-State-Machine) for more details
 
 ### Stakeholders Panel
 
-Stakeholders are the parties involved in the commission waterfall. This panel is **editable only when the deal is in Under Review**. Once the deal advances, it locks.
+Stakeholders are the parties involved in the commission waterfall. This panel is **editable only when the deal is in Under Review or Pending Details**. Once the deal advances, it locks. User can add all these stakeholder types and whether they are paid from huspy's or agent's pockets.
 
-
-| Stakeholder type          | Role                                                                                                                |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Revenue Source**        | The party paying Huspy (buyer, developer, bank, tenant). Their amount is Huspy's gross revenue.                     |
-| **Internal Payout**       | A Huspy agent. Commission is calculated by the system from the agent's commission structure — not entered manually. |
-| **Acquisition Deduction** | External commercial partner (co-broker, referral). Huspy pays them; deducted from gross.                            |
-| **Operational Deduction** | Fixed service cost (notary, conveyance, legal). Deducted from gross.                                                |
-
-
-### Identity Resolution
-
-Before adding a stakeholder, Ops verifies the `Party` record using `taxId` (NIE in Spain, Emirates ID in UAE). If the `taxId` already exists in the system, the existing Party record is reused — no duplicate is created. This keeps the ledger accurate across multiple deals involving the same buyer, developer, or agent.
+| Stakeholder type | Role |
+| --- | --- |
+| **Revenue Source** | The parties paying Huspy (buyer, developer, bank, tenant…). Their amount is Huspy's gross revenue. |
+| **Agent Payout** | A Huspy agent/broker. Commission is calculated by the system from the agent's commission structure — not entered manually. |
+| **Acquisition Deduction** | External commercial partner (co-broker, referral). Huspy pays them; deducted from gross. |
+| **Operational Deduction** | Fixed service cost (notary, conveyance, legal). Deducted from net. |
 
 ### P&L Waterfall
+
+<!-- SCREENSHOT -->
 
 Displayed on every deal detail page. Shows how gross revenue flows to Huspy's margin:
 
 1. Deal amount (and any rebate/subsidy applied)
 2. Gross revenue (sum of Revenue Source stakeholders)
 3. Minus Acquisition Deductions (external partners)
-4. Minus Operational Deductions (fixed costs)
-5. = Net revenue
-6. Minus Agent payouts (calculated from each agent's commission strategy)
+4. = Net revenue
+5. Minus Agent payouts (calculated from each agent's commission strategy)
+6. Minus Operational Deductions (fixed costs)
 7. = **Huspy margin**
+
+### Invoices (Per Deal)
+
+<!-- SCREENSHOT -->
+
+All invoices linked to the deal appear in the Invoices section on the deal detail page, showing their counterparty, type, gross amount, status, and issue date. Clicking an invoice redirects the user to its detailed page. See the dedicated invoices tab below for more information.
+
+Not all invoices are linked to deals. Check domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692/Domain+Model+Entity+Relationships#Deal-%E2%86%92-Invoice-%E2%86%92-PostingLine)
+
+### Accounting Events (Per Deal)
+
+<!-- SCREENSHOT -->
+
+Deal progress and linked invoice status changes generate accounting events (postings). A dedicated section on the deal detail page displays them. Clicking any posting opens a posting popup with more details. See the dedicated ledger tab below for more.
+
+Not all postings are linked to deals. Check domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692/Domain+Model+Entity+Relationships#Deal-%E2%86%92-Invoice-%E2%86%92-PostingLine)
 
 ### Document Requirements (Per Deal)
 
-Each deal has a checklist of required documents, pre-populated based on the deal's market, BU, and country. Ops can:
+<!-- SCREENSHOT -->
 
-- **Approve** a document the agent has uploaded
-- **Waive** a requirement if it doesn't apply
-- **Add** a one-off requirement not in the standard template
-- **Download** any uploaded file
+Each deal has a checklist of required documents, pre-populated based on the deal's market, BU, and country (and channel?). Ops can:
+
+* **Approve** a document the agent has uploaded
+* **Waive** a requirement if it doesn't apply
+* **Add** a one-off requirement not in the standard template
+* **Download** any uploaded file
 
 ### Comments
 
+<!-- SCREENSHOT -->
+
 A threaded comment panel connects Ops and the agent. Ops can write at any status. The agent can reply until the deal is Finalized or Canceled. All messages are timestamped and retained permanently.
 
+# 5. The Invoices Tab
+
+<!-- SCREENSHOT -->
+
+Centralized view of all invoices across deals. Filter the table by any header: invoice ID, direction, party, deal, amount, status, issue date, or due date
+
+## 5.1. Inside an Invoice — What Ops Does
+
+To check booking logic (i.e., posting creation), see the example [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911/Process+Flow+Deal+Lifecycle#Accounting-Entries-Per-Stage)
+
+### Invoice in Draft state
+
+**Inbound**
+
+<!-- SCREENSHOT -->
+
+The user can:
+
+* Upload the received invoice
+* Fill in invoice number, due date and VAT
+* Confirm receipt. I.e. move Draft → Issued.
+* Cancel invoice
+
+**Outbound**
+
+<!-- SCREENSHOT -->
+
+The user can:
+
+* Change invoice number, due date and VAT
+* Download the pre filled invoice template
+* Once the user has sent the document to the counterparty to collect the funds, he can move Draft → Issued.
+* Cancel invoice
+
+### Invoice in Issued state
+
+**Inbound / Outbound**
+
+<!-- SCREENSHOT -->
+
+The user can:
+
+* Download the invoice
+* See related accounting events (i.e. linked postings)
+* Record the payment
+* Cancel or mark as Paid
+
+### Invoice in Paid state
+
+**Inbound / Outbound**
+
+<!-- SCREENSHOT -->
+
+The user can:
+
+* Download the invoice
+* See related accounting events (i.e. linked postings)
+* Cancel invoice
+
+# 6. Ledger Tab
+
+<!-- SCREENSHOT -->
+
+The Ledger tab is the global view of all ledgers and double-entry accounting postings in the system. It is Finance's primary tool for reconciliation, audit, and manual corrections. The high level view show all the ledgers and their balance.
+
+Finance can create a manual posting directly from this tab for corrections, bonuses, or adjustments that fall outside the automated flows (e.g. a one-off incentive, a withholding tax correction, or a reversal of a mis-posted entry).
+
+The manual posting form requires:
+
+* **Value date** — accounting date for the entry
+* **Currency** — all lines must share the same currency
+* **Business process** — select from a fixed list (e.g. `manual_adjustment`, `reversal`)
+* **Description** — mandatory free-text explanation for audit purposes
+* **At least two posting lines** — each specifying a ledger, side (Debit / Credit), and amount
+
+The form enforces the balance invariant in real time: the **Save** button is disabled until `Σ debits = Σ credits`. Unbalanced postings cannot be saved.
+
+Manual postings can be created singularly or via bulk upload via csv.
+
+### Postings Table
+
+<!-- SCREENSHOT -->
+
+Once a ledger is clicked, a paginated, searchable table of every posting ever created on that ledger shows up. User can **Search, Filter and Sort** by posting ID, value date and created date, description, deal ID, type or amount.
+
+### Posting Detail
+
+<!-- SCREENSHOT -->
+
+Clicking a row expands the full posting. All [posting and its postinglines metadata](https://huspy.atlassian.net/wiki/spaces/corp/pages/2432073741/Accounting+101#2.-Posting-and-Posting-Line-%E2%80%94-Generic-Metadata) is shown here.
+
+# 7. Deal Configuration Tab
+
+Global configuration that drives how deals behave across all markets and business units. Changes here affect all new deals going forward — nothing here is per-deal. The tab is split into sub-tabs; more will be added as the system expands.
+
 ---
 
-## The Invoices Tab
+### Sub-tab: Document Requirements
 
-Centralized view of all invoices across all deals. Four KPI tiles at the top (unaffected by the table filters):
+<!-- SCREENSHOT -->
 
+Manages the templates that determine what documents are required for each deal type.
 
-| Tile                        | What it counts                                                      |
-| --------------------------- | ------------------------------------------------------------------- |
-| Outbound — Awaiting payment | Client invoices (Huspy → client) that are Issued but not yet Paid   |
-| Outbound — Collected        | Client invoices marked Paid                                         |
-| Agent invoices — Pending    | Agent invoices submitted to Huspy (Issued, awaiting Finance review) |
-| Agent invoices — Paid       | Agent invoices that have been paid out                              |
+The matrix is organized by **Business Unit** (REBU / Mortgage) × **Market** (Primary / Secondary / Leasing) × **Country** (AE, ES, SA). Each cell is one of:
 
-
-The table can be filtered by **direction** (outbound = client-facing; inbound = agent-facing), **status**, and **currency**.
-
-### Invoice Actions (in the Invoice Detail)
-
-
-| Action        | Constraint                                                                                 |
-| ------------- | ------------------------------------------------------------------------------------------ |
-| Issue invoice | Moves Draft → Issued. Invoice is now sent to counterparty.                                 |
-| Mark as Paid  | Requires a **payment reference number**. Proof of payment file is optional.                |
-| Cancel        | A written **cancellation reason** is mandatory. Can be applied to Issued or Paid invoices. |
-
-
----
-
-## Finalizing a Deal (Automatic)
-
-When Finance marks the last outbound invoice as Paid, the system **automatically** transitions the deal to **Finalized**. This is not a manual step in the status dropdown.
-
-What the auto-finalization creates:
-
-- Locks the deal permanently — no further changes
-- Creates a commission accrual posting: agent commission liability is credited to the agent's individual subledger
-- The agent sees a new entry appear in their Earnings ledger
-
-> Agent payout is **not** triggered at finalization. The deal closing creates the liability; the actual bank transfer happens later when Finance reviews and pays the agent's inbound invoice.
-
----
-
-## Vendor Invoices
-
-If the deal had external deductions (e.g. a €500 notary fee, a conveyance provider), those parties submit their own invoices to Huspy after the deal closes. Finance logs these as inbound invoices in the Invoices tab, verifies amounts against the deal's Operational Deduction stakeholders, and pays them out. Each payment creates a `bank_statement_outbound_matched` posting against the relevant external liability subledger.
-
----
-
-## Agent Management
-
-<!-- SCREENSHOT: Karvel agents list — searchable table with status badges (Onboarding / Active / Churned) -->
-
-<!-- SCREENSHOT: Karvel agent detail — profile tabs (Overview, Documents, Deals, Ledger, Financials) -->
-
-The Agents section has a searchable, filterable list of all agents with status badges (Onboarding / Active / Churned). Each agent profile has eight tabs:
-
-
-| Tab               | What it contains                                                                                                                                                        |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Overview**      | Personal details, working zones, agent ID, activation/archive controls                                                                                                  |
-| **Documents**     | Compliance documents (KYC, passport, IBAN, license) — Ops can upload, approve, waive, or reset each one                                                                 |
-| **Clients**       | Planned — not yet live                                                                                                                                                  |
-| **Properties**    | Planned — not yet live                                                                                                                                                  |
-| **Opportunities** | Planned — not yet live                                                                                                                                                  |
-| **Deals**         | All deals linked to the agent with status, market, commission payout                                                                                                    |
-| **Ledger**        | The agent's subledger: running balance, full posting history. Finance can create manual postings here (bonuses, adjustments, reversals) using a full double-entry form. |
-| **Financials**    | Commission structure: Flat %, Max with cap, or Slab (progressive tiers). Also shows Team Lead and Manager overhead rates.                                               |
-
-
-### Payout Run
-
-Finance processes agent invoices in bulk, not one at a time. On payday, Finance filters the Invoices tab for Inbound → Issued, verifies each agent's VAT and withholding tax calculations, executes the wire transfers via the bank portal, and marks each invoice as Paid in Karvel. This creates `bank_statement_outbound_matched` postings that clear the agent subledger balances to zero.
-
----
-
-## Document Requirements Tab (Global Templates)
-
-Manages the templates that determine what documents are required for each deal type. Changes here affect all new deals going forward — it is not a per-deal view.
-
-Matrix organized by **Business Unit** (REBU / Mortgage) × **Market** (Primary / Secondary / Leasing) × **Country** (AE, ES, SA):
-
-
-| Value        | Meaning                                                                         |
-| ------------ | ------------------------------------------------------------------------------- |
+| Value | Meaning |
+| --- | --- |
 | **Required** | Mandatory — deal cannot advance to Pending Agent Approval without this document |
-| **Optional** | Shown on the deal but can be waived by Ops                                      |
-| **Off**      | Not shown on deals for this market/country combination                          |
+| **Optional** | Shown on the deal but can be waived by Ops |
+| **Off** | Not shown on deals for this market/country combination |
 
+Additional actions per document:
 
-Ops can also attach a template file per document per country (for agents to download and fill in), add new document types, or remove existing ones.
+* **Attach a template file** per country — agents can download and fill it in from the deal page
+* **Add** a new document type (appears across all cells until configured)
+* **Remove** an existing document type
+
+The user can also add another row (required document) and configure it per each country.
 
 ---
 
-## Ledger Tab
+### Sub-tab: Broker Rate Slabs
 
-The Ledger tab is a global view of all accounting postings in the system. Finance uses it to inspect any posting in detail — seeing which accounts were debited and credited, the business event that triggered the posting, the linked deal or invoice, and the value date.
+<!-- SCREENSHOT -->
 
-Finance can also create manual postings directly from this view for corrections, bonuses, or adjustments that fall outside the automated flows (e.g. a one-off incentive or a withholding tax correction). All manual postings require a full double-entry form: both sides must balance before the posting can be saved.
+Configures the monthly broker commission rates for the **MBU MA/Broker channel** (UAE). This is the rate Huspy pays to the broker from the disbursed mortgage, split into tiers based on the broker's total monthly GMV across all banks.
+
+**How it works:**
+
+* Rates are expressed as a **percentage of the disbursed mortgage amount**
+* The applicable tier is determined by the broker's **total monthly disbursed GMV across all banks**
+* Each tier defines a per-bank rate; different banks pay different percentages
+* A new slab set is created each **reporting month** — historical months are read-only
+
+The User can upload a csv to edit/add new months. This will impact newly created deals.
+
+# 8. Agent Management
+
+<!-- SCREENSHOT -->
+<!-- SCREENSHOT -->
+<!-- SCREENSHOT -->
+
+The Agents section has a searchable, filterable list of all agents. In relation to Deals and Payments product, 3 new tabs will be added
+
+| Tab | What it contains |
+| --- | --- |
+| **Deals** | All deals linked to the agent with main metadata |
+| **Ledger** | The agent's subledger view: running balance, full posting history. Same as in the ledger general tab, filtered for the agent subledger. Finance/Ops can create manual postings here as well. |
+| **Financials** | Commission structure: Flat %, Max with cap, or Slab (progressive tiers). Also shows connected agents (i.e. team leads, managers) |
+
+Finance / Ops can also bulk upload updates on agent financials and connected agents.
