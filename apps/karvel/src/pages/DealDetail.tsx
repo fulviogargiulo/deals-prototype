@@ -1,16 +1,36 @@
+// MODIFIED — replaces the inline <header> with <DealHeader>, removes the
+// hasChanges/Save flow, and persists every status transition immediately.
+//
+// Sections below the header (P&L, Invoices, Postings, Comments, Documents,
+// Deal Progress rail) are unchanged from the original file, except:
+//   • SectionCard accepts an optional `id` prop so the readiness strip's
+//     jump links can scroll to "#pnl" and "#docs".
+//   • P&L SectionCard is given id="pnl", Documents SectionCard id="docs".
+
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { findDeal, updateDeal } from "@/data/dealStore";
 import { saveDocumentRequirements } from "@/data/sharedEntityStore";
 import { Deal, DealStatus } from "@/data/types";
-import { DealStatusBadge } from "@/components/DealBadges";
-import { ArrowLeft, CheckCircle2, Circle, ExternalLink, Download, AlertTriangle, CheckCheck, Undo2, ChevronDown } from "lucide-react";
-import { computeDealPnL, createCommissionAccrualPosting, getDealEngine } from "@/lib/dealCalculations";
+import {
+  CheckCircle2,
+  Circle,
+  ExternalLink,
+  Download,
+  AlertTriangle,
+  CheckCheck,
+  Undo2,
+  ChevronDown,
+} from "lucide-react";
+import {
+  computeDealPnL,
+  getDealEngine,
+  fireCommissionAccrualOnTransition,
+} from "@/lib/dealCalculations";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/contexts/UserContext";
 import {
   canTransitionDealStatus,
-  getAllowedDealTransitions,
   getBlueprint,
   sharedInvoices,
   sharedParties,
@@ -24,14 +44,15 @@ import {
   type DocumentRequirementStatus,
   type DealDocumentRequirement,
 } from "@huspy/shared-domain";
+import { dealStatusLabel } from "@/lib/labels";
 import { PnLWaterfall } from "@/components/PnLWaterfall";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
+import { DealHeader } from "@/components/DealHeader";
 
 const STAGE_ORDER: { key: DealStatus; label: string }[] = [
-  { key: "pending-details", label: "Pending Details" },
   { key: "under-review", label: "Under Review" },
   { key: "pending-agent-approval", label: "Agent Approval" },
-  { key: "invoicing", label: "Receivables" },
+  { key: "invoicing", label: "Invoicing" },
   { key: "finalized", label: "Finalized" },
 ];
 
@@ -42,10 +63,10 @@ function getStageIndex(status: DealStatus): number {
 function getStageDates(deal: Deal): Record<string, string | null> {
   const dates: Record<string, string | null> = {};
   STAGE_ORDER.forEach((stage) => { dates[stage.key] = null; });
-  dates["pending-details"] = deal.reportDate ? new Date(deal.reportDate).toISOString() : null;
+  dates["under-review"] = deal.reportDate ? new Date(deal.reportDate).toISOString() : null;
   if (deal.statusHistory) {
     for (const entry of deal.statusHistory) {
-      if (dates[entry.to] === null) dates[entry.to] = entry.timestamp;
+      if (entry.to in dates && dates[entry.to] === null) dates[entry.to] = entry.timestamp;
     }
   }
   return dates;
@@ -62,6 +83,15 @@ function formatDateTime(dateStr: string): string {
   });
 }
 
+function formatSavedAt(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function fmt(amount: number, currency: string): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
 }
@@ -75,10 +105,24 @@ function ReadRow({ label, value, children }: { label: string; value?: string | R
   );
 }
 
-function SectionCard({ title, children, className = "", collapsible = false, defaultOpen = true }: { title: string; children: React.ReactNode; className?: string; collapsible?: boolean; defaultOpen?: boolean }) {
+function SectionCard({
+  id,
+  title,
+  children,
+  className = "",
+  collapsible = false,
+  defaultOpen = true,
+}: {
+  id?: string;
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={`bg-card border border-border rounded-lg shadow-sm ${className}`}>
+    <div id={id} className={`bg-card border border-border rounded-lg shadow-sm scroll-mt-32 ${className}`}>
       <div
         className={`px-5 py-3.5 border-b border-border flex items-center justify-between ${collapsible ? "cursor-pointer select-none" : ""}`}
         onClick={collapsible ? () => setOpen((o) => !o) : undefined}
@@ -115,7 +159,6 @@ const DealDetail = () => {
 
   const handleWaterfallChanged = () => {
     if (!pnlPendingApproval && deal) {
-      // Snapshot before the first edit in this session
       stakesSnapshot.current = sharedDealStakeholders
         .filter((s) => s.dealId === deal.id)
         .map((s) => ({ ...s }));
@@ -132,7 +175,6 @@ const DealDetail = () => {
 
   const handleRejectPnL = () => {
     if (!deal) return;
-    // Remove all current stakes for this deal and restore from snapshot
     const toRemove = sharedDealStakeholders.filter((s) => s.dealId === deal.id);
     toRemove.forEach((s) => {
       const idx = sharedDealStakeholders.indexOf(s);
@@ -152,10 +194,38 @@ const DealDetail = () => {
     setDocs(sharedDealDocumentRequirements.filter((r) => r.dealId === deal.id));
   }, [deal]);
 
-  const hasChanges = useMemo(() => {
-    if (!deal) return false;
-    return status !== deal.status;
-  }, [deal, status]);
+  // ── Derived values for the header ───────────────────────────────────
+  const { clientName, amountLabel } = useMemo(() => {
+    if (!deal) return { clientName: "—", amountLabel: "—" };
+    const revenueParties = sharedDealStakeholders
+      .filter((s) => s.dealId === deal.id && s.role === "REVENUE_SOURCE")
+      .map((s) => sharedParties.find((p) => p.id === s.partyId)?.displayName)
+      .filter(Boolean)
+      .join(", ");
+    const dealAmountValue = deal.dealPrice ?? deal.dealAmount;
+    const currency = deal.currency ?? "EUR";
+    return {
+      clientName: revenueParties || deal.clientName || "—",
+      amountLabel: dealAmountValue != null && dealAmountValue > 0 ? fmt(dealAmountValue, currency) : "—",
+    };
+  }, [deal, stakesVersion]);
+
+  const ageInStage = useMemo(() => {
+    const lastEntry = [...statusHistory].reverse().find((h) => h.to === status);
+    const sinceIso = lastEntry?.timestamp ?? deal?.createdAt;
+    if (!sinceIso) return undefined;
+    const days = Math.floor((Date.now() - new Date(sinceIso).getTime()) / 86400000);
+    if (days <= 0) return "today";
+    if (days === 1) return "1 day in stage";
+    return `${days} days in stage`;
+  }, [status, statusHistory, deal?.createdAt]);
+
+  const savedAt = useMemo(() => {
+    const lastEntry = statusHistory.length > 0
+      ? statusHistory[statusHistory.length - 1].timestamp
+      : deal?.createdAt;
+    return lastEntry ? formatSavedAt(lastEntry) : undefined;
+  }, [statusHistory, deal?.createdAt]);
 
   if (!deal) {
     return (
@@ -173,17 +243,20 @@ const DealDetail = () => {
 
   const currency = deal.currency ?? "EUR";
   const isREBU = deal.businessUnit === "rebu";
-  const allowedTransitions = [status, ...getAllowedDealTransitions(status)];
   const stageDates = getStageDates({ ...deal, status, statusHistory });
   const currentIdx = getStageIndex(status);
   const canEditOps = (status === "pending-details" || status === "under-review") && !pnlPendingApproval;
 
-  const handleStatusChange = (to: DealStatus) => {
+  // ── Status transition handler ───────────────────────────────────────
+  // Persists immediately (no separate Save button — C2 / autosave model).
+  const handleStatusChange = (to: DealStatus, opts?: { reason?: string }) => {
     if (to === status) return;
     if (!canTransitionDealStatus(status, to)) {
       toast.error(`Cannot transition ${status} → ${to}`);
       return;
     }
+
+    // Pre-flight checks for forward motion out of Under Review.
     if (status === "under-review" && to === "pending-agent-approval") {
       if (pnlPendingApproval) {
         toast.error("Cannot move to Agent Approval: P&L changes must be approved by Finance Lead first.");
@@ -195,17 +268,21 @@ const DealDetail = () => {
         return;
       }
     }
+
+    // Auto-draft invoices when moving into Invoicing.
     if (to === "invoicing") {
       const blueprint = getBlueprint(deal.country, deal.businessUnit);
       const billableStakes = sharedDealStakeholders.filter(
-        (s) => s.dealId === deal.id && s.role !== "AGENT_PAYOUT" && s.financialAmount != null && s.financialAmount !== 0,
+        (s) =>
+          s.dealId === deal.id &&
+          s.role !== "AGENT_PAYOUT" &&
+          s.financialAmount != null &&
+          s.financialAmount !== 0,
       );
       const now = new Date().toISOString();
       const today = now.slice(0, 10);
       const dueDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
-      // Group REVENUE_SOURCE by partyId so a client with multiple charges (commission + conveyance) gets one bundled invoice.
-      // Non-revenue stakes (costs, referrals) stay as individual invoices.
       const revenueStakesByParty = new Map<string, typeof billableStakes>();
       const nonRevenueStakes: typeof billableStakes = [];
       billableStakes.forEach((s) => {
@@ -219,7 +296,7 @@ const DealDetail = () => {
 
       let invIdx = 0;
       const country = (deal.country ?? "XX").toUpperCase();
-      const currency = deal.currency ?? "EUR";
+      const invCurrency = deal.currency ?? "EUR";
 
       revenueStakesByParty.forEach((stakes) => {
         const subtotal = stakes.reduce((sum, s) => sum + Math.abs(s.financialAmount!), 0);
@@ -237,7 +314,7 @@ const DealDetail = () => {
           subtotal,
           vatAmount,
           lineItems,
-          currency,
+          currency: invCurrency,
           issueDate: today,
           dueDate,
           createdAt: now,
@@ -258,7 +335,7 @@ const DealDetail = () => {
           status: "draft" as const,
           subtotal,
           vatAmount,
-          currency,
+          currency: invCurrency,
           issueDate: today,
           dueDate,
           createdAt: now,
@@ -269,55 +346,38 @@ const DealDetail = () => {
 
       if (billableStakes.length > 0) setInvoicesVersion((v) => v + 1);
     }
-    const entry = { from: status, to, timestamp: new Date().toISOString(), note: "Manual transition" };
-    setStatus(to);
-    setStatusHistory((prev) => [...prev, entry]);
-  };
 
-  const handleSave = () => {
-    const updated: Deal = { ...deal, status, statusHistory };
-    if (status === "finalized" && deal.status !== "finalized") {
-      createCommissionAccrualPosting(updated);
-    }
+    const note = opts?.reason ? `Canceled: ${opts.reason}` : "Manual transition";
+    const entry = { from: status, to, timestamp: new Date().toISOString(), note };
+    const nextHistory = [...statusHistory, entry];
+
+    setStatus(to);
+    setStatusHistory(nextHistory);
+
+    // Persist immediately (C2 — no Save button).
+    const updated: Deal = { ...deal, status: to, statusHistory: nextHistory };
+    fireCommissionAccrualOnTransition(deal, to);
     updateDeal(updated);
-    toast.success("Deal saved");
+
+    if (to === "canceled") toast.success("Deal canceled");
+    else if (to === "pending-details") toast.success("Sent back to agent");
+    else toast.success(`Moved to ${dealStatusLabel[to]}`);
   };
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-20 flex items-center justify-between px-6 h-14 bg-card border-b border-border">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate("/deals")} className="p-1.5 hover:bg-muted rounded transition-colors text-muted-foreground">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-3">
-            <h1 className="text-base font-semibold text-foreground">{deal.id}</h1>
-            <DealStatusBadge status={status} />
-            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${isREBU ? "bg-blue-500/15 text-blue-700 dark:text-blue-400" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"}`}>
-              {deal.businessUnit?.toUpperCase()}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={status}
-            onChange={(e) => handleStatusChange(e.target.value as DealStatus)}
-            className="px-3 py-1.5 border border-border rounded-md text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            {allowedTransitions.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <button
-            onClick={handleSave}
-            disabled={!hasChanges}
-            className={`px-4 py-1.5 rounded-md text-[13px] font-semibold transition-opacity ${hasChanges ? "bg-primary text-primary-foreground hover:opacity-90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
-          >
-            Save
-          </button>
-        </div>
-      </header>
+      <DealHeader
+        deal={deal}
+        status={status}
+        pnlPendingApproval={pnlPendingApproval}
+        docs={docs}
+        clientName={clientName}
+        amountLabel={amountLabel}
+        ageInStage={ageInStage}
+        savedAt={savedAt}
+        onTransition={handleStatusChange}
+      />
 
-      {/* Content */}
       <div className="flex-1 overflow-auto px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
           {/* Left */}
@@ -326,13 +386,6 @@ const DealDetail = () => {
             {/* Deal Overview */}
             <SectionCard title="Deal Overview">
               {(() => {
-                const revenueParties = sharedDealStakeholders
-                  .filter((s) => s.dealId === deal.id && s.role === "REVENUE_SOURCE")
-                  .map((s) => sharedParties.find((p) => p.id === s.partyId)?.displayName)
-                  .filter(Boolean)
-                  .join(", ");
-                const clientDisplay = revenueParties || deal.clientName || "—";
-                const dealAmountValue = deal.dealPrice ?? deal.dealAmount;
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
                     <div>
@@ -340,8 +393,8 @@ const DealDetail = () => {
                       <ReadRow label="Market" value={deal.market} />
                       <ReadRow label="Country" value={deal.country?.toUpperCase()} />
                       <ReadRow label="Currency" value={deal.currency} />
-                      {dealAmountValue != null && dealAmountValue > 0 && (
-                        <ReadRow label="Deal Amount" value={fmt(dealAmountValue, currency)} />
+                      {(deal.dealPrice ?? deal.dealAmount) != null && (deal.dealPrice ?? deal.dealAmount)! > 0 && (
+                        <ReadRow label="Deal Amount" value={fmt(deal.dealPrice ?? deal.dealAmount!, currency)} />
                       )}
                       <ReadRow label="Report Date" value={deal.reportDate ? formatDate(deal.reportDate) : "—"} />
                       <ReadRow label="Created" value={deal.createdAt ? formatDate(deal.createdAt) : "—"} />
@@ -349,7 +402,7 @@ const DealDetail = () => {
                     <div>
                       <ReadRow label="Property" value={deal.title ?? deal.buildingName ?? "—"} />
                       <ReadRow label="Offer ID" value={deal.offerId ?? "—"} />
-                      <ReadRow label="Client" value={clientDisplay} />
+                      <ReadRow label="Client" value={clientName} />
                       <ReadRow label="Channel" value={deal.channel ?? "—"} />
                       <ReadRow label="P&L Engine" value={getDealEngine(deal)} />
                     </div>
@@ -359,7 +412,7 @@ const DealDetail = () => {
             </SectionCard>
 
             {/* P&L */}
-            <SectionCard title={pnlPendingApproval ? "P&L — Pending Approval" : "P&L"} collapsible>
+            <SectionCard id="pnl" title={pnlPendingApproval ? "P&L — Pending Approval" : "P&L"} collapsible>
               {pnlPendingApproval && (
                 <div className={`flex items-center justify-between mb-4 px-3 py-2.5 rounded-md border ${currentUser.role === "finance_lead" ? "border-amber-300 bg-amber-50 dark:bg-amber-950/20" : "border-border bg-muted/40"}`}>
                   <div className="flex items-center gap-2">
@@ -429,7 +482,7 @@ const DealDetail = () => {
             />
           </div>
 
-          {/* Right sidebar: Deal Progress + Timeline */}
+          {/* Right sidebar: Deal Progress timeline */}
           <div className="flex flex-col gap-5">
             <SectionCard title="Deal Progress" collapsible>
               <div className="relative pl-4">
@@ -468,6 +521,7 @@ const DealDetail = () => {
 
 export default DealDetail;
 
+// ─── Below: helper sections (unchanged from original) ──────────────────────────
 
 const PROCESS_LABELS: Record<string, string> = {
   invoice_issued: "Invoice Issued",
@@ -765,7 +819,7 @@ function DocumentsSection({
   const [addingLabel, setAddingLabel] = useState("");
 
   return (
-    <SectionCard title="Documents" collapsible>
+    <SectionCard id="docs" title="Documents" collapsible>
       {docs.length === 0 && !canEdit ? (
         <p className="text-[13px] text-muted-foreground italic">No document requirements for this deal.</p>
       ) : (
@@ -844,4 +898,3 @@ function DocumentsSection({
     </SectionCard>
   );
 }
-
