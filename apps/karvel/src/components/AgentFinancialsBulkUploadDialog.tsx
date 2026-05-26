@@ -103,6 +103,8 @@ function parseRow(row: Record<string, string>, rowIndex: number): ParsedRow | nu
 function strategyLabel(s: AgentStrategy): string {
   if (s.kind === "flat") return `Flat ${s.pct}%`;
   if (s.kind === "max") return `Max ${s.pct}% (cap ${s.capAmount})`;
+  if (s.kind === "broker-rate-slab") return "Broker rate slab (resolved at calc time)";
+  if (s.kind === "mbu-direct-rate-slab") return "MBU direct rate slab (resolved at calc time)";
   return `Slab (${s.slabs.length} tiers)`;
 }
 

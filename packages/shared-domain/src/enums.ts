@@ -134,12 +134,14 @@ export type StakeholderType =
 // D: External service providers (notaries, conveyance, legal — fixed fees).
 // Buckets A and B are derived by the engine; C and D are user-declared.
 // ============================================================
-export type CostBucket = "A" | "B" | "C" | "D";
+export type CostBucket = "agent-payout" | "acquisition-cost" | "operational-cost";
 
 // Discriminator for AgentFinancials.strategy. See entities.ts for the union shape.
 // "broker-rate-slab": rate is not fixed — resolved at calculation time from BrokerRateSlab
 // based on reporting month, lending bank, and broker's monthly GMV tier.
-export type AgentStrategyKind = "flat" | "slab" | "max" | "broker-rate-slab";
+// "mbu-direct-rate-slab": rate resolved at calculation time from MBUDirectMonthlyRate
+// based on reporting month, channel (REA/DS/B2C), and sourcing type (self vs external).
+export type AgentStrategyKind = "flat" | "slab" | "max" | "broker-rate-slab" | "mbu-direct-rate-slab";
 
 // ============================================================
 // Deal document requirements — per-deal checklist driven by

@@ -22,11 +22,11 @@ import { getBlueprint } from "./blueprints";
  *
  * Waterfall flow:
  *   REVENUE_SOURCE stakes — positive = commission charged; negative = rebate/discount on client invoice
- *     − ACQUISITION_DEDUCTION stakes (Bucket C: co-brokers, external referrals Huspy pays)
+ *     − ACQUISITION_DEDUCTION stakes (co-brokers, external referrals that reduce the commission pool)
  *   = Commission Base  ← agent splits applied here
- *     − AGENT_PAYOUT per agent (Bucket B: strategy-derived)
+ *     − AGENT_PAYOUT per agent (strategy-derived)
  *   = Huspy Gross Share
- *     − OPERATIONAL_DEDUCTION stakes (Bucket D: Huspy operational costs, NOT shared with agents)
+ *     − OPERATIONAL_DEDUCTION stakes (Huspy-borne service costs, NOT shared with agents)
  *   = Huspy Net Margin
  *
  * Agent split percentages are read from DealStakeholder.splitPercentage.
@@ -68,13 +68,11 @@ export interface ProjectedPnL {
   blueprintId: string;
   currency: Currency;
   grossRevenue: number;
-  /** Always 0 — tax is routed to LIAB_VAT via draftPostings, not the waterfall. */
-  totalBucketA: 0;
-  totalBucketC: number;
-  /** gross − C: the base on which all agent splits are calculated. */
+  totalAcquisitionCost: number;
+  /** gross − acquisitionCost: the base on which all agent splits are calculated. */
   commissionBase: number;
-  totalBucketD: number;
-  totalBucketB: number;
+  totalOperationalCost: number;
+  totalAgentPayout: number;
   huspyMargin: number;
   splits: ProjectedAgentSplit[];
   ledger: LedgerEntry[];
@@ -165,41 +163,41 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
   }
 
   // ── Step 2: Deductions ───────────────────────────────────────────────────
-  let totalC = 0;
-  let totalD = 0;
+  let totalAcquisitionCost = 0;
+  let totalOperationalCost = 0;
 
   for (const stake of input.stakeholders) {
     if (stake.parentStakeholderId) continue; // child of an agent stake — handled in Step 3
     if (stake.role === "ACQUISITION_DEDUCTION") {
       const amount = Math.abs(stake.financialAmount ?? 0);
       if (amount === 0) continue;
-      totalC += amount;
+      totalAcquisitionCost += amount;
       const name = input.partyDisplayNames?.[stake.partyId] ?? stake.partyId;
-      ledger.push({ id: `acq::${stake.id}`, label: name, bucket: "C", side: "DEBIT", amount, partyId: stake.partyId });
+      ledger.push({ id: `acq::${stake.id}`, label: name, bucket: "acquisition-cost", side: "DEBIT", amount, partyId: stake.partyId });
     } else if (stake.role === "OPERATIONAL_DEDUCTION") {
       const amount = Math.abs(stake.financialAmount ?? 0);
       if (amount === 0) continue;
-      totalD += amount;
+      totalOperationalCost += amount;
       const name = input.partyDisplayNames?.[stake.partyId] ?? stake.partyId;
-      ledger.push({ id: `ops::${stake.id}`, label: name, bucket: "D", side: "DEBIT", amount, partyId: stake.partyId });
+      ledger.push({ id: `ops::${stake.id}`, label: name, bucket: "operational-cost", side: "DEBIT", amount, partyId: stake.partyId });
     }
   }
 
   // Legacy convenience reductions (rebates/subsidies from deal wizard).
   for (const r of input.reductions ?? []) {
     if (r.amount <= 0) continue;
-    totalC += r.amount;
-    ledger.push({ id: `red::${r.label}`, label: r.label, bucket: "C", side: "DEBIT", amount: r.amount });
+    totalAcquisitionCost += r.amount;
+    ledger.push({ id: `red::${r.label}`, label: r.label, bucket: "acquisition-cost", side: "DEBIT", amount: r.amount });
   }
 
-  // commissionBase = gross − C: this is what agent splits are calculated on.
-  // D is a Huspy-only cost and does NOT reduce the agent commission pool.
-  const commissionBase = gross - totalC;
+  // commissionBase = gross − acquisitionCost: this is what agent splits are calculated on.
+  // operationalCost is Huspy-only and does NOT reduce the agent commission pool.
+  const commissionBase = gross - totalAcquisitionCost;
 
-  // ── Step 3: Internal splits (AGENT_PAYOUT / Bucket B) ─────────────────
+  // ── Step 3: Agent payouts ────────────────────────────────────────────────
   const agentStakes = input.stakeholders.filter((s) => s.role === "AGENT_PAYOUT");
   const splits: ProjectedAgentSplit[] = [];
-  let totalB = 0;
+  let totalAgentPayout = 0;
 
   for (const stake of agentStakes) {
     const agentId = input.partyIdToAgentId[stake.partyId];
@@ -220,7 +218,7 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
       const childName = input.partyDisplayNames?.[child.partyId] ?? child.partyId;
       const childLabel = child.description ? `${childName} — ${child.description}` : childName;
       agentSourcedDeductions.push({ partyId: child.partyId, label: childLabel, amount: childAmount });
-      ledger.push({ id: `agtsub::${child.id}`, label: childLabel, bucket: "B", side: "DEBIT", amount: childAmount, partyId: child.partyId });
+      ledger.push({ id: `agtsub::${child.id}`, label: childLabel, bucket: "agent-payout", side: "DEBIT", amount: childAmount, partyId: child.partyId });
     }
     const agentBorneCostsTotal = agentSourcedDeductions.reduce((s, d) => s + d.amount, 0);
 
@@ -234,29 +232,27 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
     splits.push({ agentId, partyId: stake.partyId, shareOfPool, allocatedNet, agentPayout, agentSourcedDeductions, teamLeadPayout, managerPayout, strategyKind: af.strategy.kind });
 
     const name = input.partyDisplayNames?.[stake.partyId] ?? agentId;
-    ledger.push({ id: `int::${stake.id}::agent`, label: `${name} — commission (${af.strategy.kind})`, bucket: "B", side: "DEBIT", amount: agentPayout, partyId: stake.partyId });
+    ledger.push({ id: `int::${stake.id}::agent`, label: `${name} — commission (${af.strategy.kind})`, bucket: "agent-payout", side: "DEBIT", amount: agentPayout, partyId: stake.partyId });
     if (teamLeadPayout > 0) {
-      ledger.push({ id: `int::${stake.id}::tl`, label: `Team-lead (${af.teamLeadRate ?? 0}%)`, bucket: "B", side: "DEBIT", amount: teamLeadPayout });
+      ledger.push({ id: `int::${stake.id}::tl`, label: `Team-lead (${af.teamLeadRate ?? 0}%)`, bucket: "agent-payout", side: "DEBIT", amount: teamLeadPayout });
     }
     if (managerPayout > 0) {
-      ledger.push({ id: `int::${stake.id}::mgr`, label: `Manager (${af.managerRate ?? 0}%)`, bucket: "B", side: "DEBIT", amount: managerPayout });
+      ledger.push({ id: `int::${stake.id}::mgr`, label: `Manager (${af.managerRate ?? 0}%)`, bucket: "agent-payout", side: "DEBIT", amount: managerPayout });
     }
 
-    // totalB = agentPayout + agentBorneCosts + teamLeadPayout + managerPayout = agentGrossPayout + TL + Mgr
-    totalB += agentGrossPayout + teamLeadPayout + managerPayout;
+    totalAgentPayout += agentGrossPayout + teamLeadPayout + managerPayout;
   }
 
-  const huspyMargin = commissionBase - totalD - totalB;
+  const huspyMargin = commissionBase - totalOperationalCost - totalAgentPayout;
 
   return {
     blueprintId: blueprint.id,
     currency: input.currency,
     grossRevenue: gross,
-    totalBucketA: 0,
-    totalBucketC: totalC,
+    totalAcquisitionCost,
     commissionBase,
-    totalBucketD: totalD,
-    totalBucketB: totalB,
+    totalOperationalCost,
+    totalAgentPayout,
     huspyMargin,
     splits,
     ledger,

@@ -10,9 +10,10 @@ import { AddDealDialog } from "@/components/AddDealDialog";
 import { DocRequirementsView } from "@/components/DocRequirementsView";
 import { LedgerView } from "@/components/LedgerView";
 import { BrokerRateSlabsView } from "@/components/BrokerRateSlabsView";
+import { MBUDirectRatesView } from "@/components/MBUDirectRatesView";
 
 type ViewMode = "listing" | "invoices" | "ledger" | "deal-config";
-type DealConfigSubTab = "doc-requirements" | "broker-rate-slabs";
+type DealConfigSubTab = "doc-requirements" | "broker-rate-slabs" | "mbu-direct-rates";
 
 const VIEW_TITLES: Record<ViewMode, string> = {
   listing: "Deal Management",
@@ -144,8 +145,18 @@ const Deals = () => {
                 >
                   <span className="flex items-center gap-2"><BookOpen className="h-3.5 w-3.5" />Broker Rate Slabs</span>
                 </button>
+                <button
+                  onClick={() => setDealConfigTab("mbu-direct-rates")}
+                  className={`px-4 py-2 text-[13px] font-medium border-b-2 transition-colors -mb-px ${
+                    dealConfigTab === "mbu-direct-rates"
+                      ? "border-foreground text-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span className="flex items-center gap-2"><BookOpen className="h-3.5 w-3.5" />MBU Direct Rates</span>
+                </button>
               </div>
-              {dealConfigTab === "doc-requirements" ? <DocRequirementsView /> : <BrokerRateSlabsView />}
+              {dealConfigTab === "doc-requirements" ? <DocRequirementsView /> : dealConfigTab === "broker-rate-slabs" ? <BrokerRateSlabsView /> : <MBUDirectRatesView />}
             </div>
           )}
       </div>

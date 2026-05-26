@@ -4,6 +4,8 @@ import {
   calculateProjectedPnL,
   getBlueprint,
   resolveBrokerRate,
+  getMBUDirectRate,
+  DEFAULT_EXTERNAL_REFERRAL_RATE,
   sharedAgentFinancials,
   sharedDealStakeholders,
   sharedAgents,
@@ -35,21 +37,45 @@ import {
 // mbu-ma-broker   mortgage       MA        AGENT_PAYOUT (1+, AF strategy: broker-rate-slab)
 //                                          REVENUE_SOURCE (bank commission = principal × commissionPct)
 //                                          SUPPLY (lending bank), DEMAND (borrower)
-//                                          No ACQUISITION_DEDUCTION / OPERATIONAL_DEDUCTION
+//                                          No ACQUISITION_DEDUCTION
 //
-// mbu-b2c         mortgage       B2C       [TO BE DETERMINED]
-// mbu-bbg         mortgage       BBG       [TO BE DETERMINED]
+// mbu-rea         mortgage       REA       AGENT_PAYOUT (1+, AF strategy: mbu-direct-rate-slab)
+// mbu-ds          mortgage       DS        REVENUE_SOURCE (bank commission)
+// mbu-b2c         mortgage       B2C       SUPPLY (lending bank), DEMAND (borrower)
+//                                          OPERATIONAL_DEDUCTION (opt, external referral — 0.3% of principal by default; signals external sourcing → lower agent rate)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type DealEngineKey = "rebu" | "mbu-ma-broker" | "mbu-b2c" | "mbu-bbg";
+export type DealEngineKey = "rebu" | "mbu-ma-broker" | "mbu-rea" | "mbu-ds" | "mbu-b2c" | "mbu-bbg";
 
 export function getDealEngine(deal: Pick<Deal, "businessUnit" | "channel">): DealEngineKey {
   if (deal.businessUnit !== "mortgage") return "rebu";
   switch (deal.channel) {
     case "MA":  return "mbu-ma-broker";
+    case "REA": return "mbu-rea";
+    case "DS":  return "mbu-ds";
     case "B2C": return "mbu-b2c";
     case "BBG": return "mbu-bbg";
-    default:    return "mbu-b2c"; // unrecognised mortgage channel → B2C path until defined
+    default:    return "mbu-b2c";
+  }
+}
+
+// ── Posting policy ───────────────────────────────────────────────────────────
+// Defines at which DealStatus the commission_accrual posting fires automatically.
+// REBU: agent is owed commission once the deal is fully finalized.
+// MBU:  broker is owed commission only when Huspy raises the invoice to the bank.
+const ENGINE_POSTING_POLICY: Record<DealEngineKey, { agentCommissionTrigger: string }> = {
+  "rebu":          { agentCommissionTrigger: "finalized" },
+  "mbu-ma-broker": { agentCommissionTrigger: "invoicing" },
+  "mbu-rea":       { agentCommissionTrigger: "invoicing" },
+  "mbu-ds":        { agentCommissionTrigger: "invoicing" },
+  "mbu-b2c":       { agentCommissionTrigger: "invoicing" },
+  "mbu-bbg":       { agentCommissionTrigger: "invoicing" },
+};
+
+export function fireCommissionAccrualOnTransition(deal: Deal, toStatus: string): void {
+  const trigger = ENGINE_POSTING_POLICY[getDealEngine(deal)].agentCommissionTrigger;
+  if (toStatus === trigger && deal.status !== trigger) {
+    createCommissionAccrualPosting(deal);
   }
 }
 
@@ -116,6 +142,25 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
             managerRate: 0,
           };
         }
+      } else if (["mbu-rea", "mbu-ds", "mbu-b2c"].includes(getDealEngine(deal))) {
+        // MBU direct channels: rate resolved from MBUDirectMonthlyRate by channel + month + sourcing.
+        const reportingMonth = deal.reportDate?.slice(0, 7);
+        const channel = deal.channel as "REA" | "DS" | "B2C";
+        const isSelfSourced = !allFixtureStakes.some((s) => s.role === "OPERATIONAL_DEDUCTION");
+        const resolvedPct = reportingMonth ? getMBUDirectRate(reportingMonth, channel, isSelfSourced) : undefined;
+        if (resolvedPct != null) {
+          af = {
+            id: `af-syn-${agent.id}`,
+            agentId: agent.id,
+            strategy: { kind: "flat", pct: resolvedPct },
+            teamLeadRate: 0,
+            managerRate: 0,
+          };
+        } else if (!af && stake.financialAmount != null && stake.financialAmount > 0) {
+          const synBase = (deal.grossRevenue ?? 0) * ((stake.splitPercentage ?? 100) / 100);
+          const impliedPct = synBase > 0 ? (stake.financialAmount / synBase) * 100 : 0;
+          af = { id: `af-syn-${agent.id}`, agentId: agent.id, strategy: { kind: "flat", pct: impliedPct } };
+        }
       } else if (!af && stake.financialAmount != null && stake.financialAmount > 0) {
         // REBU / other channels fallback — no AF entry, synthesise from financialAmount.
         const synBase = (deal.grossRevenue ?? 0) * ((stake.splitPercentage ?? 100) / 100);
@@ -175,6 +220,18 @@ function buildEngineInput(deal: Deal): Parameters<typeof calculateProjectedPnL>[
       );
     }
   }
+
+  // MBU direct channels: fill in default referral fee (0.3% of disbursed principal) for any
+  // OPERATIONAL_DEDUCTION (referral party) that has no explicit amount set.
+  // Base is dealAmount (mortgage principal), not grossRevenue (bank commission).
+  if (["mbu-rea", "mbu-ds", "mbu-b2c"].includes(getDealEngine(deal))) {
+    stakeholders = stakeholders.map((s) => {
+      if (s.role === "OPERATIONAL_DEDUCTION" && !s.financialAmount) {
+        return { ...s, financialAmount: -(deal.dealAmount * DEFAULT_EXTERNAL_REFERRAL_RATE / 100) };
+      }
+      return s;
+    });
+  }
   return {
     country,
     businessUnit,
@@ -224,13 +281,13 @@ function applyWaterfallEngine(deal: Deal): Deal | null {
     .filter((e) => e.side === "DEBIT" && e.bucket)
     .forEach((e) => {
       const entityType: PayableEntry["entityType"] =
-        e.bucket === "B"
+        e.bucket === "agent-payout"
           ? e.label.startsWith("Agent")
             ? "agent"
             : e.label.startsWith("Team")
               ? "team_lead"
               : "manager"
-          : e.bucket === "C"
+          : e.bucket === "acquisition-cost"
             ? "external_partner"
             : "conveyance";
       const prev = existing.find((p) => p.entityLabel === e.label);
@@ -262,8 +319,8 @@ function applyWaterfallEngine(deal: Deal): Deal | null {
     managerName: first?.managerName,
     managerOverrideRate: first?.managerOverrideRate ?? 0,
     managerOverride: projection.splits.reduce((s, sp) => s + sp.managerPayout, 0),
-    cogsInternal: projection.totalBucketB,
-    cogsExternal: projection.totalBucketC,
+    cogsInternal: projection.totalAgentPayout,
+    cogsExternal: projection.totalAcquisitionCost,
     cogsReferrals: 0,
     payables,
   };
@@ -430,9 +487,10 @@ export function recalculateDeal(deal: Deal): Deal {
     case "mbu-ma-broker":
       // Waterfall engine handles MA/Broker via BrokerRateSlab; no legacy fallback.
       return applyWaterfallEngine(deal) ?? deal;
+    case "mbu-rea":
+    case "mbu-ds":
     case "mbu-b2c":
     case "mbu-bbg":
-      // Waterfall engine works for internal-agent mortgage deals; no legacy fallback.
       return applyWaterfallEngine(deal) ?? deal;
   }
 }
@@ -453,12 +511,12 @@ export function computeDealPnL(deal: Deal) {
     const name = sharedParties.find((p) => p.id === stake.partyId)?.displayName ?? stake.partyId;
     const amount = Math.abs(stake.fixedAmount!);
     additionalB += amount;
-    extraLedger.push({ id: `fixed::${stake.id}`, label: `${name} — fixed commission`, bucket: "B", side: "DEBIT", amount, partyId: stake.partyId });
+    extraLedger.push({ id: `fixed::${stake.id}`, label: `${name} — fixed commission`, bucket: "agent-payout", side: "DEBIT", amount, partyId: stake.partyId });
   }
 
   return {
     ...pnl,
-    totalBucketB: pnl.totalBucketB + additionalB,
+    totalAgentPayout: pnl.totalAgentPayout + additionalB,
     huspyMargin: pnl.huspyMargin - additionalB,
     ledger: [...pnl.ledger, ...extraLedger],
   };
@@ -513,18 +571,18 @@ export function draftPostings(projection: ProjectedPnL, deal: { id: string; busi
     }
   }
 
-  // Bucket C + D (external partners): Expense debit + External payable credit
-  const externalTotal = projection.totalBucketC + projection.totalBucketD;
+  // Acquisition + operational costs: Expense debit + External payable credit
+  const externalTotal = projection.totalAcquisitionCost + projection.totalOperationalCost;
   if (externalTotal > 0) {
     lines.push(line(ids.exp, "DEBIT", externalTotal));
     lines.push(line(ids.extPayable, "CREDIT", externalTotal));
   }
 
-  // Bucket B (agent payouts): one Expense debit for the total, then one Credit per
+  // Agent payouts: one Expense debit for the total, then one Credit per
   // agent subledger (AgentLiability_agent-{id}). Falls back to the GL parent only
   // when no subledger is found for an agent — preserving double-entry balance.
-  if (projection.totalBucketB > 0) {
-    lines.push(line(ids.exp, "DEBIT", projection.totalBucketB));
+  if (projection.totalAgentPayout > 0) {
+    lines.push(line(ids.exp, "DEBIT", projection.totalAgentPayout));
     for (const split of projection.splits) {
       const agentTotal = split.agentPayout + split.teamLeadPayout + split.managerPayout;
       if (agentTotal <= 0) continue;
@@ -545,7 +603,7 @@ function assertNotControlAccount(ledgerId: number, context: string): void {
 
 export function createCommissionAccrualPosting(deal: Deal): void {
   const pnl = computeDealPnL(deal);
-  if (!pnl || pnl.totalBucketB <= 0) return;
+  if (!pnl || pnl.totalAgentPayout <= 0) return;
 
   const currency = (deal.currency ?? "EUR") as "EUR" | "AED" | "SAR";
   const ids = LEDGER_IDS[currency] ?? LEDGER_IDS.EUR;

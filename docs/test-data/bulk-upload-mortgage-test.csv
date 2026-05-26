@@ -1,0 +1,13 @@
+offerId,propertyName,market,businessUnit,channel,country,currency,dealPrice,reportDate,stakeRole,partyId,amount,description,chargedTo,splitPct,fixedAmount
+TEST-MA-001,Downtown Burj View Apt 4801,primary,mortgage,MA,ae,AED,4200000,2026-05-01,AGENT_PAYOUT,party-broker-omar-rahman,,,,65,
+TEST-MA-001,,,,,,,,,,AGENT_PAYOUT,party-broker-khalid-assoc,,,,35,
+TEST-MA-001,,,,,,,,,,DEMAND,party-client-004,,,,,
+TEST-MA-001,,,,,,,,,,SUPPLY,party-third-adib,,,,,
+TEST-MA-001,,,,,,,,,,REVENUE_SOURCE,party-third-adib,50400,Bank commission 1.2% of 4200000,,,
+TEST-REA-001,Marina Heights Studio 1502,primary,mortgage,REA,ae,AED,2800000,2026-05-01,AGENT_PAYOUT,party-agent-001,,,,70,
+TEST-REA-001,,,,,,,,,,AGENT_PAYOUT,party-agent-002,,,,30,
+TEST-REA-001,,,,,,,,,,DEMAND,party-client-006,,,,,
+TEST-REA-001,,,,,,,,,,SUPPLY,party-third-fab,,,,,
+TEST-REA-001,,,,,,,,,,REVENUE_SOURCE,party-third-fab,30800,Bank commission 1.1% of 2800000,,,
+TEST-REA-001,,,,,,,,,,OPERATIONAL_DEDUCTION,party-third-inmobiliaria-grupo-norte,0,REA referral - default 0.3% of 2800000 = 8400,,,
+TEST-REA-001,,,,,,,,,,OPERATIONAL_DEDUCTION,party-third-snb,500,Admin processing fee,,,

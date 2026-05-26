@@ -64,8 +64,8 @@ export function CommissionBreakdown({ deal, stake, projection, agentSplit, perso
   const currency = deal.currency ?? 'AED';
 
   const revenueLines = projection?.ledger.filter(e => e.id.startsWith('gross::')) ?? [];
-  const acqLines = projection?.ledger.filter(e => e.bucket === 'C') ?? [];
-  const opLines = projection?.ledger.filter(e => e.bucket === 'D') ?? [];
+  const acqLines = projection?.ledger.filter(e => e.bucket === 'acquisition-cost') ?? [];
+  const opLines = projection?.ledger.filter(e => e.bucket === 'operational-cost') ?? [];
   const borneCosts = agentSplit?.agentSourcedDeductions ?? [];
   const agentBorneCostsTotal = borneCosts.reduce((s, d) => s + d.amount, 0);
   const agentGrossPayout = personalCommission + agentBorneCostsTotal;

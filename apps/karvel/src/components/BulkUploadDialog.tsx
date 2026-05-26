@@ -14,10 +14,10 @@ interface Props {
   onDealsCreated: (deals: Deal[]) => void;
 }
 
-// One row per stakeholder. Deal metadata (columns 1-7) only needed on the first row of each offerId group.
+// One row per stakeholder. Deal metadata only needed on the first row of each offerId group.
 const CSV_HEADERS = [
-  "offerId", "propertyName", "market", "businessUnit", "channel", "country", "currency", "dealPrice",
-  "stakeRole", "partyId", "amount", "description", "chargedTo", "splitPct",
+  "offerId", "propertyName", "market", "businessUnit", "channel", "country", "currency", "dealPrice", "reportDate",
+  "stakeRole", "partyId", "amount", "description", "chargedTo", "splitPct", "fixedAmount",
 ];
 
 // Template: 2 deals showing REBU and MBU MA/Broker patterns.
@@ -35,35 +35,35 @@ const CSV_HEADERS = [
 const TEMPLATE_ROWS = [
   // ── REBU example ──────────────────────────────────────────────────────────
   // row 1: deal header + primary agent (lister, 60%) — channel blank for REBU
-  ["DEAL-BULK-001", "Dubai Marina Tower Apt 2204", "primary", "rebu", "", "ae", "AED", "1500000", "AGENT_PAYOUT", "party-agent-004", "", "", "", "60"],
+  ["DEAL-BULK-001", "Dubai Marina Tower Apt 2204", "primary", "rebu", "", "ae", "AED", "1500000", "2026-05-01", "AGENT_PAYOUT", "party-agent-004", "", "", "", "60", ""],
   // row 2: co-agent (closer, 40%)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "", "AGENT_PAYOUT", "party-agent-005", "", "", "", "40"],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "", "AGENT_PAYOUT", "party-agent-005", "", "", "", "40", ""],
   // row 3: DEMAND — the buyer (identity only, no amount)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "", "DEMAND", "party-client-008", "", "", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "", "DEMAND", "party-client-008", "", "", "", "", ""],
   // row 4: SUPPLY — the developer/seller (identity only, no amount)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "", "SUPPLY", "party-third-emaar", "", "", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "", "SUPPLY", "party-third-emaar", "", "", "", "", ""],
   // rows 5-7: revenue lines (buyer commission + conveyance + rebate)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "30000", "Commission", "", ""],
-  ["DEAL-BULK-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "1500", "Conveyance Fee", "", ""],
-  ["DEAL-BULK-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "-2000", "Rebate", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "30000", "Commission", "", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "1500", "Conveyance Fee", "", "", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-008", "-2000", "Rebate", "", "", ""],
   // row 8: developer revenue line
-  ["DEAL-BULK-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-007", "20000", "Commission", "", ""],
-  // row 9: Huspy-borne service cost (D)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "", "OPERATIONAL_DEDUCTION", "party-third-snb", "800", "Admin Cost", "", ""],
-  // row 10: co-broker cost charged to agent1's pool (C with chargedTo)
-  ["DEAL-BULK-001", "", "", "", "", "", "", "", "ACQUISITION_DEDUCTION", "party-third-inmobiliaria-grupo-norte", "3500", "Co-broker", "party-agent-004", ""],
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-client-007", "20000", "Commission", "", "", ""],
+  // row 9: Huspy-borne service cost
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "", "OPERATIONAL_DEDUCTION", "party-third-snb", "800", "Admin Cost", "", "", ""],
+  // row 10: co-broker cost charged to agent1's pool
+  ["DEAL-BULK-001", "", "", "", "", "", "", "", "", "ACQUISITION_DEDUCTION", "party-third-inmobiliaria-grupo-norte", "3500", "Co-broker", "party-agent-004", "", ""],
 
   // ── MBU MA/Broker example ─────────────────────────────────────────────────
   // channel = "MA". dealPrice = mortgage principal.
   // Broker payout resolved at runtime from BrokerRateSlab(reportingMonth, bankId, brokerMonthlyGmv).
   // row 11: deal header + sole broker (100% pool share)
-  ["DEAL-MBU-001", "Creek Harbour Apartment", "primary", "mortgage", "MA", "ae", "AED", "1500000", "AGENT_PAYOUT", "party-broker-omar-rahman", "", "", "", "100"],
+  ["DEAL-MBU-001", "Creek Harbour Apartment", "primary", "mortgage", "MA", "ae", "AED", "1500000", "2026-05-01", "AGENT_PAYOUT", "party-broker-omar-rahman", "", "", "", "100", ""],
   // row 12: DEMAND — the borrower (identity only)
-  ["DEAL-MBU-001", "", "", "", "", "", "", "", "DEMAND", "party-client-011", "", "", "", ""],
+  ["DEAL-MBU-001", "", "", "", "", "", "", "", "", "DEMAND", "party-client-011", "", "", "", "", ""],
   // row 13: SUPPLY — the lending bank (identity only)
-  ["DEAL-MBU-001", "", "", "", "", "", "", "", "SUPPLY", "party-third-dib", "", "", "", ""],
+  ["DEAL-MBU-001", "", "", "", "", "", "", "", "", "SUPPLY", "party-third-dib", "", "", "", "", ""],
   // row 14: REVENUE_SOURCE — bank commission to Huspy (1.2% × 1,500,000 = 18,000)
-  ["DEAL-MBU-001", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-third-dib", "18000", "Bank commission 1.2%", "", ""],
+  ["DEAL-MBU-001", "", "", "", "", "", "", "", "", "REVENUE_SOURCE", "party-third-dib", "18000", "Bank commission 1.2%", "", "", ""],
 ];
 
 function downloadTemplate(): void {
@@ -129,7 +129,7 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
     commissionPercentage: 0,
     title: header.propertyName || "Untitled Property",
     buildingName: header.propertyName || "Untitled Property",
-    reportDate: new Date().toISOString().split("T")[0],
+    reportDate: header.reportDate || new Date().toISOString().split("T")[0],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     agentName,
@@ -152,6 +152,7 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
     if (row.stakeRole !== "AGENT_PAYOUT") continue;
     const stakeId = `ds-${offerId}-agent-${agentIdx++}`;
     agentStakeIdByPartyId[row.partyId] = stakeId;
+    const fa = parseFloat(row.fixedAmount);
     stakeholders.push({
       id: stakeId,
       dealId: offerId,
@@ -159,6 +160,7 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
       role: "AGENT_PAYOUT",
       isPrimary: agentIdx === 1,
       splitPercentage: parseFloat(row.splitPct) || (agentIdx === 1 ? 100 : 0),
+      fixedAmount: !isNaN(fa) && fa > 0 ? fa : undefined,
     });
   }
 
@@ -275,10 +277,10 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
     for (const [offerId, rows] of groups) {
       results.push(buildDeal(offerId, rows, i++));
     }
-    const deals = results.map(({ deal }) => recalculateDeal(deal));
     for (const { stakeholders } of results) {
       for (const s of stakeholders) sharedDealStakeholders.push(s);
     }
+    const deals = results.map(({ deal }) => recalculateDeal(deal));
     for (const deal of deals) {
       sharedDocumentRequirementTemplates
         .filter((t) => t.market === deal.market && t.businessUnit === deal.businessUnit && t.country === deal.country)
@@ -334,7 +336,7 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
 
             <div className="bg-accent/50 rounded-md p-4 space-y-2 text-[11px]">
               <p className="font-medium text-foreground text-[12px]">Format — one row per stakeholder</p>
-              <p className="font-mono text-muted-foreground">offerId, propertyName, market, businessUnit, <span className="text-foreground font-semibold">channel</span>, country, currency, dealPrice, <span className="text-foreground font-semibold">stakeRole</span>, partyId, amount, description, chargedTo, splitPct</p>
+              <p className="font-mono text-muted-foreground">offerId, propertyName, market, businessUnit, <span className="text-foreground font-semibold">channel</span>, country, currency, dealPrice, reportDate, <span className="text-foreground font-semibold">stakeRole</span>, partyId, amount, description, chargedTo, splitPct, fixedAmount</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-2 text-muted-foreground">
                 <p><span className="text-foreground">AGENT_PAYOUT</span> — agent (use splitPct)</p>
                 <p><span className="text-foreground">REVENUE_SOURCE</span> — commission/fee/rebate (negative = rebate)</p>

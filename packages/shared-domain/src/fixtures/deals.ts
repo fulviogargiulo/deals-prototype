@@ -238,7 +238,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 1850000, reportDate: "2026-05-01",
     createdAt: "2026-05-01T00:00:00.000Z", updatedAt: "2026-05-03T09:00:00.000Z",
     commissionPercentage: 2,
-    channel: "B2C/Digital",
     rebatePercentage: 2.0,
     statusHistory: [
       { from: "pending-details", to: "under-review", timestamp: "2026-05-03T09:00:00.000Z" },
@@ -250,7 +249,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 4200000, reportDate: "2026-03-18",
     createdAt: "2026-03-18T00:00:00.000Z", updatedAt: "2026-03-25T11:00:00.000Z",
     commissionPercentage: 2,
-    channel: "REA",
     statusHistory: [
       { from: "pending-details", to: "under-review", timestamp: "2026-03-20T09:00:00.000Z" },
       { from: "under-review",    to: "canceled",     timestamp: "2026-03-25T11:00:00.000Z", note: "Client withdrew" },
@@ -330,7 +328,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 2100000, reportDate: "2026-05-01",
     createdAt: "2026-05-01T00:00:00.000Z", updatedAt: "2026-05-05T11:00:00.000Z",
     commissionPercentage: 2, paymentDate: "2026-05-04",
-    channel: "REA",
     rebatePercentage: 1.5,
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-05-02T09:00:00.000Z" },
@@ -381,7 +378,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 1200000, reportDate: "2026-05-12",
     createdAt: "2026-05-12T00:00:00.000Z", updatedAt: "2026-05-17T14:00:00.000Z",
     commissionPercentage: 2,
-    channel: "REA",
     paymentDate: "2026-05-17",
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-05-12T10:00:00.000Z" },

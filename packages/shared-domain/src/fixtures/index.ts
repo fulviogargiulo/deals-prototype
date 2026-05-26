@@ -18,6 +18,7 @@ export { sharedAgentDocuments } from "./agentDocuments";
 export { sharedDealComments } from "./dealComments";
 export { sharedAgentFinancials, getAgentFinancialsByAgentId } from "./agentFinancials";
 export { sharedBrokerRateSlabs, getBrokerRateSlabForMonth, resolveBrokerRate } from "./brokerRateSlabs";
+export { sharedMBUDirectRates, getMBUDirectRate, DEFAULT_EXTERNAL_REFERRAL_RATE } from "./mbuDirectRates";
 export {
   generateMockScheduleActivities,
   sharedScheduleActivities,

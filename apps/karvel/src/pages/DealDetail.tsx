@@ -50,6 +50,7 @@ import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { DealHeader } from "@/components/DealHeader";
 
 const STAGE_ORDER: { key: DealStatus; label: string }[] = [
+  { key: "pending-details", label: "Pending Details" },
   { key: "under-review", label: "Under Review" },
   { key: "pending-agent-approval", label: "Agent Approval" },
   { key: "invoicing", label: "Invoicing" },
@@ -63,7 +64,7 @@ function getStageIndex(status: DealStatus): number {
 function getStageDates(deal: Deal): Record<string, string | null> {
   const dates: Record<string, string | null> = {};
   STAGE_ORDER.forEach((stage) => { dates[stage.key] = null; });
-  dates["under-review"] = deal.reportDate ? new Date(deal.reportDate).toISOString() : null;
+  dates["pending-details"] = deal.reportDate ? new Date(deal.reportDate).toISOString() : null;
   if (deal.statusHistory) {
     for (const entry of deal.statusHistory) {
       if (entry.to in dates && dates[entry.to] === null) dates[entry.to] = entry.timestamp;

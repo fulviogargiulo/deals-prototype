@@ -450,7 +450,30 @@ export interface BrokerRateSlabStrategy {
   kind: "broker-rate-slab";
 }
 
-export type AgentStrategy = FlatAgentStrategy | SlabAgentStrategy | MaxAgentStrategy | BrokerRateSlabStrategy;
+/** Rate resolved at calc time from MBUDirectMonthlyRate by channel + month + sourcing type. */
+export interface MBUDirectRateSlabStrategy {
+  kind: "mbu-direct-rate-slab";
+}
+
+export type AgentStrategy = FlatAgentStrategy | SlabAgentStrategy | MaxAgentStrategy | BrokerRateSlabStrategy | MBUDirectRateSlabStrategy;
+
+// ============================================================
+// MBUDirectMonthlyRate — agent commission config for MBU direct channels (REA, DS, B2C).
+// Rates are % of gross revenue (what Huspy gets from the bank).
+// selfSourcedRate applies when no ACQUISITION_DEDUCTION stakeholder is present.
+// externalSourcedRate applies when a referral party (ACQUISITION_DEDUCTION) is present.
+// The referral fee defaults to 0.3% of gross revenue unless overridden on the stakeholder.
+// ============================================================
+export interface MBUDirectMonthlyRate {
+  id: string;
+  /** "YYYY-MM" — the reporting month this config applies to. */
+  reportingMonth: string;
+  channel: "REA" | "DS" | "B2C";
+  /** % of gross revenue paid to agent when deal is self-sourced. */
+  selfSourcedRate: number;
+  /** % of gross revenue paid to agent when deal is externally sourced (referral present). */
+  externalSourcedRate: number;
+}
 
 // ============================================================
 // BrokerRateSlab — MBU MA/Broker channel commission config.

@@ -127,10 +127,16 @@ function persistAgentFinancials(next: SharedAgentFinancials) {
 
 function describeStrategy(s: AgentStrategy): string {
   switch (s.kind) {
-    case "flat": return `Flat — ${s.pct}% of net`;
-    case "max":  return `Max — ${s.pct}% of net, capped at ${s.capAmount.toLocaleString()}`;
-    case "slab": return `Slab — ${s.slabs.length} tier${s.slabs.length === 1 ? "" : "s"}`;
+    case "flat":                return `Flat — ${s.pct}% of net`;
+    case "max":                 return `Max — ${s.pct}% of net, capped at ${s.capAmount.toLocaleString()}`;
+    case "slab":                return `Slab — ${s.slabs.length} tier${s.slabs.length === 1 ? "" : "s"}`;
+    case "broker-rate-slab":    return "Broker rate slab — resolved monthly from Broker Rate Slabs config";
+    case "mbu-direct-rate-slab":return "MBU direct rate slab — resolved monthly from MBU Direct Rates config";
   }
+}
+
+function isRuntimeResolvedStrategy(s: AgentStrategy): boolean {
+  return s.kind === "broker-rate-slab" || s.kind === "mbu-direct-rate-slab";
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
@@ -747,13 +753,17 @@ export default function AgentDetail() {
               <CardHeader className="gap-0">
                 <CardTitle className="flex items-center justify-between gap-2 text-sm font-bold">
                   Commission Structure
-                  <Button variant="ghost" size="icon"
-                    onClick={() => { setFinEditing(!finEditing); setFinDraft(fin); }}>
-                    {finEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                  </Button>
+                  {!isRuntimeResolvedStrategy(fin.strategy) && (
+                    <Button variant="ghost" size="icon"
+                      onClick={() => { setFinEditing(!finEditing); setFinDraft(fin); }}>
+                      {finEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                    </Button>
+                  )}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Agent take rate and commission strategy. Strategy is applied by the waterfall engine to the agent's allocated net revenue.
+                  {isRuntimeResolvedStrategy(fin.strategy)
+                    ? "Rate is resolved at calculation time from the monthly rate table. Edit via Deal Config."
+                    : "Agent take rate and commission strategy. Strategy is applied by the waterfall engine to the agent's allocated net revenue."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-2 space-y-4">

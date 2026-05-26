@@ -523,7 +523,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
   };
 
   // Get display amount for a stakeholder from the pnl ledger
-  const getLedgerAmount = (partyId: string, bucket: "C" | "D"): number | undefined => {
+  const getLedgerAmount = (partyId: string, bucket: "acquisition-cost" | "operational-cost"): number | undefined => {
     const entry = pnl?.ledger.find((e) => e.partyId === partyId && e.bucket === bucket);
     return entry?.amount;
   };
@@ -623,7 +623,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
               key={s.id}
               name={resolvePartyName(s.partyId)}
               identifier={resolvePartyIdentifier(s.partyId)}
-              amount={getLedgerAmount(s.partyId, "C")}
+              amount={getLedgerAmount(s.partyId, "acquisition-cost")}
               currency={currency}
               onRemove={canEdit ? () => removeStake(s.id) : undefined}
             />
@@ -743,7 +743,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
               key={s.id}
               name={resolvePartyName(s.partyId)}
               identifier={resolvePartyIdentifier(s.partyId)}
-              amount={getLedgerAmount(s.partyId, "D")}
+              amount={getLedgerAmount(s.partyId, "operational-cost")}
               currency={currency}
               onRemove={canEdit ? () => removeStake(s.id) : undefined}
             />
