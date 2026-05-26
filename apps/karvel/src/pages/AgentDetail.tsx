@@ -773,6 +773,31 @@ export default function AgentDetail() {
                   onChange={(s) => setFinDraft((d) => ({ ...d, strategy: s }))}
                 />
 
+                {(finEditing ? finDraft.strategy : fin.strategy).kind === "broker-rate-slab" && (
+                  <div className="flex flex-wrap items-center border border-transparent gap-4 p-0 text-sm">
+                    <div className="flex flex-1 flex-col gap-2">
+                      <div className="h-3.5 text-sm font-medium leading-snug">BYOB Penalty Rate</div>
+                      {finEditing ? (
+                        <div className="flex items-center gap-1.5 px-3 py-[3px]">
+                          <input
+                            type="number" min={0} max={100} step={0.5}
+                            value={(finDraft.byobPenaltyRate ?? 0)}
+                            onChange={(e) => setFinDraft((d) => ({ ...d, byobPenaltyRate: Number(e.target.value) || undefined }))}
+                            className="w-[72px] border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                          />
+                          <span className="text-muted-foreground text-[13px]">%</span>
+                          <span className="text-[11px] text-muted-foreground ml-1">0 = MA channel (no penalty)</span>
+                        </div>
+                      ) : (
+                        <p className="px-3 py-[6.5px] text-muted-foreground text-sm">
+                          {fin.byobPenaltyRate ? `${fin.byobPenaltyRate}%` : "—"}
+                          <span className="text-[11px] ml-1">{fin.byobPenaltyRate ? "— BYOB channel" : "MA channel"}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {finEditing && (
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" onClick={saveFinancials}>Save</Button>

@@ -402,6 +402,51 @@ export const sharedDeals: Deal[] = [
       { from: "invoicing", to: "finalized",        timestamp: "2026-05-14T15:00:00.000Z", note: "ADIB payment received" },
     ],
   }),
+  // MBU BYOB — DIB — Nadia Hassan, dealAmount=2M, bank rate 1.10% → gross 22,000
+  // (DIB tier 1 0.624% − 0.10% penalty) × 2M = 10,480 broker payout
+  expand({
+    id: "deal-023", offerId: "offer-023",
+    status: "invoicing",
+    businessUnit: "mortgage", channel: "BYOB",
+    market: "primary", country: "ae", currency: "AED",
+    dealAmount: 2_000_000, commissionPercentage: 1.10,
+    reportDate: "2026-05-10",
+    createdAt: "2026-05-10T00:00:00.000Z", updatedAt: "2026-05-12T10:00:00.000Z",
+    statusHistory: [
+      { from: "pending-details", to: "under-review", timestamp: "2026-05-11T09:00:00.000Z" },
+      { from: "under-review",    to: "invoicing",    timestamp: "2026-05-12T10:00:00.000Z", note: "Invoice issued to DIB" },
+    ],
+  }),
+  // BBG — Broker sub-channel: Layla Nasser (RM 25%) + Omar Sheikh (TL 5%) + Rami Haddad (DS 5%) + Falcon Capital (ext 54%)
+  // Gross 50,000 AED | Huspy margin: 11% = 5,500
+  expand({
+    id: "deal-024", offerId: "offer-024",
+    status: "invoicing",
+    businessUnit: "mortgage", channel: "BBG",
+    market: "primary", country: "ae", currency: "AED",
+    dealAmount: 2_500_000, commissionPercentage: 2,
+    reportDate: "2026-05-15",
+    createdAt: "2026-05-15T00:00:00.000Z", updatedAt: "2026-05-16T10:00:00.000Z",
+    statusHistory: [
+      { from: "pending-details", to: "under-review", timestamp: "2026-05-15T09:00:00.000Z" },
+      { from: "under-review",    to: "invoicing",    timestamp: "2026-05-16T10:00:00.000Z" },
+    ],
+  }),
+  // BBG — Self-Generated: Layla Nasser (RM 60%) + Omar Sheikh (TL 5%)
+  // Gross 30,000 AED | Huspy margin: 35% = 10,500
+  expand({
+    id: "deal-025", offerId: "offer-025",
+    status: "invoicing",
+    businessUnit: "mortgage", channel: "BBG",
+    market: "primary", country: "ae", currency: "AED",
+    dealAmount: 1_500_000, commissionPercentage: 2,
+    reportDate: "2026-05-18",
+    createdAt: "2026-05-18T00:00:00.000Z", updatedAt: "2026-05-19T11:00:00.000Z",
+    statusHistory: [
+      { from: "pending-details", to: "under-review", timestamp: "2026-05-18T09:00:00.000Z" },
+      { from: "under-review",    to: "invoicing",    timestamp: "2026-05-19T11:00:00.000Z" },
+    ],
+  }),
   expand({
     id: "deal-021", offerId: "offer-021",
     status: "finalized", businessUnit: "rebu", market: "primary", country: "es", currency: "EUR",

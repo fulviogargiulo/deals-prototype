@@ -48,10 +48,8 @@ export interface ProjectedAgentSplit {
   /** Deductions sourced from this agent's commission pool (referrals, costs the agent absorbs).
    *  Each item becomes a separate payable to the third party. */
   agentSourcedDeductions: Array<{ partyId: string; label: string; amount: number }>;
-  /** Team-lead payout (% of gross agent payout before sourced deductions, Huspy-borne, additive). */
-  teamLeadPayout: number;
-  /** Manager override payout (% of gross agent payout before sourced deductions, Huspy-borne, additive). */
-  managerPayout: number;
+  /** Overhead payouts for connected agents (team leads, managers, etc.) — Huspy-borne, additive. */
+  connectedAgentPayouts: Array<{ agentId: string; label: string; amount: number; ledgerId?: number }>;
   strategyKind: AgentStrategy["kind"];
 }
 
@@ -201,9 +199,20 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
 
   for (const stake of agentStakes) {
     const agentId = input.partyIdToAgentId[stake.partyId];
-    if (!agentId) continue;
-    const af = input.agentFinancialsByAgentId[agentId];
-    if (!af) continue;
+    const af = agentId ? input.agentFinancialsByAgentId[agentId] : undefined;
+
+    // Fixed-amount path: financialAmount on the stake is authoritative; strategy is not consulted.
+    if (stake.financialAmount != null) {
+      const agentPayout = Math.abs(stake.financialAmount);
+      const effectiveId = agentId ?? stake.partyId;
+      const name = input.partyDisplayNames?.[stake.partyId] ?? effectiveId;
+      splits.push({ agentId: effectiveId, partyId: stake.partyId, shareOfPool: 1, allocatedNet: agentPayout, agentPayout, agentSourcedDeductions: [], connectedAgentPayouts: [], strategyKind: "flat" });
+      ledger.push({ id: `int::${stake.id}::agent`, label: `${name} — fixed payout`, bucket: "agent-payout", side: "DEBIT", amount: agentPayout, partyId: stake.partyId });
+      totalAgentPayout += agentPayout;
+      continue;
+    }
+
+    if (!agentId || !af) continue;
 
     const shareOfPool = (stake.splitPercentage ?? 100) / 100;
     const allocatedNet = (input.agentPayoutBase ?? commissionBase) * shareOfPool;
@@ -222,25 +231,29 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
     }
     const agentBorneCostsTotal = agentSourcedDeductions.reduce((s, d) => s + d.amount, 0);
 
-    // TL and Mgr are Huspy-borne additive costs — they don't reduce the agent's take-home.
+    // Connected agents (TL, manager, etc.) are Huspy-borne additive costs.
     // Their base is the agent's net after their own borne costs (not the gross).
     const agentNetForHierarchy = Math.max(0, agentGrossPayout - agentBorneCostsTotal);
-    const teamLeadPayout = ((af.teamLeadRate ?? 0) / 100) * agentNetForHierarchy;
-    const managerPayout = ((af.managerRate ?? 0) / 100) * agentNetForHierarchy;
+    const connectedAgentPayouts = (af.connectedAgents ?? []).map((ca) => ({
+      agentId: ca.agentId,
+      label: ca.label,
+      amount: (ca.rate / 100) * agentNetForHierarchy,
+      ledgerId: ca.ledgerId,
+    }));
+    const totalConnectedPayout = connectedAgentPayouts.reduce((s, p) => s + p.amount, 0);
     const agentPayout = agentNetForHierarchy;
 
-    splits.push({ agentId, partyId: stake.partyId, shareOfPool, allocatedNet, agentPayout, agentSourcedDeductions, teamLeadPayout, managerPayout, strategyKind: af.strategy.kind });
+    splits.push({ agentId, partyId: stake.partyId, shareOfPool, allocatedNet, agentPayout, agentSourcedDeductions, connectedAgentPayouts, strategyKind: af.strategy.kind });
 
     const name = input.partyDisplayNames?.[stake.partyId] ?? agentId;
     ledger.push({ id: `int::${stake.id}::agent`, label: `${name} — commission (${af.strategy.kind})`, bucket: "agent-payout", side: "DEBIT", amount: agentPayout, partyId: stake.partyId });
-    if (teamLeadPayout > 0) {
-      ledger.push({ id: `int::${stake.id}::tl`, label: `Team-lead (${af.teamLeadRate ?? 0}%)`, bucket: "agent-payout", side: "DEBIT", amount: teamLeadPayout });
-    }
-    if (managerPayout > 0) {
-      ledger.push({ id: `int::${stake.id}::mgr`, label: `Manager (${af.managerRate ?? 0}%)`, bucket: "agent-payout", side: "DEBIT", amount: managerPayout });
+    for (const cp of connectedAgentPayouts) {
+      if (cp.amount > 0) {
+        ledger.push({ id: `int::${stake.id}::ca::${cp.agentId}`, label: cp.label, bucket: "agent-payout", side: "DEBIT", amount: cp.amount });
+      }
     }
 
-    totalAgentPayout += agentGrossPayout + teamLeadPayout + managerPayout;
+    totalAgentPayout += agentGrossPayout + totalConnectedPayout;
   }
 
   const huspyMargin = commissionBase - totalOperationalCost - totalAgentPayout;

@@ -93,8 +93,6 @@ function parseRow(row: Record<string, string>, rowIndex: number): ParsedRow | nu
     agentId,
     strategy,
     connectedAgents,
-    teamLeadRate: connectedAgents[0]?.rate,
-    managerRate: connectedAgents[1]?.rate,
   };
 
   return { agentId, agentName: resolveAgentName(agentId), financials, warnings };

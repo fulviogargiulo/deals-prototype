@@ -239,6 +239,22 @@ export const sharedParties: Party[] = [
     iban: "AE070330000000000111222",
   },
 
+  // ── MBU BYOB brokers (UAE) ────────────────────────────────────────────────
+  {
+    id: "party-byob-broker-nadia-hassan",
+    displayName: "Nadia Hassan",
+    legalType: "individual",
+    taxId: "784-1991-2345678",
+    iban: "AE070331111111111222333",
+  },
+  {
+    id: "party-byob-broker-tariq-al-far",
+    displayName: "Tariq Al-Farsi",
+    legalType: "individual",
+    taxId: "784-1986-8765432",
+    iban: "AE070334444444444555666",
+  },
+
   // ── Connected agents (team leads / managers) — one entry per currency ─────
   {
     id: "party-ca-santiago-eur",
@@ -288,6 +304,13 @@ export const sharedParties: Party[] = [
     email: "majid.alharbi@huspy.io",
     legalType: "individual",
   },
+
+  // ── BBG internal staff (UAE) ───────────────────────────────────────────────
+  { id: "party-bbg-rm-layla-nasser",    displayName: "Layla Nasser",           legalType: "individual" },
+  { id: "party-bbg-tl-omar-sheikh",     displayName: "Omar Sheikh",            legalType: "individual" },
+  { id: "party-bbg-ds-rami-haddad",     displayName: "Rami Haddad",            legalType: "individual" },
+  // ── BBG external brokers (UAE) ─────────────────────────────────────────────
+  { id: "party-bbg-ext-falcon-capital", displayName: "Falcon Capital Partners", legalType: "company" },
 
   // ── Conveyance firms ───────────────────────────────────────────────────────
   {

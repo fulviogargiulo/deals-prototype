@@ -2,7 +2,7 @@
 
 # 0. Intro
 
-This process flow aims to support all type of deals across all geographies and business units. Th current scope and example cover REBU. If agents/brokers do not have access to agent app, the confirmation and pending document stages are handled offline. Figjam representation [here](https://www.figma.com/board/14IzOPtzeDJFLjmRaFeAL6/Payments---Deals-workflow?node-id=0-1&p=f&t=HS7ZpSQVjmsTyLiT-0)
+This process flow aims to support all type of deals across all geographies and business units. The current scope and example covers REBU. If agents/brokers do not have access to agent app, the confirmation and pending document stages are handled offline. Figjam representation [here](https://www.figma.com/board/14IzOPtzeDJFLjmRaFeAL6/Payments---Deals-workflow?node-id=0-1&p=f&t=HS7ZpSQVjmsTyLiT-0)
 
 # 1. State Machine
 

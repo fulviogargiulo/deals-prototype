@@ -19,7 +19,7 @@ export const sharedDealStakeholders: DealStakeholder[] = [
 
   // ── deal-001 — buy, agent-001, client-001 | rebate 1.5% × 11 550 = 173 → net 11 377
   { id: "ds-deal-001-client", dealId: "deal-001", partyId: "party-client-001",           role: "REVENUE_SOURCE",        financialAmount: 11377 },
-  { id: "ds-deal-001-agent",  dealId: "deal-001", partyId: "party-agent-001",            role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100, financialAmount: 4550.8 },
+  { id: "ds-deal-001-agent",  dealId: "deal-001", partyId: "party-agent-001",            role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-001-conv",   dealId: "deal-001", partyId: "party-conv-gestoria-lopez",  role: "OPERATIONAL_DEDUCTION", financialAmount: -800 },
   { id: "ds-deal-001-demand", dealId: "deal-001", partyId: "party-client-001",           role: "DEMAND" },
   { id: "ds-deal-001-supply", dealId: "deal-001", partyId: "party-dev-neinor",           role: "SUPPLY" },
@@ -90,15 +90,15 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   { id: "ds-deal-010-supply", dealId: "deal-010", partyId: "party-seller-010",       role: "SUPPLY" },
 
   // ── deal-011 — MBU MA/Broker, DIB, Omar Rahman (sole broker)
-  // Revenue: 1,500,000 × 1.20% = 18,000 | Broker payout: 52% × 18,000 = 9,360
-  { id: "ds-deal-011-bank",   dealId: "deal-011", partyId: "party-third-dib",          role: "REVENUE_SOURCE", splitPercentage: 1.20, financialAmount: 18_000 },
-  { id: "ds-deal-011-broker", dealId: "deal-011", partyId: "party-broker-omar-rahman", role: "AGENT_PAYOUT",   isPrimary: true, splitPercentage: 100, financialAmount: 9_360 },
+  // Revenue: 1,500,000 × 1.20% = 18,000 | DIB tier 1 0.624% × 1.5M = 9,360
+  { id: "ds-deal-011-bank",   dealId: "deal-011", partyId: "party-third-dib",          role: "REVENUE_SOURCE", financialAmount: 18_000 },
+  { id: "ds-deal-011-broker", dealId: "deal-011", partyId: "party-broker-omar-rahman", role: "AGENT_PAYOUT",   isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-011-demand", dealId: "deal-011", partyId: "party-client-011",         role: "DEMAND" },
   { id: "ds-deal-011-supply", dealId: "deal-011", partyId: "party-third-dib",          role: "SUPPLY" },
 
   // ── deal-012 — MBU B2C, FAB (internal MC TBD when B2C channel is built)
   // Revenue: 3,200,000 × 1.00% = 32,000
-  { id: "ds-deal-012-bank",   dealId: "deal-012", partyId: "party-third-fab", role: "REVENUE_SOURCE", splitPercentage: 1.00, financialAmount: 32_000 },
+  { id: "ds-deal-012-bank",   dealId: "deal-012", partyId: "party-third-fab", role: "REVENUE_SOURCE", financialAmount: 32_000 },
   { id: "ds-deal-012-demand", dealId: "deal-012", partyId: "party-client-008", role: "DEMAND" },
   { id: "ds-deal-012-supply", dealId: "deal-012", partyId: "party-third-fab",  role: "SUPPLY" },
 
@@ -124,7 +124,7 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   // ── deal-016 — sell, agent-004, client-007 + developer split | rebate 1.5% × 42 000 = 630 → client net 24 570
   { id: "ds-deal-016-client",    dealId: "deal-016", partyId: "party-client-007",       role: "REVENUE_SOURCE",        financialAmount: 24570 },
   { id: "ds-deal-016-developer", dealId: "deal-016", partyId: "party-third-emaar",      role: "REVENUE_SOURCE",        financialAmount: 16800 },
-  { id: "ds-deal-016-agent",     dealId: "deal-016", partyId: "party-agent-004",        role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100, financialAmount: 17375.4 },
+  { id: "ds-deal-016-agent",     dealId: "deal-016", partyId: "party-agent-004",        role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-016-conv",      dealId: "deal-016", partyId: "party-conv-tamm-legal",  role: "OPERATIONAL_DEDUCTION", financialAmount: -3000 },
   { id: "ds-deal-016-demand",    dealId: "deal-016", partyId: "party-client-007",       role: "DEMAND" },
   { id: "ds-deal-016-supply",    dealId: "deal-016", partyId: "party-third-emaar",      role: "SUPPLY" },
@@ -139,7 +139,7 @@ export const sharedDealStakeholders: DealStakeholder[] = [
 
   // ── deal-018 — buy, agent-001, client-004 | subsidy 7 000 → net 24 250
   { id: "ds-deal-018-client", dealId: "deal-018", partyId: "party-client-004",          role: "REVENUE_SOURCE",        financialAmount: 24250 },
-  { id: "ds-deal-018-agent",  dealId: "deal-018", partyId: "party-agent-001",           role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100, financialAmount: 9700 },
+  { id: "ds-deal-018-agent",  dealId: "deal-018", partyId: "party-agent-001",           role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-018-conv",   dealId: "deal-018", partyId: "party-conv-gestoria-lopez", role: "OPERATIONAL_DEDUCTION", financialAmount: -1200 },
   { id: "ds-deal-018-demand", dealId: "deal-018", partyId: "party-client-004",          role: "DEMAND" },
   { id: "ds-deal-018-supply", dealId: "deal-018", partyId: "party-seller-018",          role: "SUPPLY" },
@@ -154,7 +154,7 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   // ── deal-020 — primary buy, ae/AED, agent-004, developer-pay (Emaar AED 1.2M @ 2%)
   // Only Emaar is a payer; client is captured via DEMAND
   { id: "ds-deal-020-developer", dealId: "deal-020", partyId: "party-third-emaar", role: "REVENUE_SOURCE", financialAmount: 24000 },
-  { id: "ds-deal-020-agent",     dealId: "deal-020", partyId: "party-agent-004",   role: "AGENT_PAYOUT",   isPrimary: true, splitPercentage: 100, financialAmount: 10080 },
+  { id: "ds-deal-020-agent",     dealId: "deal-020", partyId: "party-agent-004",   role: "AGENT_PAYOUT",   isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-020-demand",    dealId: "deal-020", partyId: "party-client-008",  role: "DEMAND" },
   { id: "ds-deal-020-supply",    dealId: "deal-020", partyId: "party-third-emaar", role: "SUPPLY" },
 
@@ -169,10 +169,33 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   { id: "ds-deal-021-supply",   dealId: "deal-021", partyId: "party-dev-neinor",          role: "SUPPLY" },
 
   // ── deal-022 — MBU MA/Broker, ADIB, Omar Rahman 60% + Khalid & Associates 40%
-  // Revenue: 2,800,000 × 1.25% = 35,000 | Omar: 53% × 21,000 = 11,130 | Khalid: 53% × 14,000 = 7,420
-  { id: "ds-deal-022-bank",          dealId: "deal-022", partyId: "party-third-adib",          role: "REVENUE_SOURCE", splitPercentage: 1.25, financialAmount: 35_000 },
-  { id: "ds-deal-022-broker-omar",   dealId: "deal-022", partyId: "party-broker-omar-rahman",  role: "AGENT_PAYOUT",   isPrimary: true, splitPercentage: 60, financialAmount: 11_130 },
-  { id: "ds-deal-022-broker-khalid", dealId: "deal-022", partyId: "party-broker-khalid-assoc", role: "AGENT_PAYOUT",   splitPercentage: 40, financialAmount: 7_420 },
+  // Revenue: 2,800,000 × 1.25% = 35,000 | ADIB tier 1 0.663%: Omar 0.663% × 1.68M = 11,138 | Khalid 0.663% × 1.12M = 7,426
+  { id: "ds-deal-022-bank",          dealId: "deal-022", partyId: "party-third-adib",          role: "REVENUE_SOURCE", financialAmount: 35_000 },
+  { id: "ds-deal-022-broker-omar",   dealId: "deal-022", partyId: "party-broker-omar-rahman",  role: "AGENT_PAYOUT",   isPrimary: true, splitPercentage: 60 },
+  { id: "ds-deal-022-broker-khalid", dealId: "deal-022", partyId: "party-broker-khalid-assoc", role: "AGENT_PAYOUT",   splitPercentage: 40 },
   { id: "ds-deal-022-demand",        dealId: "deal-022", partyId: "party-client-012",          role: "DEMAND" },
   { id: "ds-deal-022-supply",        dealId: "deal-022", partyId: "party-third-adib",          role: "SUPPLY" },
+
+  // ── deal-024 — BBG Broker: gross 50,000 | RM 25%=12,500 | TL 5%=2,500 | DS 5%=2,500 | Ext 54%=27,000 | Huspy 11%=5,500
+  { id: "ds-deal-024-bank",   dealId: "deal-024", partyId: "party-third-adib",             role: "REVENUE_SOURCE", financialAmount: 50_000 },
+  { id: "ds-deal-024-rm",     dealId: "deal-024", partyId: "party-bbg-rm-layla-nasser",    role: "AGENT_PAYOUT",   isPrimary: true, financialAmount: 12_500 },
+  { id: "ds-deal-024-tl",     dealId: "deal-024", partyId: "party-bbg-tl-omar-sheikh",     role: "AGENT_PAYOUT",   financialAmount: 2_500 },
+  { id: "ds-deal-024-ds",     dealId: "deal-024", partyId: "party-bbg-ds-rami-haddad",     role: "AGENT_PAYOUT",   financialAmount: 2_500 },
+  { id: "ds-deal-024-ext",    dealId: "deal-024", partyId: "party-bbg-ext-falcon-capital", role: "AGENT_PAYOUT",   financialAmount: 27_000 },
+  { id: "ds-deal-024-demand", dealId: "deal-024", partyId: "party-client-012",             role: "DEMAND" },
+  { id: "ds-deal-024-supply", dealId: "deal-024", partyId: "party-third-adib",             role: "SUPPLY" },
+
+  // ── deal-025 — BBG Self-Generated: gross 30,000 | RM 60%=18,000 | TL 5%=1,500 | Huspy 35%=10,500
+  { id: "ds-deal-025-bank",   dealId: "deal-025", partyId: "party-third-fab",           role: "REVENUE_SOURCE", financialAmount: 30_000 },
+  { id: "ds-deal-025-rm",     dealId: "deal-025", partyId: "party-bbg-rm-layla-nasser", role: "AGENT_PAYOUT",   isPrimary: true, financialAmount: 18_000 },
+  { id: "ds-deal-025-tl",     dealId: "deal-025", partyId: "party-bbg-tl-omar-sheikh",  role: "AGENT_PAYOUT",   financialAmount: 1_500 },
+  { id: "ds-deal-025-demand", dealId: "deal-025", partyId: "party-client-011",          role: "DEMAND" },
+  { id: "ds-deal-025-supply", dealId: "deal-025", partyId: "party-third-fab",           role: "SUPPLY" },
+
+  // ── deal-023 — MBU BYOB, DIB, Nadia Hassan (sole broker)
+  // Revenue: 2,000,000 × 1.10% = 22,000 | (DIB tier 1 0.624% − 0.10% penalty) × 2M = 10,480
+  { id: "ds-deal-023-bank",   dealId: "deal-023", partyId: "party-third-dib",                  role: "REVENUE_SOURCE", financialAmount: 22_000 },
+  { id: "ds-deal-023-broker", dealId: "deal-023", partyId: "party-byob-broker-nadia-hassan",   role: "AGENT_PAYOUT",   isPrimary: true, splitPercentage: 100 },
+  { id: "ds-deal-023-demand", dealId: "deal-023", partyId: "party-client-011",                 role: "DEMAND" },
+  { id: "ds-deal-023-supply", dealId: "deal-023", partyId: "party-third-dib",                  role: "SUPPLY" },
 ];

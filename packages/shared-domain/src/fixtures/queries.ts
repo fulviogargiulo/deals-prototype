@@ -82,10 +82,10 @@ export const getAgentStakeForDeal = (dealId: string, agentPartyId: string): Deal
   sharedDealStakeholders.find((s) => s.dealId === dealId && s.partyId === agentPartyId && s.role === "AGENT_PAYOUT");
 
 // Computes the commission amount attributable to one agent based on their stake.
-// Uses fixedAmount when set; otherwise applies splitPercentage (defaults to 100%).
+// Uses financialAmount when set (fixed payout); otherwise applies splitPercentage (defaults to 100%).
 export const computeAgentCommission = (totalAgentCommission: number, stake: DealStakeholder | undefined): number => {
   if (!stake) return totalAgentCommission;
-  if (stake.fixedAmount !== undefined) return stake.fixedAmount;
+  if (stake.financialAmount !== undefined) return Math.abs(stake.financialAmount);
   return Math.round(totalAgentCommission * ((stake.splitPercentage ?? 100) / 100));
 };
 

@@ -199,27 +199,19 @@ export function CommissionBreakdown({ deal, stake, projection, agentSplit, perso
       </div>
 
       {/* Linked Agents — Huspy-borne, informational only */}
-      {((agentSplit?.teamLeadPayout ?? 0) > 0 || (agentSplit?.managerPayout ?? 0) > 0) && (
+      {(agentSplit?.connectedAgentPayouts ?? []).some((cp) => cp.amount > 0) && (
         <>
           <SectionLabel>Linked Agents</SectionLabel>
-          {(agentSplit?.teamLeadPayout ?? 0) > 0 && (
+          {(agentSplit?.connectedAgentPayouts ?? []).filter((cp) => cp.amount > 0).map((cp) => (
             <Row
-              label={agentRecord?.teamLeadName ?? 'Team Lead'}
-              sublabel="Team lead · paid by Huspy"
-              value={fmt(agentSplit!.teamLeadPayout, currency)}
+              key={cp.agentId}
+              label={cp.label}
+              sublabel={`${cp.label} · paid by Huspy`}
+              value={fmt(cp.amount, currency)}
               muted
               indent
             />
-          )}
-          {(agentSplit?.managerPayout ?? 0) > 0 && (
-            <Row
-              label={agentRecord?.managerName ?? 'Manager'}
-              sublabel="Manager · paid by Huspy"
-              value={fmt(agentSplit!.managerPayout, currency)}
-              muted
-              indent
-            />
-          )}
+          ))}
         </>
       )}
 

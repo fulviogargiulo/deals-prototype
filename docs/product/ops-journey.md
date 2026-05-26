@@ -21,11 +21,8 @@ Deals and Payments product aim to add to Karvel four main tabs under the Deal se
 Deals always start in **Under Review**. There are currently two creation paths, with a third planned:
 
 * **Manual** — Ops clicks "Add Deal" in the Deals tab and fills in the form.
-* **Bulk CSV upload** — Ops uploads a CSV to create multiple deals at once. A template is provided
+* **Bulk CSV upload** — Ops uploads a CSV to create multiple deals at once. A template is provided  
 * **Offer entity (planned)** — An offer submission flow is being built for REBU agents. When an agent's offer is accepted, a deal will be created automatically without Ops having to enter it manually.
-
-<!-- SCREENSHOT -->
-<!-- SCREENSHOT -->
 
 From Under Review, Ops has two paths:
 
@@ -34,11 +31,9 @@ From Under Review, Ops has two paths:
 
 Once the agent submits their information, the deal returns to Under Review automatically. This loop can repeat.
 
-A deal has multiple deal stakeholders, check the domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692/Domain+Model+Entity+Relationships#2.-Key-Entities). When adding a stakeholder, Ops verifies the `Party` record using `taxId` (NIE in Spain, Emirates ID in UAE…). If the `taxId` already exists in the system, the existing Party record is reused — no duplicate is created. This keeps the ledger accurate across multiple deals involving the same buyer, developer, or other third parties.
+A deal has multiple deal stakeholders, check the domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692). When adding a stakeholder, Ops verifies the `Party` record using `taxId` (NIE in Spain, Emirates ID in UAE…). If the `taxId` already exists in the system, the existing Party record is reused — no duplicate is created. This keeps the ledger accurate across multiple deals involving the same buyer, developer, or other third parties.
 
 # 4. The Deals Tab
-
-<!-- SCREENSHOT -->
 
 The Deals tab is a paginated, searchable table of all deals across all statuses, markets, business units and all table headers.
 
@@ -50,15 +45,13 @@ Each row shows: Deal ID, status, BU, country, market, gross revenue, net revenue
 
 ## 4.1. Inside a Deal — What Ops Does
 
-<!-- SCREENSHOT -->
-
 ### Status Transitions
 
-The deal status is changed via a dropdown in the deal detail header. Every status change is timestamped and recorded in the deal's history. Check the deal state machine [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911/Process+Flow+Deal+Lifecycle#1.-State-Machine) for more details
+The deal status is changed via a dropdown in the deal detail header. Every status change is timestamped and recorded in the deal's history. Check the deal state machine [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911) for more details
 
 ### Stakeholders Panel
 
-Stakeholders are the parties involved in the commission waterfall. This panel is **editable only when the deal is in Under Review or Pending Details**. Once the deal advances, it locks. User can add all these stakeholder types and whether they are paid from huspy's or agent's pockets.
+Stakeholders are the parties involved in the commission waterfall. This panel is **editable only when the deal is in Under Review or Pending Details**. Once the deal advances, it locks. User can add all these stakeholder types and whether they are paid from huspy's or agent's pockets. 
 
 | Stakeholder type | Role |
 | --- | --- |
@@ -68,8 +61,6 @@ Stakeholders are the parties involved in the commission waterfall. This panel is
 | **Operational Deduction** | Fixed service cost (notary, conveyance, legal). Deducted from net. |
 
 ### P&L Waterfall
-
-<!-- SCREENSHOT -->
 
 Displayed on every deal detail page. Shows how gross revenue flows to Huspy's margin:
 
@@ -81,25 +72,21 @@ Displayed on every deal detail page. Shows how gross revenue flows to Huspy's ma
 6. Minus Operational Deductions (fixed costs)
 7. = **Huspy margin**
 
-### Invoices (Per Deal)
+Refer to [P&L Engines](https://huspy.atlassian.net/wiki/spaces/corp/pages/2441248770) for P&L calculations.
 
-<!-- SCREENSHOT -->
+### Invoices (Per Deal)
 
 All invoices linked to the deal appear in the Invoices section on the deal detail page, showing their counterparty, type, gross amount, status, and issue date. Clicking an invoice redirects the user to its detailed page. See the dedicated invoices tab below for more information.
 
-Not all invoices are linked to deals. Check domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692/Domain+Model+Entity+Relationships#Deal-%E2%86%92-Invoice-%E2%86%92-PostingLine)
+Not all invoices are linked to deals. Check domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692)
 
 ### Accounting Events (Per Deal)
 
-<!-- SCREENSHOT -->
-
 Deal progress and linked invoice status changes generate accounting events (postings). A dedicated section on the deal detail page displays them. Clicking any posting opens a posting popup with more details. See the dedicated ledger tab below for more.
 
-Not all postings are linked to deals. Check domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692/Domain+Model+Entity+Relationships#Deal-%E2%86%92-Invoice-%E2%86%92-PostingLine)
+Not all postings are linked to deals. Check domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692)
 
 ### Document Requirements (Per Deal)
-
-<!-- SCREENSHOT -->
 
 Each deal has a checklist of required documents, pre-populated based on the deal's market, BU, and country (and channel?). Ops can:
 
@@ -110,25 +97,19 @@ Each deal has a checklist of required documents, pre-populated based on the deal
 
 ### Comments
 
-<!-- SCREENSHOT -->
-
 A threaded comment panel connects Ops and the agent. Ops can write at any status. The agent can reply until the deal is Finalized or Canceled. All messages are timestamped and retained permanently.
 
 # 5. The Invoices Tab
-
-<!-- SCREENSHOT -->
 
 Centralized view of all invoices across deals. Filter the table by any header: invoice ID, direction, party, deal, amount, status, issue date, or due date
 
 ## 5.1. Inside an Invoice — What Ops Does
 
-To check booking logic (i.e., posting creation), see the example [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911/Process+Flow+Deal+Lifecycle#Accounting-Entries-Per-Stage)
+To check booking logic (i.e., posting creation), see the example [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911)
 
 ### Invoice in Draft state
 
 **Inbound**
-
-<!-- SCREENSHOT -->
 
 The user can:
 
@@ -138,8 +119,6 @@ The user can:
 * Cancel invoice
 
 **Outbound**
-
-<!-- SCREENSHOT -->
 
 The user can:
 
@@ -152,8 +131,6 @@ The user can:
 
 **Inbound / Outbound**
 
-<!-- SCREENSHOT -->
-
 The user can:
 
 * Download the invoice
@@ -165,8 +142,6 @@ The user can:
 
 **Inbound / Outbound**
 
-<!-- SCREENSHOT -->
-
 The user can:
 
 * Download the invoice
@@ -174,8 +149,6 @@ The user can:
 * Cancel invoice
 
 # 6. Ledger Tab
-
-<!-- SCREENSHOT -->
 
 The Ledger tab is the global view of all ledgers and double-entry accounting postings in the system. It is Finance's primary tool for reconciliation, audit, and manual corrections. The high level view show all the ledgers and their balance.
 
@@ -195,17 +168,13 @@ Manual postings can be created singularly or via bulk upload via csv.
 
 ### Postings Table
 
-<!-- SCREENSHOT -->
-
 Once a ledger is clicked, a paginated, searchable table of every posting ever created on that ledger shows up. User can **Search, Filter and Sort** by posting ID, value date and created date, description, deal ID, type or amount.
 
 ### Posting Detail
 
-<!-- SCREENSHOT -->
+Clicking a row expands the full posting. All [posting and its postinglines metadata](https://huspy.atlassian.net/wiki/spaces/corp/pages/2432073741) is shown here.
 
-Clicking a row expands the full posting. All [posting and its postinglines metadata](https://huspy.atlassian.net/wiki/spaces/corp/pages/2432073741/Accounting+101#2.-Posting-and-Posting-Line-%E2%80%94-Generic-Metadata) is shown here.
-
-# 7. Deal Configuration Tab
+# 7. **Deal Configuration Tab**
 
 Global configuration that drives how deals behave across all markets and business units. Changes here affect all new deals going forward — nothing here is per-deal. The tab is split into sub-tabs; more will be added as the system expands.
 
@@ -213,17 +182,15 @@ Global configuration that drives how deals behave across all markets and busines
 
 ### Sub-tab: Document Requirements
 
-<!-- SCREENSHOT -->
-
 Manages the templates that determine what documents are required for each deal type.
 
 The matrix is organized by **Business Unit** (REBU / Mortgage) × **Market** (Primary / Secondary / Leasing) × **Country** (AE, ES, SA). Each cell is one of:
 
 | Value | Meaning |
 | --- | --- |
-| **Required** | Mandatory — deal cannot advance to Pending Agent Approval without this document |
-| **Optional** | Shown on the deal but can be waived by Ops |
-| **Off** | Not shown on deals for this market/country combination |
+| **Required**  | Mandatory — deal cannot advance to Pending Agent Approval without this document  |
+| **Optional**  | Shown on the deal but can be waived by Ops  |
+| **Off**  | Not shown on deals for this market/country combination  |
 
 Additional actions per document:
 
@@ -237,24 +204,18 @@ The user can also add another row (required document) and configure it per each 
 
 ### Sub-tab: Broker Rate Slabs
 
-<!-- SCREENSHOT -->
-
 Configures the monthly broker commission rates for the **MBU MA/Broker channel** (UAE). This is the rate Huspy pays to the broker from the disbursed mortgage, split into tiers based on the broker's total monthly GMV across all banks.
 
 **How it works:**
 
 * Rates are expressed as a **percentage of the disbursed mortgage amount**
-* The applicable tier is determined by the broker's **total monthly disbursed GMV across all banks**
+* The applicable tier is determined by the broker's **total monthly disbursed GMV across all banks** 
 * Each tier defines a per-bank rate; different banks pay different percentages
 * A new slab set is created each **reporting month** — historical months are read-only
 
-The User can upload a csv to edit/add new months. This will impact newly created deals.
+The User can upload a csv to edit/add new months. This will impact newly created deals.  
 
 # 8. Agent Management
-
-<!-- SCREENSHOT -->
-<!-- SCREENSHOT -->
-<!-- SCREENSHOT -->
 
 The Agents section has a searchable, filterable list of all agents. In relation to Deals and Payments product, 3 new tabs will be added
 

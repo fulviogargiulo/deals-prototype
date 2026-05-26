@@ -17,7 +17,7 @@ interface Props {
 // One row per stakeholder. Deal metadata only needed on the first row of each offerId group.
 const CSV_HEADERS = [
   "offerId", "propertyName", "market", "businessUnit", "channel", "country", "currency", "dealPrice", "reportDate",
-  "stakeRole", "partyId", "amount", "description", "chargedTo", "splitPct", "fixedAmount",
+  "stakeRole", "partyId", "amount", "description", "chargedTo", "splitPct", "financialAmount",
 ];
 
 // Template: 2 deals showing REBU and MBU MA/Broker patterns.
@@ -152,7 +152,7 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
     if (row.stakeRole !== "AGENT_PAYOUT") continue;
     const stakeId = `ds-${offerId}-agent-${agentIdx++}`;
     agentStakeIdByPartyId[row.partyId] = stakeId;
-    const fa = parseFloat(row.fixedAmount);
+    const fa = parseFloat(row.financialAmount);
     stakeholders.push({
       id: stakeId,
       dealId: offerId,
@@ -160,7 +160,7 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
       role: "AGENT_PAYOUT",
       isPrimary: agentIdx === 1,
       splitPercentage: parseFloat(row.splitPct) || (agentIdx === 1 ? 100 : 0),
-      fixedAmount: !isNaN(fa) && fa > 0 ? fa : undefined,
+      financialAmount: !isNaN(fa) && fa > 0 ? fa : undefined,
     });
   }
 
@@ -336,7 +336,7 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
 
             <div className="bg-accent/50 rounded-md p-4 space-y-2 text-[11px]">
               <p className="font-medium text-foreground text-[12px]">Format — one row per stakeholder</p>
-              <p className="font-mono text-muted-foreground">offerId, propertyName, market, businessUnit, <span className="text-foreground font-semibold">channel</span>, country, currency, dealPrice, reportDate, <span className="text-foreground font-semibold">stakeRole</span>, partyId, amount, description, chargedTo, splitPct, fixedAmount</p>
+              <p className="font-mono text-muted-foreground">offerId, propertyName, market, businessUnit, <span className="text-foreground font-semibold">channel</span>, country, currency, dealPrice, reportDate, <span className="text-foreground font-semibold">stakeRole</span>, partyId, amount, description, chargedTo, splitPct, financialAmount</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-2 text-muted-foreground">
                 <p><span className="text-foreground">AGENT_PAYOUT</span> — agent (use splitPct)</p>
                 <p><span className="text-foreground">REVENUE_SOURCE</span> — commission/fee/rebate (negative = rebate)</p>

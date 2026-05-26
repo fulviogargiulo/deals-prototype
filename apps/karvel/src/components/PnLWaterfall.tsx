@@ -472,7 +472,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
 
   const dealAgents = agentStakes.map((s) => ({ partyId: s.partyId, name: resolvePartyName(s.partyId) }));
 
-  const poolAgents = agentStakes.filter((s) => s.fixedAmount == null);
+  const poolAgents = agentStakes.filter((s) => s.financialAmount == null);
   const splitPoolTotal = poolAgents.reduce((sum, s) => sum + (s.splitPercentage ?? 0), 0);
 
   const stopAdding = () => setAdding(null);
@@ -518,7 +518,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
       role: "AGENT_PAYOUT",
       isPrimary: isFirst,
       splitPercentage: mode === "split" ? value : undefined,
-      fixedAmount: mode === "fixed" ? value : undefined,
+      financialAmount: mode === "fixed" ? value : undefined,
     });
   };
 
@@ -528,11 +528,10 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
     return entry?.amount;
   };
 
-  const getAgentTotalPayout = (partyId: string, fixedAmount?: number): number | undefined => {
-    if (fixedAmount != null) return fixedAmount;
+  const getAgentTotalPayout = (partyId: string): number | undefined => {
     const split = pnl?.splits.find((s) => s.partyId === partyId);
     if (!split) return undefined;
-    return split.agentPayout + split.teamLeadPayout + split.managerPayout;
+    return split.agentPayout + split.connectedAgentPayouts.reduce((s, p) => s + p.amount, 0);
   };
 
   if (isMBU && !pnl) {
@@ -662,9 +661,9 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
             const agentId = agentIdForParty(s.partyId);
             const split = pnl?.splits.find((sp) => sp.partyId === s.partyId);
             const agentRecord = agentId ? sharedAgents.find((a) => a.id === agentId) : undefined;
-            const isFixed = s.fixedAmount != null;
+            const isFixed = s.financialAmount != null;
             const splitLabel = !isFixed && s.splitPercentage != null ? `${s.splitPercentage}% pool` : isFixed ? "fixed" : undefined;
-            const agentOwnPayout = split ? split.agentPayout : (s.fixedAmount ?? undefined);
+            const agentOwnPayout = split ? split.agentPayout : (s.financialAmount != null ? Math.abs(s.financialAmount) : undefined);
             return (
               <Fragment key={s.id}>
                 <WaterfallRow
@@ -676,23 +675,17 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
                   onClick={agentId ? () => navigate(`/agents/${agentId}`) : undefined}
                   onRemove={canEdit && !s.isPrimary ? () => removeStake(s.id) : undefined}
                 />
-                {split && split.teamLeadPayout > 0 && (
-                  <WaterfallRow
-                    name={agentRecord?.teamLeadName ?? "Team Lead"}
-                    amount={split.teamLeadPayout}
-                    currency={currency}
-                    badge="TL"
-                    indent
-                  />
-                )}
-                {split && split.managerPayout > 0 && (
-                  <WaterfallRow
-                    name={agentRecord?.managerName ?? "Manager"}
-                    amount={split.managerPayout}
-                    currency={currency}
-                    badge="Mgr"
-                    indent
-                  />
+                {split && split.connectedAgentPayouts.map((cp) =>
+                  cp.amount > 0 ? (
+                    <WaterfallRow
+                      key={cp.agentId}
+                      name={cp.label}
+                      amount={cp.amount}
+                      currency={currency}
+                      badge={cp.label.slice(0, 3)}
+                      indent
+                    />
+                  ) : null
                 )}
                 {agentSourcedStakes
                   .filter((d) => d.parentStakeholderId === s.id)

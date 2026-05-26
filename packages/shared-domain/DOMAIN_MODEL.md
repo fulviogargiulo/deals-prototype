@@ -102,8 +102,7 @@ erDiagram
         string partyId FK
         StakeholderType role
         number splitPercentage
-        number fixedAmount
-        number financialAmount "signed: + = revenue, - = cost"
+        number financialAmount "signed: + = revenue / payout, - = cost"
     }
     DealDocumentRequirement {
         string id
@@ -322,7 +321,7 @@ cancelled → issued  (restore — for op error recovery)
 | Type | Auto-created on deal → `invoicing`? | Entry state | Advances to `issued` when… |
 |---|---|---|---|
 | Outbound (Huspy → client/developer/bank) | Yes | `draft` | Finance completes (due date, VAT) and sends PDF |
-| Inbound — external vendor (conveyance, legal, co-broker) | Yes | `draft` | Vendor submits their invoice; Finance validates and updates details |
+| Inbound — external vendor (conveyance, legal, co-broker) | Yes, unless the party has an agent/broker subledger — those are settled via commission accrual posting instead | `draft` | Vendor submits their invoice; Finance validates and updates details |
 | Inbound — agent | No — decoupled from deal lifecycle | `issued` | Agent submits; no draft stage |
 
 `issued → paid` requires both `proofFileName` and `paymentReference`. Neither alone is sufficient.
@@ -365,7 +364,7 @@ Both fields survive on `Deal` as reference data and appear as greyed context lin
 | Value | Bucket | Used when |
 |---|---|---|
 | `REVENUE_SOURCE` | — | Party paying Huspy. `financialAmount > 0` contributes to commissionable gross. |
-| `AGENT_PAYOUT` | B | Huspy agent. Commission calculated via `AgentFinancials.strategy`; not manually entered. |
+| `AGENT_PAYOUT` | B | Huspy agent or broker. Commission calculated via `AgentFinancials.strategy`, or fixed when `financialAmount` is set directly on the stake (e.g. BBG channel). |
 | `ACQUISITION_DEDUCTION` | C | External commercial partner (co-broker, referral agency). Huspy pays them. |
 | `OPERATIONAL_DEDUCTION` | D | Fixed service provider (notary, conveyance, legal). Huspy pays a fixed fee. |
 | `SUPPLY` | — | Non-financial role: supply-side party (seller, developer, landlord, bank/lender). No `financialAmount`. Replaces `Deal.sellerName`. |
@@ -437,9 +436,9 @@ Supported currencies: `EUR`, `AED`, `SAR`.
 | `invoice_issued` | DEBIT `ASSET_AR_{CUR}` (gross = subtotal + vatAmount), CREDIT `REV_{CUR}` (subtotal), CREDIT `LIAB_VAT_{CUR}` (vatAmount). Triggered: outbound invoice draft → issued. |
 | `bank_statement_inbound_matched` | DEBIT `ASSET_BANK_BankX_{CUR}` (gross), CREDIT `ASSET_AR_{CUR}` (gross). Triggered: outbound invoice issued → paid. |
 | `commission_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (gross base), CREDIT `AgentLiability_agent-{slug}` (gross base). Triggered: deal → finalized. No invoice exists yet — do not set `invoiceId`. |
-| `agent_invoice_accrual` | DEBIT `AgentLiability_agent-{slug}` (base — clears commission accrual), DEBIT `LIAB_VAT_{CUR}` (input VAT), CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (IRPF, Spain only), CREDIT `AgentLiability_agent-{slug}` (net payable = base + VAT − withholding). Triggered: agent invoice → issued. All lines tagged with `invoiceId`. //is it really like that? shouldn't we credit `LIAB_PAYABLE_{CUR}`?
+| `agent_invoice_accrual` | DEBIT `AgentLiability_agent-{slug}` (base — clears the commission accrual debit), DEBIT `LIAB_VAT_{CUR}` (input VAT), CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (IRPF, Spain only), CREDIT `AgentLiability_agent-{slug}` (net payable = base + VAT − withholding). Triggered: agent invoice → issued. All lines tagged with `invoiceId`. The subledger is debited and re-credited in the same posting to transform its balance from gross to the exact wire amount — `LIAB_PAYABLE_{CUR}` is not used because agent liability stays in the agent's own subledger until paid. |
 | `external_cost_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (subtotal), DEBIT `LIAB_VAT_{CUR}` (vatAmount — input VAT reduces net VAT owed), CREDIT `LIAB_PAYABLE_{CUR}` (gross). Triggered: inbound vendor invoice draft → issued. All lines tagged with `invoiceId`. |
-| `bank_statement_outbound_matched` | DEBIT `AgentLiability_agent-{slug}` or `LIAB_PAYABLE_{CUR}` (net payable) //why OR? shouldn't it always be LIAB_PAYABLE_{CUR}?, CREDIT `ASSET_BANK_BankX_{CUR}`. Triggered: inbound invoice issued → paid (agents and vendors use the same shape). Bank line is **not** tagged with `invoiceId`; payable-clearing line is tagged. |
+| `bank_statement_outbound_matched` | DEBIT `AgentLiability_agent-{slug}` (agents) or `LIAB_PAYABLE_{CUR}` (vendors), CREDIT `ASSET_BANK_BankX_{CUR}`. The debit target differs because agents are tracked in their own subledger whereas vendors are tracked in the general payable account. Bank line is **not** tagged with `invoiceId`; payable-clearing line is tagged. |
 | `agent_adjustment` | DEBIT `EXP_COMMISSION_{CUR}`, CREDIT `AgentLiability_agent-{slug}`. Triggered: manually created by Finance for bonus or incentive. |
 | `huspy_fee` | DEBIT `AgentLiability_agent-{slug}`, CREDIT `REV_{CUR}`. Triggered: manually created by Finance to charge a platform fee. |
 | `manual_adjustment` | Flexible — use for standalone corrections |
@@ -484,11 +483,9 @@ Agent subledger is credited the **base** at `commission_accrual` time. At `agent
 **Waterfall steps:**
 
 1. **Gross revenue** — sum of `REVENUE_SOURCE` stakes where `financialAmount > 0`; falls back to `input.grossRevenue` if no explicit payer amounts
-2. **Bucket C** — subtract all `ACQUISITION_DEDUCTION` stakes (`|financialAmount|`)
-3. **Bucket D** — subtract all `OPERATIONAL_DEDUCTION` stakes (`|financialAmount|`)
-4. **Net revenue** = Gross − C − D
-5. **Bucket B** — per `INTERNAL_PAYOUT` agent, apply `AgentFinancials.strategy` to `netRevenue × splitPercentage`; team lead and manager overrides are **additive** on top (Huspy-borne)
-6. **Huspy margin** = Net revenue − B
+2. **Bucket C** — subtract all `ACQUISITION_DEDUCTION` stakes (`|financialAmount|`) → **Commission base** = Gross − C
+3. **Bucket B** — per `AGENT_PAYOUT` stake, apply `AgentFinancials.strategy` to `commissionBase × splitPercentage`; or use `financialAmount` directly if set (fixed-amount path). Team lead and manager overrides are **additive** on top (Huspy-borne). → **Huspy gross share** = Commission base − B
+4. **Bucket D** — subtract all `OPERATIONAL_DEDUCTION` stakes (`|financialAmount|`) → **Huspy net margin** = Huspy gross share − D
 
 `totalBucketA` is always `0` in the engine output — tax is intentionally excluded.
 
@@ -578,7 +575,7 @@ Stand-ins for what a real backend query layer would do. All return from in-memor
 | `getDealStakeholdersForDeal(dealId)` | All stakeholders on a deal |
 | `getDealStakeholdersForParty(partyId)` | All deals a party participates in |
 | `getAgentStakeForDeal(dealId, agentPartyId)` | The `INTERNAL_PAYOUT` stake for a specific agent on a deal |
-| `computeAgentCommission(totalAgentCommission, stake)` | Agent's share of total commission — uses `fixedAmount` if set, otherwise `splitPercentage` |
+| `computeAgentCommission(totalAgentCommission, stake)` | Agent's share of total commission — uses `financialAmount` if set (fixed payout), otherwise `splitPercentage` |
 | `getClientForDeal(dealId)` | Primary `DEMAND` client record for a deal |
 
 ## Deprecated fields (kept for fixture compatibility — remove before real API)

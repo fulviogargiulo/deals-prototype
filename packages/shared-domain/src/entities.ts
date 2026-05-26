@@ -505,16 +505,10 @@ export interface AgentFinancials {
   agentId: string;
   /** Strategy used to compute the agent's payout against deal net revenue. */
   strategy: AgentStrategy;
-  /** Flexible list of connected agents (team leads, managers, etc.) and their overhead rates. */
+  /** Connected agents (team leads, managers, etc.) — overhead paid by Huspy on top of agent commission. */
   connectedAgents?: ConnectedAgent[];
-  /** @deprecated Use connectedAgents. Kept for waterfall engine compat. */
-  teamLeadRate?: number;
-  /** @deprecated Use connectedAgents. Kept for waterfall engine compat. */
-  managerRate?: number;
-  /** Subledger ID where the team lead's portion is credited on commission_accrual. */
-  teamLeadLedgerId?: number;
-  /** Subledger ID where the manager's portion is credited on commission_accrual. */
-  managerLedgerId?: number;
+  /** BYOB channel only: % deducted from the broker's slab-computed payout as a Huspy service fee. */
+  byobPenaltyRate?: number;
   /** ISO date the policy became effective. Used when multiple records exist for one agent. */
   effectiveFrom?: string;
 }
@@ -552,15 +546,13 @@ export interface DealStakeholder {
   partyId: string;
   role: StakeholderType;
   isPrimary?: boolean;
-  /** Agent's share of the commission pool (0–100).
-   *  Waterfall allocates commissionBase × (splitPercentage / 100) to this agent before applying AgentStrategy.
-   *  Prefer setting financialAmount directly when the payout is fixed or pre-negotiated. */
+  /** Agent's share of the commission pool (0–100). Only meaningful on AGENT_PAYOUT roles.
+   *  Waterfall allocates commissionBase × (splitPercentage / 100) to this agent before applying AgentStrategy. */
   splitPercentage?: number;
-  fixedAmount?: number;
   /** Signed financial impact on the deal P&L.
-   *  Positive → party pays Huspy (REVENUE_SOURCE: commission, conveyance fee, etc.).
-   *  Negative → rebate returned to client (REVENUE_SOURCE) or cost Huspy pays (ACQUISITION_DEDUCTION / OPERATIONAL_DEDUCTION).
-   *  Bucket derived from role — see StakeholderType. */
+   *  Positive → party pays Huspy (REVENUE_SOURCE) or receives a fixed payout (AGENT_PAYOUT).
+   *  Negative → rebate to client (REVENUE_SOURCE) or cost Huspy pays (ACQUISITION_DEDUCTION / OPERATIONAL_DEDUCTION).
+   *  When set on AGENT_PAYOUT, the waterfall uses this amount directly instead of applying an AgentStrategy. */
   financialAmount?: number;
   /** Human-readable label for this line (e.g. "Commission", "Conveyance Fee").
    *  Used to distinguish multiple REVENUE_SOURCE entries on the same party and as invoice line item description. */

@@ -83,8 +83,10 @@ describe("calculateProjectedPnL — agent payout, flat strategy", () => {
       id: "af-001",
       agentId: "agent-001",
       strategy: { kind: "flat", pct: 40 },
-      teamLeadRate: 10,
-      managerRate: 5,
+      connectedAgents: [
+        { id: "ca-tl", agentId: "agent-tl", label: "Team Lead", rate: 10 },
+        { id: "ca-mgr", agentId: "agent-mgr", label: "Manager", rate: 5 },
+      ],
     };
     const r = calculateProjectedPnL(
       baseInput({
@@ -99,8 +101,8 @@ describe("calculateProjectedPnL — agent payout, flat strategy", () => {
     const s = r.splits[0];
     expect(s.allocatedNet).toBe(10_000);
     expect(s.agentPayout).toBe(4_000);
-    expect(s.teamLeadPayout).toBe(400);
-    expect(s.managerPayout).toBe(200);
+    expect(s.connectedAgentPayouts[0]?.amount).toBe(400);
+    expect(s.connectedAgentPayouts[1]?.amount).toBe(200);
     expect(r.totalAgentPayout).toBe(4_000 + 400 + 200);
     expect(r.huspyMargin).toBe(10_000 - 4_600);
   });
@@ -118,8 +120,10 @@ describe("calculateProjectedPnL — agent payout, flat strategy", () => {
       id: "af-001",
       agentId: "agent-001",
       strategy: { kind: "flat", pct: 40 },
-      teamLeadRate: 10,
-      managerRate: 5,
+      connectedAgents: [
+        { id: "ca-tl", agentId: "agent-tl", label: "Team Lead", rate: 10 },
+        { id: "ca-mgr", agentId: "agent-mgr", label: "Manager", rate: 5 },
+      ],
     };
     const r = calculateProjectedPnL(
       baseInput({
@@ -134,8 +138,8 @@ describe("calculateProjectedPnL — agent payout, flat strategy", () => {
     );
 
     expect(r.splits[0].agentPayout).toBe(4_620);
-    expect(r.splits[0].teamLeadPayout).toBe(462);
-    expect(r.splits[0].managerPayout).toBe(231);
+    expect(r.splits[0].connectedAgentPayouts[0]?.amount).toBe(462);
+    expect(r.splits[0].connectedAgentPayouts[1]?.amount).toBe(231);
     expect(r.huspyMargin).toBe(6_237);
   });
 });
@@ -243,8 +247,6 @@ describe("calculateProjectedPnL — ledger integrity", () => {
       id: "af-x",
       agentId: "agent-x",
       strategy: { kind: "flat", pct: 30 },
-      teamLeadRate: 0,
-      managerRate: 0,
     };
     const r = calculateProjectedPnL(
       baseInput({
@@ -268,5 +270,35 @@ describe("calculateProjectedPnL — ledger integrity", () => {
     expect(r.grossRevenue - r.totalAcquisitionCost).toBeCloseTo(r.commissionBase);
     // commissionBase − operationalCost − agentPayout = huspyMargin
     expect(r.commissionBase - r.totalOperationalCost - r.totalAgentPayout).toBeCloseTo(r.huspyMargin);
+  });
+});
+
+describe("calculateProjectedPnL — BYOB penalty via agentPayoutBase", () => {
+  it("applies subtracted penalty rate to agentPayoutBase", () => {
+    // Mirrors deal-023: bank pays 22,000 gross; broker payout base = 2,000,000 mortgage principal.
+    // DIB tier 1 slab 0.624% − 0.10% penalty = 0.524% → 2,000,000 × 0.524% = 10,480.
+    const stake: DealStakeholder = {
+      id: "ds-byob", dealId: "d", partyId: "party-byob", role: "AGENT_PAYOUT", splitPercentage: 100,
+    };
+    // dealCalculations resolves the penalty and passes a synthesized flat AF into the engine.
+    const af: AgentFinancials = {
+      id: "af-byob-syn", agentId: "byob-agent",
+      strategy: { kind: "flat", pct: 0.524 }, // 0.624 − 0.10
+    };
+    const r = calculateProjectedPnL(
+      baseInput({
+        blueprint: minimalBlueprint,
+        grossRevenue: 22_000,
+        agentPayoutBase: 2_000_000,
+        stakeholders: [stake],
+        agentFinancialsByAgentId: { "byob-agent": af },
+        partyIdToAgentId: { "party-byob": "byob-agent" },
+      }),
+    );
+
+    expect(r.grossRevenue).toBe(22_000);
+    expect(r.splits).toHaveLength(1);
+    expect(r.splits[0].agentPayout).toBeCloseTo(10_480);
+    expect(r.huspyMargin).toBeCloseTo(22_000 - 10_480);
   });
 });

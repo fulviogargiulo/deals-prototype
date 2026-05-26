@@ -196,17 +196,20 @@ const DealDetail = () => {
   }, [deal]);
 
   // ── Derived values for the header ───────────────────────────────────
-  const { clientName, amountLabel } = useMemo(() => {
-    if (!deal) return { clientName: "—", amountLabel: "—" };
-    const revenueParties = sharedDealStakeholders
-      .filter((s) => s.dealId === deal.id && s.role === "REVENUE_SOURCE")
-      .map((s) => sharedParties.find((p) => p.id === s.partyId)?.displayName)
-      .filter(Boolean)
-      .join(", ");
+  const { clientName, demandName, supplyName, amountLabel } = useMemo(() => {
+    if (!deal) return { clientName: "—", demandName: "—", supplyName: "—", amountLabel: "—" };
+    const resolve = (role: string) =>
+      sharedDealStakeholders
+        .filter((s) => s.dealId === deal.id && s.role === role)
+        .map((s) => sharedParties.find((p) => p.id === s.partyId)?.displayName)
+        .filter(Boolean)
+        .join(", ") || "—";
     const dealAmountValue = deal.dealPrice ?? deal.dealAmount;
     const currency = deal.currency ?? "EUR";
     return {
-      clientName: revenueParties || deal.clientName || "—",
+      clientName: resolve("DEMAND") !== "—" ? resolve("DEMAND") : deal.clientName || "—",
+      demandName: resolve("DEMAND"),
+      supplyName: resolve("SUPPLY"),
       amountLabel: dealAmountValue != null && dealAmountValue > 0 ? fmt(dealAmountValue, currency) : "—",
     };
   }, [deal, stakesVersion]);
@@ -278,7 +281,13 @@ const DealDetail = () => {
           s.dealId === deal.id &&
           s.role !== "AGENT_PAYOUT" &&
           s.financialAmount != null &&
-          s.financialAmount !== 0,
+          s.financialAmount !== 0 &&
+          // Agent/broker cost entries (referral fees, co-brokers) are settled via the
+          // commission accrual posting, not via invoices. Skip them here.
+          !(
+            (s.role === "ACQUISITION_DEDUCTION" || s.role === "OPERATIONAL_DEDUCTION") &&
+            sharedLedgers.some((l) => l.partyId === s.partyId)
+          ),
       );
       const now = new Date().toISOString();
       const today = now.slice(0, 10);
@@ -403,7 +412,8 @@ const DealDetail = () => {
                     <div>
                       <ReadRow label="Property" value={deal.title ?? deal.buildingName ?? "—"} />
                       <ReadRow label="Offer ID" value={deal.offerId ?? "—"} />
-                      <ReadRow label="Client" value={clientName} />
+                      <ReadRow label="Demand" value={demandName} />
+                      <ReadRow label="Supply" value={supplyName} />
                       <ReadRow label="Channel" value={deal.channel ?? "—"} />
                       <ReadRow label="P&L Engine" value={getDealEngine(deal)} />
                     </div>

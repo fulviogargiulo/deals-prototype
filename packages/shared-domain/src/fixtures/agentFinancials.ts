@@ -9,7 +9,6 @@ export const sharedAgentFinancials: AgentFinancials[] = [
       { id: "ca-af001-tl",  agentId: "agent-008", label: "Team Lead", rate: 10, ledgerId: 31 },
       { id: "ca-af001-mgr", agentId: "agent-009", label: "Manager",   rate: 5,  ledgerId: 32 },
     ],
-    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 31, managerLedgerId: 32,
   },
   {
     id: "af-002",
@@ -19,7 +18,6 @@ export const sharedAgentFinancials: AgentFinancials[] = [
       { id: "ca-af002-tl",  agentId: "agent-008", label: "Team Lead", rate: 10, ledgerId: 31 },
       { id: "ca-af002-mgr", agentId: "agent-009", label: "Manager",   rate: 5,  ledgerId: 32 },
     ],
-    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 31, managerLedgerId: 32,
   },
   {
     id: "af-003",
@@ -29,7 +27,6 @@ export const sharedAgentFinancials: AgentFinancials[] = [
       { id: "ca-af003-tl",  agentId: "agent-012", label: "Team Lead", rate: 10, ledgerId: 37 },
       { id: "ca-af003-mgr", agentId: "agent-011", label: "Manager",   rate: 5,  ledgerId: 38 },
     ],
-    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 37, managerLedgerId: 38,
   },
   {
     id: "af-004",
@@ -39,7 +36,6 @@ export const sharedAgentFinancials: AgentFinancials[] = [
       { id: "ca-af004-tl",  agentId: "agent-010", label: "Team Lead", rate: 10, ledgerId: 33 },
       { id: "ca-af004-mgr", agentId: "agent-011", label: "Manager",   rate: 5,  ledgerId: 34 },
     ],
-    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 33, managerLedgerId: 34,
   },
   {
     id: "af-005",
@@ -56,7 +52,6 @@ export const sharedAgentFinancials: AgentFinancials[] = [
       { id: "ca-af005-tl",  agentId: "agent-010", label: "Team Lead", rate: 10, ledgerId: 35 },
       { id: "ca-af005-mgr", agentId: "agent-011", label: "Manager",   rate: 5,  ledgerId: 36 },
     ],
-    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 35, managerLedgerId: 36,
   },
   {
     id: "af-006",
@@ -66,14 +61,16 @@ export const sharedAgentFinancials: AgentFinancials[] = [
       { id: "ca-af006-tl",  agentId: "agent-010", label: "Team Lead", rate: 10, ledgerId: 35 },
       { id: "ca-af006-mgr", agentId: "agent-011", label: "Manager",   rate: 5,  ledgerId: 36 },
     ],
-    teamLeadRate: 10, managerRate: 5, teamLeadLedgerId: 35, managerLedgerId: 36,
   },
 
-  // MBU MA/Broker channel — rate resolved at runtime from BrokerRateSlab, not fixed here.
-  { id: "af-broker-001", agentId: "broker-001", strategy: { kind: "broker-rate-slab" }, teamLeadRate: 0, managerRate: 0 },
-  { id: "af-broker-002", agentId: "broker-002", strategy: { kind: "broker-rate-slab" }, teamLeadRate: 0, managerRate: 0 },
-  { id: "af-broker-003", agentId: "broker-003", strategy: { kind: "broker-rate-slab" }, teamLeadRate: 0, managerRate: 0 },
+  // MBU MA/Broker channel — rate resolved at runtime from BrokerRateSlab.
+  { id: "af-broker-001", agentId: "broker-001", strategy: { kind: "broker-rate-slab" } },
+  { id: "af-broker-002", agentId: "broker-002", strategy: { kind: "broker-rate-slab" } },
+  { id: "af-broker-003", agentId: "broker-003", strategy: { kind: "broker-rate-slab" } },
 
+  // MBU BYOB channel — same slab lookup as MA, plus a per-broker service fee (pct points, e.g. 0.10 = 0.10%).
+  { id: "af-byob-broker-001", agentId: "byob-broker-001", strategy: { kind: "broker-rate-slab" }, byobPenaltyRate: 0.10 },
+  { id: "af-byob-broker-002", agentId: "byob-broker-002", strategy: { kind: "broker-rate-slab" }, byobPenaltyRate: 0.20 },
 ];
 
 export function getAgentFinancialsByAgentId(agentId: string): AgentFinancials | undefined {

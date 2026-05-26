@@ -136,4 +136,16 @@ export const sharedLedgers: Ledger[] = [
   { id: 40, name: "BrokerLiability_broker-001", description: "Broker Liability — Omar Rahman (AED)",        type: "liability", glId: 10, partyId: "party-broker-omar-rahman",  currency: "AED" },
   { id: 41, name: "BrokerLiability_broker-002", description: "Broker Liability — Sara Mansoor (AED)",       type: "liability", glId: 10, partyId: "party-broker-sara-mansoor", currency: "AED" },
   { id: 42, name: "BrokerLiability_broker-003", description: "Broker Liability — Khalid & Associates (AED)", type: "liability", glId: 10, partyId: "party-broker-khalid-assoc", currency: "AED" },
+
+  // ── MBU BYOB broker subledgers — AED (UAE) ───────────────────────────────
+  { id: 43, name: "BrokerLiability_byob-broker-001", description: "Broker Liability — Nadia Hassan (AED)",    type: "liability", glId: 10, partyId: "party-byob-broker-nadia-hassan", currency: "AED" },
+  { id: 44, name: "BrokerLiability_byob-broker-002", description: "Broker Liability — Tariq Al-Farsi (AED)", type: "liability", glId: 10, partyId: "party-byob-broker-tariq-al-far",  currency: "AED" },
+
+  // ── BBG internal staff subledgers — AED (UAE) ────────────────────────────
+  { id: 45, name: "AgentLiability_bbg-rm-001", description: "Agent Liability — Layla Nasser / BBG RM (AED)",          type: "liability", glId: 10, partyId: "party-bbg-rm-layla-nasser", currency: "AED" },
+  { id: 46, name: "AgentLiability_bbg-tl-001", description: "Agent Liability — Omar Sheikh / BBG TL (AED)",           type: "liability", glId: 10, partyId: "party-bbg-tl-omar-sheikh",  currency: "AED" },
+  { id: 47, name: "AgentLiability_bbg-ds-001", description: "Agent Liability — Rami Haddad / BBG DS (AED)",           type: "liability", glId: 10, partyId: "party-bbg-ds-rami-haddad",  currency: "AED" },
+
+  // ── BBG external broker subledger — AED (UAE) ────────────────────────────
+  { id: 48, name: "BrokerLiability_bbg-ext-001", description: "Broker Liability — Falcon Capital Partners (AED)", type: "liability", glId: 10, partyId: "party-bbg-ext-falcon-capital", currency: "AED" },
 ];

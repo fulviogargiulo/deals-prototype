@@ -4,151 +4,311 @@ This page explains how the core entities in the Deals system connect to each oth
 
 # 1. Entity Relationship Diagram
 
-```
+````
+```mermaid
 erDiagram
     Party {
         string id
-        string taxId
         string displayName
-        string country
-    }
-    Deal {
-        string id
-        DealStatus status
-        string market
-        BusinessUnit businessUnit
-        Country country
-        number dealAmount
-    }
-    DealStakeholder {
-        string id
-        string dealId
-        string partyId
-        StakeholderType role
-        number financialAmount
-        number splitPercentage
-        string parentStakeholderId
+        string email
+        string phone
+        string legalType
+        string taxId "dedup key (optional)"
     }
     Agent {
         string id
-        string partyId
-        Country country
-        string employmentType
+        string partyId FK
+        string employmentStatus
     }
     AgentFinancials {
-        string agentId
+        string id
+        string agentId FK
         AgentStrategy strategy
+        number teamLeadRate
+        number managerRate
+        string effectiveFrom
+    }
+    AgentDocument {
+        string id
+        string agentId FK
+        AgentDocumentType documentType
+        string kind "file | text"
+        DocumentRequirementStatus status
+        string expiresAt
+    }
+    Client {
+        string id
+        string partyId FK
+        string status
+        string verificationStatus
+        string source
+    }
+    Opportunity {
+        string id
+        string clientId FK
+        string agentId FK
+        OpportunityType type
+        OpportunityStatus status
+        string country
+    }
+    Property {
+        string id
+        string name
+        Country country
+        Currency currency
+        string address "optional"
+        string type "optional"
+        string developmentName "optional"
+    }
+    Offer {
+        string id
+        OfferStatus status
+        Country country
+        Currency currency
+        string propertyId FK "optional"
+        string opportunityId FK "optional"
+        string clientId FK "optional"
+        number offerAmount "optional"
+        CommissionPayer commissionPayer "optional"
+        number totalCommissionPct "optional"
+        string buyerAgentId FK "optional — Closer"
+        string sellerAgentId FK "optional — Lister"
+        number buyerAgentSplitPct "optional"
+        number sellerAgentSplitPct "optional"
+    }
+    Deal {
+        string id
+        string offerId FK "optional"
+        string propertyId FK "optional"
+        DealType type
+        DealStatus status
+        number dealAmount
+        Currency currency
+        BusinessUnit businessUnit
+        string blueprintId FK
+    }
+    Blueprint {
+        string id
+        Country country
+        BusinessUnit businessUnit
+        DealType dealType
+        number taxRate
+        string taxLabel
+        number withholdingRate "optional — markets with income withholding (e.g. IRPF)"
+        string withholdingLabel "optional — e.g. IRPF"
+    }
+    DealStakeholder {
+        string id
+        string dealId FK
+        string partyId FK
+        StakeholderType role
+        number splitPercentage
+        number financialAmount "signed: + = revenue / payout, - = cost"
+    }
+    DealDocumentRequirement {
+        string id
+        string dealId FK
+        string label
+        boolean required
+        DocumentRequirementStatus status
+        string documentId FK
+    }
+    DocumentRequirementTemplate {
+        string id
+        Market market
+        BusinessUnit businessUnit
+        Country country
+        string label
+        boolean required
     }
     Invoice {
         string id
-        string direction
-        string partyId
-        string dealId
+        string direction "inbound | outbound"
+        string partyId FK
+        string dealId FK
+        string invoiceNumber
         InvoiceStatus status
-        number subtotal
-        number vatAmount
-        number withholdingAmount
-    }
-    Posting {
-        string id
-        string dealId
-        BusinessProcess businessProcess
-        string valueDate
+        number subtotal "base commission (pre-VAT); gross = subtotal + vatAmount"
+        number vatAmount "optional — VAT charged on top of base"
+        number withholdingRate "optional — IRPF rate applied (agent-editable)"
+        number withholdingAmount "optional — withheld by Huspy, remitted to authority"
         Currency currency
+        string issueDate
+        string dueDate
+        string proofFileName "required when paid"
+        string proofUploadedAt "required when paid"
+        string paymentReference "required when paid"
+        string cancelReason "required when cancelled"
+        string cancelledAt "set on cancel"
     }
-    PostingLine {
+    Task {
         string id
-        string postingId
-        number ledgerId
-        PostingSide side
-        number amount
-        string invoiceId
+        string clientId FK
+        string opportunityId FK
+        string assigneeId FK
+        TaskStatus status
+        TaskPriority priority
+    }
+    Document {
+        string id
+        string clientId FK
+        string opportunityId FK
+        DocumentType type
+    }
+    DealComment {
+        string id
+        string dealId FK
+        string author "ops | agent"
+        string authorName
+        string text
+        string createdAt
     }
     Ledger {
         number id
         string name
         LedgerType type
-        boolean isControlAccount
-        number glId
-        string partyId
+        number glId "optional FK"
+        string partyId "optional FK - agent subledgers only"
+        Currency currency
     }
-    DealDocumentRequirement {
+    Posting {
         string id
-        string dealId
-        string label
-        DocumentRequirementStatus status
+        string dealId FK
+        BusinessUnit businessUnit
+        string externalRef
+        BusinessProcess businessProcess
+        string valueDate
+        Currency currency
+        string reversedByPostingId FK
     }
-    DealComment {
+    PostingLine {
         string id
-        string dealId
-        string authorRole
-        string body
+        string postingId FK
+        number ledgerId FK
+        string invoiceId FK
+        PostingSide side
+        number amount
     }
 
-    Party ||--o{ DealStakeholder : "plays role in"
-    Deal   ||--o{ DealStakeholder : "has"
-    DealStakeholder }o--o| DealStakeholder : "funded by parent"
-    Party ||--o| Agent : "is"
-    Agent  ||--o| AgentFinancials : "has commission structure"
-    Agent  ||--o| Ledger : "owns subledger"
-    Deal   ||--o{ Invoice : "has"
-    Party  ||--o{ Invoice : "counterparty on"
-    Deal   ||--o{ Posting : "triggers"
-    Posting ||--|{ PostingLine : "contains"
-    PostingLine }o--|| Ledger : "posts to"
-    PostingLine }o--o| Invoice : "settled by"
-    Ledger  }o--o| Ledger : "subledger of (glId)"
-    Deal ||--o{ DealDocumentRequirement : "requires"
-    Deal ||--o{ DealComment : "has"
+    Party           ||--o| Agent                       : "acts as"
+    Party           ||--o| Client                      : "acts as"
+    Agent           ||--o{ AgentFinancials              : "has strategy"
+    Agent           ||--o{ AgentDocument                : "has compliance docs"
+    Client          ||--o{ Opportunity                  : "has"
+    Opportunity     ||--o{ Offer                        : "produces"
+    Property        ||--o{ Offer                        : "subject of"
+    Offer           ||--o| Deal                         : "spawns"
+    Deal            ||--|{ DealStakeholder               : "involves"
+    Deal            ||--o{ DealDocumentRequirement       : "requires"
+    Deal            ||--o{ DealComment                    : "has thread"
+    Deal            |o--o{ Posting                       : "generates"
+    Deal            |o--|{ Invoice                       : "creates"
+    Blueprint       |o--o{ Deal                          : "governs tax for"
+    DocumentRequirementTemplate ||--o{ DealDocumentRequirement : "instantiates"
+    Party           ||--o{ DealStakeholder               : "participates as"
+    Party           |o--o{ Ledger                        : "owns (optional)"
+    Party           ||--o{ Invoice                       : "billed to/from"
+    Posting         ||--|{ PostingLine                   : "has"
+    Ledger          ||--o{ PostingLine                   : "receives"
+    Invoice         |o--o{ PostingLine                   : "claimed by"
+    Client          ||--o{ Task                          : "has"
+    Opportunity     ||--o{ Task                          : "has"
+    Client          ||--o{ Document                      : "has"
+    Opportunity     ||--o{ Document                      : "has"
+    Ledger          ||--o{ Ledger                        : "subledger of"
+    Agent           ||--o{ Opportunity                   : "assigned"
 ```
+````
 
 # 2. Key Entities
 
 | Entity | One-line summary |
 | --- | --- |
-| `Party` | Single identity record for every person or organisation — deduplicated by `taxId`. |
-| `Deal` | Central transaction record: status, amount, market, BU, country. |
-| `DealStakeholder` | Links a Party to a Deal with a financial or identity role; drives the P&L waterfall. |
-| `Invoice` | Billing instrument — outbound (Huspy bills client) or inbound (agent/vendor bills Huspy). |
+| `Party` | Central identity record. `Agent` and `Client` are sub-types that link to a `Party` via `partyId`. Third parties (banks, developers, buyers, sellers) are also Parties. Deduplicated by `taxId`. Before creating a new Party record, look up by `taxId` |
+| `Deal` | Central transaction record: status, amount, market, channel, BU, country. |
+| `DealStakeholder` | Each deal now has one or more stakeholder records, each linking a Party to a **financial role** (`StakeholderType`). This naturally supports multi-agent commission splits and mixed revenue/cost structures. |
+| `Invoice` | Billing instrument. Outbound (Huspy bills client) or inbound (agent/vendor bills Huspy). |
 | `Posting` / `PostingLine` | Double-entry primitives — every business event creates a balanced posting across one or more ledger accounts. |
-| `Ledger` | A GL account or agent subledger in the chart of accounts. |
+| `Ledger` | A GL account or agent/broker subledger in the chart of accounts. |
 
-## P&L Waterfall
+# 2. How the Entities Connect
 
-The waterfall engine calculates deal profitability dynamically from its `DealStakeholders`. Applied in order:
+### 2.1 Party - the identity anchor
 
-1. **Gross Revenue** — sum of `REVENUE_SOURCE` stakeholder amounts (all services charged by Huspy)
-2. **Minus Acquisition Deductions** — `ACQUISITION_DEDUCTION` stakeholders (external partners, referrals)
-3. **Minus Operational Deductions** — `OPERATIONAL_DEDUCTION` stakeholders (notary, conveyance, legal)
-4. **Net Revenue** = Gross − Acquisition − Operational
-5. **Minus Agent Payouts** — calculated from each agent's `AgentFinancials.strategy`
-6. **Huspy Margin** = Net Revenue − Agent Payouts
+`Party` is the single identity record for every person or organisation in the system: buyer, seller, developer, bank, notary, agent. Deduplicated by `taxId` . All other entities that represent a person/legal entity with which we interact with point here — `Agent`, `DealStakeholder`, and `Invoice` all carry a `partyId`.
 
-A stakeholder can carry a `parentStakeholderId`, linking it to another stakeholder. This is used when a deduction is funded from an agent's own commission rather than from Huspy directly — e.g. a referral fee paid out of the referring agent's cut.
+### 2.2 Deal → DealStakeholder → Party
 
-Tax (Blueprint tax) is handled separately via country/BU configuration and never appears as a manually declared stakeholder.
+A `Deal` has no notion of "who is involved" by itself. All financial and identity participants are expressed as `DealStakeholders`. cStakeholders can be added at any point from deal creation up to — but not including — the transition to `invoicing` status. Each stakeholder links a `Party` to the deal with a role:
 
-**Example — €500,000 property, Spain, Agent has 50% rate:**
-
-| Line | Amount |
+| Role | Effect on waterfall |
 | --- | --- |
-| Gross Revenue (3% take rate) | €15,000 |
-| External broker fee (Acquisition Deduction) | −€3,000 |
-| Net Revenue | €12,000 |
-| Agent payout (flat 50%) | −€6,000 |
-| **Huspy Margin** | **€6,000** |
+| `REVENUE_SOURCE` | Adds to gross revenue |
+| `ACQUISITION_DEDUCTION` | Deducted from gross revenues |
+| `INTERNAL_PAYOUT` | Agent commission — calculated from `AgentFinancials.strategy` |
+| `OPERATIONAL_DEDUCTION` | Deducted from net revenues |
+| `DEMAND` | Buyer / tenant / borrower / client — identity only, no financial effect |
+| `SUPPLY` | Seller / developer / lender / bank — identity only, no financial effect |
 
-### Agent Commission Strategies
+**Sub-stakeholders:** A `DealStakeholder` can carry a `parentStakeholderId`, linking it to an `INTERNAL_PAYOUT` stakeholder. When set, the cost is deducted from the parent agent's commission pool rather than from Huspy's share (e.g. a referral fee funded by the agent's own cut, not by Huspy).
 
-| Kind | Behaviour |
-| --- | --- |
-| `flat` | Fixed % of the agent's share of net revenue |
-| `slab` | Progressive tiers — each % applies to the slice between thresholds |
-| `max` | Flat % capped at a maximum amount |
+### 2.3 Party → Ledger
 
-## Chart of Accounts
+`ledger.partyId` is optional. Most GL accounts (revenue, expense, AR, bank) are company-wide and carry no `partyId`.
 
-One set of GL accounts per currency (EUR, AED, SAR). Business unit attribution is a dimension on the Posting, not embedded in ledger names.
+Agent/brokers/MCs/DS have subledgers set under general ledger `LIAB_AGENT_{CUR}`, because Huspy carries an ongoing liability to agents across multiple deals, the subledger balance matters between payout runs.
+
+### 2.3 Agent → AgentFinancials → commission strategy
+
+`Agent` is Huspy's own agent/broker/MC record. It extends `Party` (via `partyId`), carries the country and employment type (`commission` or `salaried`), and links to `AgentFinancials`, which stores the commission strategy. A commission strategy defines how the agent commission is supposed to be calculated depending on the deal nature (BU, channel, country).
+
+`AgentFinancials` also tracks connected agents (e.g. Team Lead, Manager) and their overhead rates, which are calculated on top of the base agent's payout.
+
+### 2.4 Deal → Invoice → PostingLine
+
+When a deal reaches `invoicing`, an outbound `Invoice` is created linking the `Deal` to the receivable `Party` (same for inbound invoices non-agent related). When the agent submits a statement, an inbound `Invoice` is created linking back to the `Party` (the agent). Not all invoices are linked to specific deals (e.g. agent invoice can group multiple deals related postinglines and non-deal specific postinlines). 
+
+`Invoice` is directional:
+
+| `direction` | Who sends it | Effect |
+| --- | --- | --- |
+| `outbound` | Huspy → client | Huspy collects |
+| `inbound` | Agent / vendor → Huspy | Huspy pays |
+
+Entry point by invoice type:
+
+| Type | Auto-created on deal → `invoicing`? | Entry state | Advances to `issued` when… |
+| --- | --- | --- | --- |
+| Outbound (Huspy → client/developer/bank) | Yes | `draft` | Finance completes (due date, VAT) and sends PDF |
+| Inbound — external vendor | Yes, unless the party has an agent/broker subledger — those are settled via commission accrual posting instead | `draft` | Vendor submits their invoice; Finance validates and updates details |
+| Inbound — agent | No — decoupled from deal lifecycle | `issued` | Agent submits or on schedule; no draft stage |
+
+An invoice is settled when the `PostingLine` entries linked to it (via `invoiceId`) are cleared by a `bank_statement` posting.
+
+`Invoice` links directly to the Party being billed (outbound) or billing Huspy (inbound). 
+
+### 2.5 Posting → PostingLine → Ledger
+
+Every business event creates a `Posting`, which groups one or more `PostingLine` records. Each line debits or credits a specific `Ledger`. All lines on a posting must sum to zero (balanced double-entry).
+
+Key posting types and what they do:
+
+| `businessProcess` | Typical lines | Trigger |
+| --- | --- | --- |
+| `invoice_issued` | DEBIT `ASSET_AR_{CUR}` (gross = subtotal + vatAmount),  CREDIT `REV_{CUR}` (subtotal),  CREDIT `LIAB_VAT_{CUR}` (vatAmount).  | Triggered: outbound invoice draft → issued. |
+| `bank_statement_inbound_matched` | DEBIT `ASSET_BANK_BankX_{CUR}` (gross),  CREDIT `ASSET_AR_{CUR}` (gross). | Triggered: outbound invoice issued → paid. |
+| `commission_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (gross base),  CREDIT `AgentLiability_agent-{slug}` (gross base).  | Triggered: deal statuc change, dependent on deal. No invoice exists yet, do not set `invoiceId`. |
+| `agent_invoice_accrual` | DEBIT `AgentLiability_agent-{slug}` (base — clears the commission accrual debit),  DEBIT `LIAB_VAT_{CUR}` (input VAT),  CREDIT `LIAB_WITHHOLDING_TAX_{CUR}` (IRPF, Spain only),  CREDIT `LIAB_PAYABLE_{CUR}` (net payable = base + VAT − withholding).  | Triggered: agent invoice → issued. All lines tagged with `invoiceId`. |
+| `external_cost_accrual` | DEBIT `EXP_COMMISSION_{CUR}` (subtotal),  DEBIT `LIAB_VAT_{CUR}` (vatAmount — input VAT reduces net VAT owed),  CREDIT `LIAB_PAYABLE_{CUR}` (gross). | Triggered: inbound vendor invoice draft → issued. All lines tagged with `invoiceId`. |
+| `bank_statement_outbound_matched` | DEBIT `LIAB_PAYABLE_{CUR}`,  CREDIT `ASSET_BANK_BankX_{CUR}`.  | Triggered: inbound invoice issued → paid. Bank line is **not** tagged with `invoiceId`; payable-clearing line is tagged. |
+| `manual_adjustment` | Flexible — use for standalone corrections |  |
+| `reversal` | Mirror of reversed posting with sides flipped; set `reversedByPostingId` |  |
+
+### 2.6 Ledger → subledger hierarchy
+
+`LIAB_AGENT_{CUR}` is a control account (marked `isControlAccount: true`). Individual agent subledgers (`AgentLiability_agent-{slug}`) point back to it via `glId`. You never post directly to a control account — always to the subledger. The control account balance equals the sum of all its subledgers.
+
+Key ledgers and what they do:
 
 | Ledger pattern | Type | Notes |
 | --- | --- | --- |
@@ -161,75 +321,6 @@ One set of GL accounts per currency (EUR, AED, SAR). Business unit attribution i
 | `LIAB_WITHHOLDING_TAX_{CUR}` | Liability | Withholding tax payable (IRPF in Spain) |
 | `REV_{CUR}` | Revenue | All commission and fee revenue |
 | `EXP_COMMISSION_{CUR}` | Expense | Agent commission expense (gross) |
-
-# 2. How the Entities Connect
-
-### Party — the identity anchor
-
-`Party` is the single identity record for every person or organisation in the system: buyer, seller, developer, bank, notary, agent. Deduplicated by `taxId` (NIE in Spain, Emirates ID in UAE). All other entities that represent a person point here — `Agent`, `DealStakeholder`, and `Invoice` all carry a `partyId`.
-
-### Deal → DealStakeholder → Party
-
-A `Deal` has no notion of "who is involved" by itself. All financial and identity participants are expressed as `DealStakeholders`. Each stakeholder links a `Party` to the deal with a role:
-
-| Role | Effect on waterfall |
-| --- | --- |
-| `REVENUE_SOURCE` | Adds to gross revenue |
-| `INTERNAL_PAYOUT` | Agent commission — calculated from `AgentFinancials.strategy` |
-| `ACQUISITION_DEDUCTION` | Deducted from gross (external partner, referral) |
-| `OPERATIONAL_DEDUCTION` | Deducted from gross (notary, conveyance) |
-| `DEMAND` | Buyer / tenant / borrower — identity only, no financial effect |
-| `SUPPLY` | Seller / developer / lender — identity only, no financial effect |
-
-**Sub-stakeholders:** A `DealStakeholder` can carry a `parentStakeholderId`, linking it to an `INTERNAL_PAYOUT` stakeholder. When set, the cost is deducted from the parent agent's commission pool rather than from Huspy's gross revenue (e.g. a referral fee funded by the agent's own cut, not by Huspy).
-
-### Agent → AgentFinancials → commission strategy
-
-`Agent` is Huspy's own agent record. It extends `Party` (via `partyId`), carries the country and employment type (`commission` or `salaried`), and links to `AgentFinancials`, which stores the commission strategy:
-
-| Strategy | How it works |
-| --- | --- |
-| `flat` | Fixed % of the agent's allocated commission base |
-| `slab` | Progressive tiers — each rate applies to the slice between thresholds |
-| `max` | Flat % capped at a maximum payout amount |
-
-`AgentFinancials` also tracks connected agents (Team Lead, Manager) and their overhead rates, which are calculated on top of the base agent's payout.
-
-### Deal → Invoice → PostingLine
-
-When a deal reaches `invoicing`, an outbound `Invoice` is created linking the `Deal` to the receivable `Party`. When the agent submits a statement, an inbound `Invoice` is created linking back to the `Party` (the agent). Not all invoices are linked to specific deals (e.g. agent invoice can group multiple deals related postinglines and non)
-
-`Invoice` is directional:
-
-| `direction` | Who sends it | Effect |
-| --- | --- | --- |
-| `outbound` | Huspy → client | Huspy collects |
-| `inbound` | Agent / vendor → Huspy | Huspy pays |
-
-An invoice is settled when the `PostingLine` entries linked to it (via `invoiceId`) are cleared by a `bank_statement` posting.
-
-### Posting → PostingLine → Ledger
-
-Every business event creates a `Posting`, which groups one or more `PostingLine` records. Each line debits or credits a specific `Ledger`. All lines on a posting must sum to zero (balanced double-entry).
-
-Key posting types and what they do:
-
-| Business process | What it records |
-| --- | --- |
-| `invoice_issued` | DR AR / CR Revenue + CR VAT Liability (outbound); DR Expense / CR Payable (inbound) |
-| `bank_statement_inbound_matched` | DR Bank / CR AR — cash received from client |
-| `commission_accrual` | DR Commission Expense / CR Agent Liability — Huspy owes the agent |
-| `agent_invoice_accrual` | Restructures Agent Liability into net payable + withholding tax |
-| `bank_statement_outbound_matched` | DR Agent Liability / CR Bank — cash paid to agent or vendor |
-| `manual_adjustment` | Finance-entered correction (bonus, reversal, platform fee) |
-
-### Ledger → subledger hierarchy
-
-`LIAB_AGENT_{CUR}` is a control account (marked `isControlAccount: true`). Individual agent subledgers (`AgentLiability_agent-{slug}`) point back to it via `glId`. You never post directly to a control account — always to the subledger. The control account balance equals the sum of all its subledgers.
-
-### DealDocumentRequirement — per-deal checklist
-
-When a deal is created, `DealDocumentRequirement` rows are instantiated from the matching `DocumentRequirementTemplate` (filtered by market, business unit, and country). Ops approves or waives each requirement in Karvel. A deal cannot advance from `under-review` to `pending-agent-approval` until all requirements are either `approved` or `waived`.
 
 # 3. Key Invariants
 

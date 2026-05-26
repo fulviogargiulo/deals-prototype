@@ -64,13 +64,13 @@ Every ledger has a **nature** that defines what it represents and how its balanc
 * To increase an Asset or Expense → **Debit**
 * To increase a Liability or Revenue → **Credit**
 
-# 2. Posting and Posting Line — Generic Metadata
+# 2. Posting and Posting Line - Generic Metadata
 
 The posting engine is generic. It doesn't know about deals, agents, or banks specifically — it only knows about postings, lines, ledgers, and the balance invariant. Domain context (which deal, which agent, which invoice) is carried as **metadata** on the posting and on each line.
 
 This separation is what makes the engine reusable across REBU, MBU, conveyance, and any future BU we add.
 
-### 3.1 Posting — fields
+### 3.1 Posting fields
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -86,7 +86,7 @@ This separation is what makes the engine reusable across REBU, MBU, conveyance, 
 | `description` | string | no | Human-readable description shown in the UI. |
 | `deal_id` | UUID | no | Deal id if connected to a specific deal |
 
-### 3.2 Posting Line — fields
+### 3.2 Postingline fields
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |

@@ -32,7 +32,7 @@ interface Props {
 }
 
 type WizardStep = "context" | "parties" | "payouts" | "success";
-type MortgageChannel = "MA" | "REA" | "DS" | "B2C" | "BBG";
+type MortgageChannel = "MA" | "BYOB" | "REA" | "DS" | "B2C" | "BBG";
 
 interface IdentityParty { partyId: string; displayName: string; }
 interface RevenueLine { id: string; partyId: string; displayName: string; amount: number; description: string; }
@@ -643,6 +643,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                           <SelectItem value="DS">DS (Direct Sales)</SelectItem>
                           <SelectItem value="B2C">B2C (Huspy direct)</SelectItem>
                           <SelectItem value="MA">MA / Broker</SelectItem>
+                          <SelectItem value="BYOB">BYOB (Bring Your Own Broker)</SelectItem>
                           <SelectItem value="BBG">BBG</SelectItem>
                         </SelectContent>
                       </Select>

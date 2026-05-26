@@ -19,8 +19,6 @@ In relation to Deals & Payments products, we plan to add a new Deals section in 
 
 ### The Actions Required Section — The Agent's Queue
 
-<!-- SCREENSHOT -->
-
 The top of the Deals page surfaces everything that needs the agent's attention. This is the primary entry point into the deal flow. Two types of action appear here:
 
 **Provide Missing Info** (`pending-details`)
@@ -33,7 +31,7 @@ Ops has reviewed the deal and flagged that something is missing. The agent is no
 
 **Confirm Commission** (`pending-agent-approval`)
 
-Ops has finalized the commission terms. The agent needs to confirm.
+Ops has finalized the commission terms. The agent needs to confirm. 
 
 Inside the deal, the commission breakdown is expanded and non-collapsible at this stage:
 
@@ -49,8 +47,6 @@ Inside the deal, the commission breakdown is expanded and non-collapsible at thi
 
 ### Pending Details
 
-<!-- SCREENSHOT -->
-
 The user can:
 
 * Upload the requested documents
@@ -61,8 +57,6 @@ The user can:
 
 ### Under Review
 
-<!-- SCREENSHOT -->
-
 The user can:
 
 * Download uploaded documents
@@ -71,8 +65,6 @@ The user can:
 The deal is pending ops input.
 
 ### Pending Agent Approval
-
-<!-- SCREENSHOT -->
 
 The user can:
 
@@ -85,7 +77,7 @@ The user can:
     * Operational costs
     * His commission
     * His connected agents commission
-
+    
 * Confirm commission (Deal moves from Pending Agent Approval → Invoicing)
 * Add a note and request review (Deal moves from Pending Agent Approval → Under Review)
 * See and create comments on the deal
@@ -93,8 +85,6 @@ The user can:
 The deal is pending agent input.
 
 ### Invoicing
-
-<!-- SCREENSHOT -->
 
 The user can:
 
@@ -106,8 +96,6 @@ The deal is pending that linked invoices are Paid.
 
 ### Finalized
 
-<!-- SCREENSHOT -->
-
 The user can:
 
 * Download attached documents
@@ -116,8 +104,6 @@ The user can:
 
 ### Canceled
 
-<!-- SCREENSHOT -->
-
 The user can:
 
 * Download atatched documents
@@ -125,8 +111,6 @@ The user can:
 * See comments on the deal
 
 # 4. The Earnings Tab
-
-<!-- SCREENSHOT -->
 
 The Earnings tab (inside the Deals page) is where the agent manages their actual payout cycle. It is separate from tracking individual deal status.
 

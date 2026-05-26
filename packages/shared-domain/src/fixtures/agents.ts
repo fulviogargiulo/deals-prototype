@@ -125,4 +125,15 @@ export const sharedAgents: Agent[] = [
   { id: "broker-001", uid: 2001, partyId: "party-broker-omar-rahman",  country: "ae", employmentType: "commission", employmentStatus: "active" },
   { id: "broker-002", uid: 2002, partyId: "party-broker-sara-mansoor", country: "ae", employmentType: "commission", employmentStatus: "active" },
   { id: "broker-003", uid: 2003, partyId: "party-broker-khalid-assoc", country: "ae", employmentType: "commission", employmentStatus: "active" },
+
+  // ── BBG internal staff (UAE) ──────────────────────────────────────────────
+  { id: "bbg-rm-001", uid: 4001, partyId: "party-bbg-rm-layla-nasser",    country: "ae", employmentType: "salaried",    employmentStatus: "active" },
+  { id: "bbg-tl-001", uid: 4002, partyId: "party-bbg-tl-omar-sheikh",     country: "ae", employmentType: "salaried",    employmentStatus: "active" },
+  { id: "bbg-ds-001", uid: 4003, partyId: "party-bbg-ds-rami-haddad",     country: "ae", employmentType: "salaried",    employmentStatus: "active" },
+  // ── BBG external brokers (UAE) ─────────────────────────────────────────────
+  { id: "bbg-ext-001", uid: 4004, partyId: "party-bbg-ext-falcon-capital", country: "ae", employmentType: "commission",  employmentStatus: "active" },
+
+  // ── MBU BYOB brokers (UAE) ────────────────────────────────────────────────
+  { id: "byob-broker-001", uid: 3001, partyId: "party-byob-broker-nadia-hassan", country: "ae", employmentType: "commission", employmentStatus: "active" },
+  { id: "byob-broker-002", uid: 3002, partyId: "party-byob-broker-tariq-al-far", country: "ae", employmentType: "commission", employmentStatus: "active" },
 ];
