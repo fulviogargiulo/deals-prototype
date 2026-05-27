@@ -721,7 +721,7 @@ export default function AgentDetail() {
                             </td>
                             <td className="px-4 py-3">
                               <Badge variant="secondary" className="capitalize text-[11px]">
-                                {PROCESS_LABELS[line.posting?.businessProcess ?? ""] ?? line.posting?.businessProcess ?? "—"}
+                                {line.posting?.businessProcess ?? "—"}
                               </Badge>
                             </td>
                             <td className={`${tdClass} font-mono text-[12px] text-muted-foreground`}>

@@ -72,7 +72,7 @@ export function DealHeader(props: Props) {
   const fireAction = (action: ReadinessAction) => onTransition(action.to);
 
   const primary = readiness.primary;
-  const primaryEnabled = primary ? readiness.mode === "ready" : false;
+  const primaryEnabled = primary ? (readiness.mode === "ready" || readiness.mode === "waiting") : false;
 
   return (
     <>

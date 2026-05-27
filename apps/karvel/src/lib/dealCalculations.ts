@@ -47,19 +47,25 @@ import {
 //                                          reduces broker payout by that % (Huspy service fee).
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type DealEngineKey = "rebu" | "mbu-ma-broker" | "mbu-byob" | "mbu-rea" | "mbu-ds" | "mbu-b2c" | "mbu-bbg";
+export type DealEngineKey = "rebu" | "mbu-ma-broker" | "mbu-direct" | "manual";
 
-export function getDealEngine(deal: Pick<Deal, "businessUnit" | "channel">): DealEngineKey {
+// Derives engine from businessUnit + channel — used as fallback for deals without pnlEngine set.
+export function derivePnlEngine(deal: Pick<Deal, "businessUnit" | "channel">): DealEngineKey {
   if (deal.businessUnit !== "mortgage") return "rebu";
   switch (deal.channel) {
-    case "MA":   return "mbu-ma-broker";
-    case "BYOB": return "mbu-byob";
-    case "REA":  return "mbu-rea";
-    case "DS":   return "mbu-ds";
-    case "B2C":  return "mbu-b2c";
-    case "BBG":  return "mbu-bbg";
-    default:     return "mbu-b2c";
+    case "MA":
+    case "BYOB":               return "mbu-ma-broker";
+    case "REA":
+    case "DS":
+    case "B2C":                return "mbu-direct";
+    case "BBG":                return "manual";
+    default:                   return "manual"; // safe: fixed payout, no silent rate lookup
   }
+}
+
+export function getDealEngine(deal: Pick<Deal, "businessUnit" | "channel" | "pnlEngine">): DealEngineKey {
+  if (deal.pnlEngine) return deal.pnlEngine as DealEngineKey;
+  return derivePnlEngine(deal);
 }
 
 // ── Posting policy ───────────────────────────────────────────────────────────
@@ -69,11 +75,8 @@ export function getDealEngine(deal: Pick<Deal, "businessUnit" | "channel">): Dea
 const ENGINE_POSTING_POLICY: Record<DealEngineKey, { agentCommissionTrigger: string }> = {
   "rebu":          { agentCommissionTrigger: "finalized" },
   "mbu-ma-broker": { agentCommissionTrigger: "invoicing" },
-  "mbu-byob":      { agentCommissionTrigger: "invoicing" },
-  "mbu-rea":       { agentCommissionTrigger: "invoicing" },
-  "mbu-ds":        { agentCommissionTrigger: "invoicing" },
-  "mbu-b2c":       { agentCommissionTrigger: "invoicing" },
-  "mbu-bbg":       { agentCommissionTrigger: "invoicing" },
+  "mbu-direct":    { agentCommissionTrigger: "invoicing" },
+  "manual":       { agentCommissionTrigger: "invoicing" },
 };
 
 export function fireCommissionAccrualOnTransition(deal: Deal, toStatus: string): void {
@@ -108,15 +111,13 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
       if (!agent) continue;
       let af = sharedAgentFinancials.find((f) => f.agentId === agent.id);
       const engine = getDealEngine(deal);
-      const isMAOrBYOB = engine === "mbu-ma-broker" || engine === "mbu-byob";
-      if (isMAOrBYOB) {
-        // No pre-computed amount (e.g. bulk-uploaded deal) — resolve dynamically.
+      if (engine === "mbu-ma-broker") {
         // Rate depends on: reporting month, lending bank, broker's total monthly GMV (MA + BYOB combined).
         const reportingMonth = deal.reportDate?.slice(0, 7);
         const bankStake = allFixtureStakes.find((s) => s.role === "SUPPLY");
         const bankId = bankStake?.partyId;
         const brokerMonthlyGmv = allDeals
-          .filter((d) => (d.channel === "MA" || d.channel === "BYOB") && d.reportDate?.startsWith(reportingMonth ?? "\0"))
+          .filter((d) => getDealEngine(d) === "mbu-ma-broker" && d.reportDate?.startsWith(reportingMonth ?? "\0"))
           .reduce((sum, d) => {
             const hasBroker = sharedDealStakeholders.some(
               (s) => s.dealId === d.id && s.role === "AGENT_PAYOUT" && s.partyId === stake.partyId
@@ -126,16 +127,17 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
         let resolvedPct = reportingMonth && bankId
           ? resolveBrokerRate(reportingMonth, bankId, brokerMonthlyGmv)
           : undefined;
-        if (resolvedPct != null && engine === "mbu-byob") {
-          const origAf = sharedAgentFinancials.find((f) => f.agentId === agent.id);
-          const penalty = origAf?.byobPenaltyRate ?? 0;
+        // BYOB: subtract per-broker penalty rate (set on AgentFinancials) from the slab rate.
+        const origAf = sharedAgentFinancials.find((f) => f.agentId === agent.id);
+        const penalty = origAf?.byobPenaltyRate ?? 0;
+        if (resolvedPct != null && penalty > 0) {
           resolvedPct = resolvedPct - penalty;
         }
         if (resolvedPct != null) {
           af = { id: `af-syn-${agent.id}`, agentId: agent.id, strategy: { kind: "flat", pct: resolvedPct } };
         }
-      } else if (["mbu-rea", "mbu-ds", "mbu-b2c"].includes(engine)) {
-        // MBU direct channels: rate resolved from MBUDirectMonthlyRate by channel + month + sourcing.
+      } else if (engine === "mbu-direct") {
+        // Rate resolved from MBUDirectMonthlyRate by channel + month + sourcing type.
         const reportingMonth = deal.reportDate?.slice(0, 7);
         const channel = deal.channel as "REA" | "DS" | "B2C";
         const isSelfSourced = !allFixtureStakes.some((s) => s.role === "OPERATIONAL_DEDUCTION");
@@ -201,7 +203,7 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
   // MBU direct channels: fill in default referral fee (0.3% of disbursed principal) for any
   // OPERATIONAL_DEDUCTION (referral party) that has no explicit amount set.
   // Base is dealAmount (mortgage principal), not grossRevenue (bank commission).
-  if (["mbu-rea", "mbu-ds", "mbu-b2c"].includes(getDealEngine(deal))) {
+  if (getDealEngine(deal) === "mbu-direct") {
     stakeholders = stakeholders.map((s) => {
       if (s.role === "OPERATIONAL_DEDUCTION" && !s.financialAmount) {
         return { ...s, financialAmount: -(deal.dealAmount * DEFAULT_EXTERNAL_REFERRAL_RATE / 100) };
@@ -215,7 +217,7 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
     currency,
     grossRevenue: deal.grossRevenue,
     // MA/Broker: payout base is the mortgage principal, not Huspy's gross revenue.
-    agentPayoutBase: ["mbu-ma-broker", "mbu-byob"].includes(getDealEngine(deal)) ? deal.dealAmount : undefined,
+    agentPayoutBase: getDealEngine(deal) === "mbu-ma-broker" ? deal.dealAmount : undefined,
     stakeholders,
     agentFinancialsByAgentId,
     partyIdToAgentId,
@@ -462,12 +464,8 @@ export function recalculateDeal(deal: Deal, allDeals: Deal[] = getDeals()): Deal
       // deals that predate the stakeholder migration (no grossRevenue/blueprintId).
       return applyWaterfallEngine(deal, allDeals) ?? recalculateREBU(deal);
     case "mbu-ma-broker":
-    case "mbu-byob":
-      return applyWaterfallEngine(deal, allDeals) ?? deal;
-    case "mbu-rea":
-    case "mbu-ds":
-    case "mbu-b2c":
-    case "mbu-bbg":
+    case "mbu-direct":
+    case "manual":
       return applyWaterfallEngine(deal, allDeals) ?? deal;
   }
 }
@@ -592,8 +590,8 @@ export function createCommissionAccrualPosting(deal: Deal): void {
     const agentName = sharedParties.find((p) => p.id === split.partyId)?.displayName ?? split.agentId;
 
     if (split.agentPayout > 0) {
-      const subledger = sharedLedgers.find((l) => l.name === `AgentLiability_${split.agentId}`);
-      if (!subledger) throw new Error(`No subledger for agent ${split.agentId}`);
+      const subledger = sharedLedgers.find((l) => l.partyId === split.partyId);
+      if (!subledger) throw new Error(`No subledger for party ${split.partyId} (agent ${split.agentId})`);
       const pid = `posting-finalize-${deal.id}-${split.agentId}-${ts}`;
       pushPosting(pid, `Commission accrual — ${agentName} (${deal.id})`);
       push2Lines(pid, subledger.id, Math.round(split.agentPayout * 100) / 100);
@@ -610,13 +608,14 @@ export function createCommissionAccrualPosting(deal: Deal): void {
     }
   }
 
-  // Acquisition and operational costs: one posting per cost entry.
-  // Routes to the party's subledger when one exists, otherwise to EXT_PAYABLE.
+  // Acquisition and operational costs: only parties that have a subledger settle here.
+  // Parties without a subledger are settled via invoice (external_cost_accrual at invoice issuance).
   for (const entry of pnl.ledger) {
     if (entry.side !== "DEBIT" || (entry.bucket !== "acquisition-cost" && entry.bucket !== "operational-cost")) continue;
     if (entry.amount <= 0) continue;
     const subledger = entry.partyId ? sharedLedgers.find((l) => l.partyId === entry.partyId) : undefined;
-    const creditId = subledger?.id ?? ids.extPayable;
+    if (!subledger) continue;
+    const creditId = subledger.id;
     const name = entry.partyId
       ? (sharedParties.find((p) => p.id === entry.partyId)?.displayName ?? entry.partyId)
       : entry.label;

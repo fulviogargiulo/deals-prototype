@@ -354,7 +354,46 @@ const DealDetail = () => {
         invIdx++;
       });
 
-      if (billableStakes.length > 0) setInvoicesVersion((v) => v + 1);
+      // Engine-computed cost parties (e.g. mbu-direct OPERATIONAL_DEDUCTION with
+      // no explicit financialAmount — amount derived from DEFAULT_EXTERNAL_REFERRAL_RATE).
+      // These are excluded by the billableStakes filter above because financialAmount is
+      // null on the raw stakeholder, but the P&L engine fills it in. Parties with a
+      // subledger are handled by createCommissionAccrualPosting; only invoice the rest.
+      const pnlForCosts = computeDealPnL(deal);
+      if (pnlForCosts) {
+        const coveredPartyIds = new Set(billableStakes.map((s) => s.partyId));
+        pnlForCosts.ledger
+          .filter(
+            (e) =>
+              e.side === "DEBIT" &&
+              (e.bucket === "acquisition-cost" || e.bucket === "operational-cost") &&
+              e.partyId &&
+              !sharedLedgers.some((l) => l.partyId === e.partyId) &&
+              !coveredPartyIds.has(e.partyId!)
+          )
+          .forEach((entry) => {
+            const subtotal = Math.abs(entry.amount);
+            const vatAmount = blueprint.taxRate ? Math.round(subtotal * blueprint.taxRate) / 100 : undefined;
+            sharedInvoices.push({
+              id: `inv-auto-${deal.id}-cost-${invIdx}-${Date.now()}`,
+              direction: "inbound" as const,
+              partyId: entry.partyId!,
+              dealId: deal.id,
+              invoiceNumber: `INV-${country}-${String(sharedInvoices.length + invIdx + 1).padStart(3, "0")}`,
+              status: "draft" as const,
+              subtotal,
+              vatAmount,
+              currency: invCurrency,
+              issueDate: today,
+              dueDate,
+              createdAt: now,
+              updatedAt: now,
+            });
+            invIdx++;
+          });
+      }
+
+      if (invIdx > 0) setInvoicesVersion((v) => v + 1);
     }
 
     const note = opts?.reason ? `Canceled: ${opts.reason}` : "Manual transition";
@@ -366,8 +405,8 @@ const DealDetail = () => {
 
     // Persist immediately (C2 — no Save button).
     const updated: Deal = { ...deal, status: to, statusHistory: nextHistory };
-    fireCommissionAccrualOnTransition(deal, to);
     updateDeal(updated);
+    fireCommissionAccrualOnTransition(updated, to);
 
     if (to === "canceled") toast.success("Deal canceled");
     else if (to === "pending-details") toast.success("Sent back to agent");
@@ -601,7 +640,7 @@ function PostingsSection({ dealId }: { dealId: string }) {
                       <td colSpan={3} className="px-4 py-2">
                         <div className="flex items-center gap-3">
                           <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-                            {PROCESS_LABELS[posting.businessProcess] ?? posting.businessProcess}
+                            {posting.businessProcess}
                           </span>
                           <span className="text-[12px] text-muted-foreground flex-1 truncate">{posting.description ?? "—"}</span>
                           <span className="text-[12px] text-muted-foreground shrink-0">{formatDate(posting.valueDate)}</span>

@@ -259,7 +259,7 @@ export const sharedDeals: Deal[] = [
   expand({
     id: "deal-011", offerId: "offer-011",
     status: "invoicing",
-    businessUnit: "mortgage", channel: "MA",
+    businessUnit: "mortgage", channel: "MA", pnlEngine: "mbu-ma-broker",
     market: "primary", country: "ae", currency: "AED",
     dealAmount: 1_500_000, commissionPercentage: 1.20,
     reportDate: "2026-04-20",
@@ -274,7 +274,7 @@ export const sharedDeals: Deal[] = [
   {
     id: "deal-012", offerId: "offer-012",
     status: "under-review",
-    businessUnit: "mortgage", channel: "B2C",
+    businessUnit: "mortgage", channel: "B2C", pnlEngine: "mbu-direct",
     market: "primary", country: "ae", currency: "AED",
     dealAmount: 3_200_000, reportDate: "2026-04-28",
     title: "FAB · Sharma Purchase",
@@ -299,7 +299,7 @@ export const sharedDeals: Deal[] = [
   expand({
     id: "deal-014", offerId: "offer-014",
     status: "invoicing", market: "secondary", country: "es", currency: "EUR",
-    businessUnit: "mortgage", channel: "B2C",
+    businessUnit: "mortgage", channel: "B2C", pnlEngine: "mbu-direct",
     dealAmount: 496000, reportDate: "2026-04-10",
     createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-15T10:00:00.000Z",
     commissionPercentage: 0.5,
@@ -312,7 +312,7 @@ export const sharedDeals: Deal[] = [
   expand({
     id: "deal-015", offerId: "offer-015",
     status: "invoicing", market: "primary", country: "sa", currency: "SAR",
-    businessUnit: "mortgage", channel: "B2C",
+    businessUnit: "mortgage", channel: "B2C", pnlEngine: "mbu-direct",
     dealAmount: 920000, reportDate: "2026-04-28",
     createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-05-02T09:00:00.000Z",
     commissionPercentage: 0.5,
@@ -391,7 +391,7 @@ export const sharedDeals: Deal[] = [
   expand({
     id: "deal-022", offerId: "offer-022",
     status: "finalized",
-    businessUnit: "mortgage", channel: "MA",
+    businessUnit: "mortgage", channel: "MA", pnlEngine: "mbu-ma-broker",
     market: "primary", country: "ae", currency: "AED",
     dealAmount: 2_800_000, commissionPercentage: 1.25,
     reportDate: "2026-05-05", paymentDate: "2026-05-14",
@@ -407,7 +407,7 @@ export const sharedDeals: Deal[] = [
   expand({
     id: "deal-023", offerId: "offer-023",
     status: "invoicing",
-    businessUnit: "mortgage", channel: "BYOB",
+    businessUnit: "mortgage", channel: "BYOB", pnlEngine: "mbu-ma-broker",
     market: "primary", country: "ae", currency: "AED",
     dealAmount: 2_000_000, commissionPercentage: 1.10,
     reportDate: "2026-05-10",
@@ -422,7 +422,7 @@ export const sharedDeals: Deal[] = [
   expand({
     id: "deal-024", offerId: "offer-024",
     status: "invoicing",
-    businessUnit: "mortgage", channel: "BBG",
+    businessUnit: "mortgage", channel: "BBG", pnlEngine: "manual",
     market: "primary", country: "ae", currency: "AED",
     dealAmount: 2_500_000, commissionPercentage: 2,
     reportDate: "2026-05-15",
@@ -437,7 +437,7 @@ export const sharedDeals: Deal[] = [
   expand({
     id: "deal-025", offerId: "offer-025",
     status: "invoicing",
-    businessUnit: "mortgage", channel: "BBG",
+    businessUnit: "mortgage", channel: "BBG", pnlEngine: "manual",
     market: "primary", country: "ae", currency: "AED",
     dealAmount: 1_500_000, commissionPercentage: 2,
     reportDate: "2026-05-18",

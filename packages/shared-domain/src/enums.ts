@@ -41,6 +41,8 @@ export type OpportunityStatus =
 
 export type BusinessUnit = "rebu" | "mortgage";
 
+export type PnlEngine = "rebu" | "mbu-ma-broker" | "mbu-direct" | "manual";
+
 export type Country = "ae" | "es" | "sa";
 
 export type Currency = "AED" | "EUR" | "SAR";

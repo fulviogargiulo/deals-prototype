@@ -98,7 +98,7 @@ function createPaidPosting(inv: Invoice): void {
     id: pid,
     dealId: inv.dealId,
     businessUnit: deal?.businessUnit ?? null,
-    businessProcess: (inv.direction === "outbound" ? "cash_receipt" : "payment_disbursed") as any,
+    businessProcess: (inv.direction === "outbound" ? "bank_statement_inbound_matched" : "bank_statement_outbound_matched") as any,
     createdBy: "ops",
     createdAt: now,
     valueDate: today,

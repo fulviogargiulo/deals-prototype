@@ -61,7 +61,7 @@ export function PostingDetailDialog({
             <div>
               <DialogTitle className="font-mono text-[14px]">{posting?.id}</DialogTitle>
               <DialogDescription>
-                {PROCESS_LABELS[posting?.businessProcess ?? ""] ?? posting?.businessProcess} · {posting?.valueDate} · {posting?.currency}
+                {posting?.businessProcess} · {posting?.valueDate} · {posting?.currency}
               </DialogDescription>
             </div>
             {posting && !posting.reversedByPostingId && onReverse && (
@@ -79,7 +79,7 @@ export function PostingDetailDialog({
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px]">
               <div>
                 <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Business Process</p>
-                <p className="font-medium">{PROCESS_LABELS[posting.businessProcess] ?? posting.businessProcess}</p>
+                <p className="font-medium">{posting.businessProcess}</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Reversed by</p>
@@ -141,7 +141,7 @@ export function PostingDetailDialog({
                             {sub ?? "—"}
                           </td>
                           <td className="px-3 py-2 text-muted-foreground text-[12px]">
-                            {PROCESS_LABELS[posting.businessProcess] ?? posting.businessProcess}
+                            {posting.businessProcess}
                           </td>
                           <td className="px-3 py-2 text-right tabular-nums font-semibold">
                             {l.side === "DEBIT" ? fmt(l.amount, posting.currency) : <span className="text-muted-foreground/30">—</span>}

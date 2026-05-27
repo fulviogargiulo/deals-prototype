@@ -13,6 +13,7 @@ import type {
   OfferStatus,
   OpportunityStatus,
   OpportunityType,
+  PnlEngine,
   PostingSide,
   StakeholderType,
 } from "./enums";
@@ -355,6 +356,7 @@ export interface Deal {
   // Karvel — operational / financial fields
   // ==========================================================
   channel?: string;
+  pnlEngine?: PnlEngine;
   ofCaseNumber?: string;
 
   // Property (REBU)

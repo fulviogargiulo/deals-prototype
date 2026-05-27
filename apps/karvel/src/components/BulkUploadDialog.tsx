@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, CheckCircle, AlertTriangle, X, Download } from "lucide-react";
 import { Deal } from "@/data/types";
-import { DealStakeholder, StakeholderType, sharedDealStakeholders, sharedDealDocumentRequirements, sharedDocumentRequirementTemplates, sharedParties, type StatusHistoryEntry } from "@huspy/shared-domain";
+import { DealStakeholder, StakeholderType, sharedDealStakeholders, sharedDealDocumentRequirements, sharedDocumentRequirementTemplates, sharedParties, sharedAgents, type StatusHistoryEntry } from "@huspy/shared-domain";
 import { toast } from "@/hooks/use-toast";
-import { recalculateDeal } from "@/lib/dealCalculations";
+import { recalculateDeal, derivePnlEngine } from "@/lib/dealCalculations";
 import { getBlueprint } from "@huspy/shared-domain";
 
 interface Props {
@@ -119,6 +119,7 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
     market: (header.market as Deal["market"]) || "primary",
     businessUnit,
     channel,
+    pnlEngine: derivePnlEngine({ businessUnit, channel }),
     country,
     currency,
     blueprintId: blueprint.id,
@@ -228,6 +229,8 @@ function validateRows(rows: Record<string, string>[]): string[] {
       if (!row.stakeRole) { errs.push(`Deal ${id} row ${i + 1}: missing stakeRole`); continue; }
       if (!VALID_ROLES.has(row.stakeRole)) errs.push(`Deal ${id} row ${i + 1}: unknown stakeRole "${row.stakeRole}"`);
       if (!row.partyId) errs.push(`Deal ${id} row ${i + 1}: missing partyId`);
+      if (row.stakeRole === "AGENT_PAYOUT" && row.partyId && !sharedAgents.some(a => a.partyId === row.partyId))
+        errs.push(`Deal ${id} row ${i + 1}: partyId "${row.partyId}" not found in agent registry — P&L cannot be calculated`);
       if (row.stakeRole === "OPERATIONAL_DEDUCTION" && row.chargedTo) errs.push(`Deal ${id} row ${i + 1}: OPERATIONAL_DEDUCTION cannot use chargedTo — use ACQUISITION_DEDUCTION for agent-borne costs`);
     }
   }

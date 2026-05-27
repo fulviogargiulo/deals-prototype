@@ -557,7 +557,7 @@ export function LedgerView() {
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant="secondary" className="capitalize text-[11px]">
-                            {PROCESS_LABELS[line.posting?.businessProcess ?? ""] ?? line.posting?.businessProcess ?? "—"}
+                            {line.posting?.businessProcess ?? "—"}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right text-[14px] tabular-nums font-semibold">

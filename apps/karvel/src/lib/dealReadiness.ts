@@ -127,6 +127,7 @@ function pendingAgentApprovalReadiness(): DealReadiness {
     headline: "Awaiting agent confirmation",
     sub: "Agent must confirm the commission terms before invoicing can begin.",
     items: [],
+    primary:   { label: "Move to invoicing", to: "invoicing", variant: "primary", icon: "send" },
     secondary: { label: "Pull back to review", to: "under-review", variant: "secondary", icon: "undo" },
   };
 }

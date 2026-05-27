@@ -4,7 +4,9 @@
 
 Every time a deal is saved or its status changes, the system runs a **P&L engine** in the background. The engine reads the deal's details: what Huspy earned, who the agents are, whether an external partner was involved, and produces a set of numbers: agent payouts, acquisition and operational costs, and Huspy's net margin.
 
-The engine chosen depends on **which business unit and channel** the deal belongs to. Each engine has its own rules for where the money comes from and how it is distributed.
+The engine chosen depends on the **`pnlEngine` field** on the deal — set explicitly at deal creation and visible on the deal detail page. `channel` is a separate reporting field; it does not drive engine selection. This separation means new markets and channels can be onboarded without changing engine logic: ops picks the right engine at creation time, and the system knows exactly which calculation to run.
+
+Each engine has its own rules for where the money comes from and how it is distributed.
 
 # 2. Party ledger treatment
 
@@ -52,19 +54,18 @@ Settlement path is driven by whether the **party** has a subledger registered in
 
 # 3. The engines
 
-| Engine | Channel | Who closes the deal | What triggers the agent/broker commission |
+| `pnlEngine` | Typical channels | Who closes the deal | Commission trigger |
 | --- | --- | --- | --- |
-| REBU | Any | Huspy's real-estate agents | The deal moves to Finalized state |
-| MBU MA/Broker | MA | External mortgage broker | The deal moves to Invoicing state |
-| MBU BYOB | BYOB | External broker, Huspy service fee applied | The deal moves to Invoicing state |
-| MBU REA | REA | Huspy mortgage agent via Real Estate Agent referral | The deal moves to Invoicing state |
-| MBU DS | DS | Huspy mortgage agent via Direct Sales | The deal moves to Invoicing state |
-| MBU B2C | B2C | Huspy mortgage agent, direct customer | The deal moves to Invoicing state |
-| MBU BBG | BBG | Mixed internal + external payouts ( | The deal moves to Invoicing state |
+| `rebu` | Any REBU channel | Huspy's real-estate agents | Deal → Finalized |
+| `mbu-ma-broker` | MA, BYOB | External mortgage broker | Deal → Invoicing |
+| `mbu-direct` | REA, DS, B2C | Huspy mortgage agent | Deal → Invoicing |
+| `manual` | BBG, or any deal with fixed declared payouts | Mixed or manually entered | Deal → Invoicing |
 
-**Connected agents - universal rule**
+**Connected agents rule**
 
-Every Huspy agent can have a **Connected Agents** (i.e. team lead, manager…) configured in their profile (set by Finance via Agent Financials). When present, the system automatically calculates their payouts from the agent's net commission and adds them to Huspy's cost — they are **never** deducted from the agent's take-home. This applies to every engine, for every channel.
+Every Huspy agent can have **Connected Agents** (i.e. team lead, manager…) configured in their profile (set by Finance via Agent Financials). When present, the system automatically calculates their payouts from the agent's net commission and adds them to Huspy's cost — they are **never** deducted from the agent's take-home. This applies to `rebu`, `mbu-ma-broker`, and `mbu-direct`.
+
+For `manual`, connected agent payouts are **not** auto-calculated. Declare them explicitly as additional `AGENT_PAYOUT` stakeholders with a fixed `financialAmount`.
 
 **P&L waterfall - universal structure**
 
@@ -328,13 +329,19 @@ TEST-REA-001,,,,,,,,,,OPERATIONAL_DEDUCTION,party-ref-grupo-norte,0,Referral fee
 
 When the referral party is a Huspy REBU agent (rather than an external firm), the deal structure is identical — the agent still appears as `OPERATIONAL_DEDUCTION` with the 0.3% referral fee. The difference is entirely in settlement: because the REBU agent has an `AgentLiability_` subledger, the referral fee posts directly to their subledger at the commission accrual step. No invoice is raised for them. The MBU mortgage agent's commission is still calculated at the externally-sourced rate.
 
-## 3.5 BBG / Commercial channel
+## 3.5 Manual (`manual`)
 
-**Where the revenue comes from**
+The `manual` engine is for deals where all payouts are entered as fixed amounts — no rate lookup, no strategy resolution. The system sums the declared `financialAmount` values across all `AGENT_PAYOUT` stakeholders and computes Huspy's margin as the remainder.
 
-The **bank** pays Huspy a commission on the transaction amount. BBG deals cover corporate and SME banking products.
+Use it for:
+* **BBG / Commercial channel** — the primary use case (see below)
+* Any deal that does not fit an existing calculated engine (e.g. a new channel being onboarded, a one-off correction deal)
 
-**How payouts are calculated**
+**Connected agents are not auto-calculated.** Declare all recipients — including team leads and managers — explicitly as `AGENT_PAYOUT` stakeholders with their own `financialAmount`.
+
+### BBG sub-channels
+
+BBG (Business Banking Group) deals cover corporate and SME banking products. The **bank** pays Huspy a commission on the transaction amount.
 
 BBG has multiple sub-channels (Self-Generated, Real Estate Agent, Marketing, Direct Sales, Broker, TWC, Alma, BL/TWC, BYOB), each with a different split structure across up to four parties:
 
@@ -354,10 +361,10 @@ The deal creator applies the correct row from this table offline and enters each
 
 **What fills each bucket**
 
-| Bucket | BBG source |
+| Bucket | `manual` source |
 | --- | --- |
-| Gross Revenue | Bank commission (REVENUE_SOURCE from bank) |
-| Agent payouts | Each party entered with a fixed financialAmount on their AGENT_PAYOUT stakeholder |
+| Gross Revenue | Declared REVENUE_SOURCE stakeholder(s) |
+| Agent payouts | Each party entered with a fixed `financialAmount` on their `AGENT_PAYOUT` stakeholder |
 | Acquisition / Operational Costs | — normally not used — |
 
 **Deal stakeholder structure**
@@ -404,17 +411,18 @@ Gross revenue AED 30,000. Sub-channel: Self-Generated (60% / 5%).
 
 # 4. When are rates updated?
 
-| Rate table | Who updates | How often | Where in Karvel |
-| --- | --- | --- | --- |
-| Broker Rate Slabs (MA / BYOB) | BizOps | Monthly | Deal Config → Broker Rate Slabs |
-| MBU Direct Rates (REA/DS/B2C) | BizOps/Finance | Monthly | Deal Config → MBU Direct Rates |
-| Agent Financials (REBU) | Finance | Per agent change | Agents page → Agent Financials upload |
-| BBG payout amounts | Deal creator | Per deal | Entered manually on each deal stakeholder |
+| Engine | Rate table | Who updates | How often | Where in Karvel |
+| --- | --- | --- | --- | --- |
+| `rebu` | Agent Financials (flat / slab / cap) | Finance | Per agent change | Agents page → Agent Financials upload |
+| `mbu-ma-broker` | Broker Rate Slabs (bank × GMV tier) | BizOps | Monthly | Deal Config → Broker Rate Slabs |
+| `mbu-direct` | MBU Direct Rates (channel × sourcing type) | BizOps/Finance | Monthly | Deal Config → MBU Direct Rates |
+| `manual` | — no rate table | Deal creator | Per deal | Entered directly on each deal stakeholder |
 
 # 5. Glossary
 
 | Term | Meaning |
 | --- | --- |
+| **`pnlEngine`** | Field on the deal that selects the P&L calculation method. Set at deal creation; independent of the `channel` field. Values: `rebu`, `mbu-ma-broker`, `mbu-direct`, `manual` |
 | **Gross Revenue** | What Huspy receives from the client or bank before any deductions |
 | **Huspy Net Margin** | Gross Revenue minus all payouts and costs |
 | **Agent Commission** | The portion of Huspy's revenue paid to the closing agent(s) |

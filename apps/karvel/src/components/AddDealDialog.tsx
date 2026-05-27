@@ -22,7 +22,7 @@ import {
   type StatusHistoryEntry,
 } from "@huspy/shared-domain";
 import { PartyPicker } from "@/components/PartyPicker";
-import { recalculateDeal } from "@/lib/dealCalculations";
+import { recalculateDeal, derivePnlEngine } from "@/lib/dealCalculations";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -472,6 +472,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       market: businessUnit === "mortgage" ? "primary" : market,
       businessUnit,
       channel: businessUnit === "mortgage" ? channel : undefined,
+      pnlEngine: derivePnlEngine({ businessUnit, channel }),
       country,
       currency,
       blueprintId: getBlueprint(country, businessUnit).id,
