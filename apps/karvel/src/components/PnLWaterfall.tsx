@@ -553,18 +553,6 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
               {fmt(deal.dealPrice ?? deal.dealAmount, currency)}
             </span>
           </div>
-          {(deal.rebateAmount ?? 0) > 0 && (
-            <div className="flex items-center justify-between py-0.5 pl-3">
-              <span className="text-[11px] text-muted-foreground/60">Client rebate{deal.rebatePercentage ? ` (${deal.rebatePercentage}%)` : ""}</span>
-              <span className="text-[11px] text-muted-foreground/60 tabular-nums font-mono">−{fmt(deal.rebateAmount!, currency)}</span>
-            </div>
-          )}
-          {(deal.subsidyAmount ?? 0) > 0 && (
-            <div className="flex items-center justify-between py-0.5 pl-3">
-              <span className="text-[11px] text-muted-foreground/60">Client subsidy</span>
-              <span className="text-[11px] text-muted-foreground/60 tabular-nums font-mono">−{fmt(deal.subsidyAmount!, currency)}</span>
-            </div>
-          )}
         </div>
       )}
 

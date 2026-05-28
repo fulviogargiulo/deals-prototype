@@ -47,8 +47,6 @@ interface BaseInput {
   paymentDate?: string;
   channel?: string;
   pnlEngine?: Deal["pnlEngine"];
-  rebatePercentage?: number;
-  subsidyAmount?: number;
   statusHistory?: Deal["statusHistory"];
 }
 
@@ -56,12 +54,6 @@ function expand(b: BaseInput): Deal {
   const offer = findOffer(b.offerId);
   const huspyRevenue = Math.round(b.dealAmount * (b.commissionPercentage / 100));
   const businessUnit = b.businessUnit;
-  // rebateAmount and subsidyAmount are stored as reference fields on the deal.
-  // The actual net amounts are already baked into each REVENUE_SOURCE stakeholder's financialAmount.
-  const grossCommission = Math.round((b.commissionPercentage / 100) * b.dealAmount);
-  const rebateAmount = b.rebatePercentage
-    ? Math.round((b.rebatePercentage / 100) * grossCommission)
-    : undefined;
   const blueprint = getBlueprint(b.country, businessUnit);
 
   // Primary agent display name (display cache only — full AgentEntry[] lives in Karvel enricher).
@@ -127,9 +119,6 @@ function expand(b: BaseInput): Deal {
     takeRate: b.commissionPercentage,
     huspyRevenue,
     receivables,
-    rebatePercentage: b.rebatePercentage ?? 0,
-    rebateAmount,
-    subsidyAmount: b.market === "secondary" ? (b.subsidyAmount ?? 0) : 0,
     numberOfTranches: 0,
     disbursedAmount: 0,
     bankSlab: businessUnit === "mortgage" ? b.commissionPercentage : 0,
@@ -138,7 +127,7 @@ function expand(b: BaseInput): Deal {
     // Agent-app — agent-facing
     marketType: b.market,
     commissionPercentage: b.commissionPercentage,
-    commissionAmount: Math.round((huspyRevenue - (b.subsidyAmount ?? 0)) * 0.40),
+    commissionAmount: Math.round(huspyRevenue * 0.40),
     paymentDate: b.paymentDate,
     statusHistory: b.statusHistory,
   };
@@ -151,7 +140,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 385000, reportDate: "2026-01-06",
     createdAt: "2026-01-06T09:00:00.000Z", updatedAt: "2026-01-12T14:30:00.000Z",
     commissionPercentage: 3, paymentDate: "2026-01-12",
-    rebatePercentage: 1.5,
     statusHistory: [
       { from: "pending-details",         to: "under-review",            timestamp: "2026-01-07T10:00:00.000Z", note: "Ops review started" },
       { from: "under-review",            to: "pending-agent-approval",  timestamp: "2026-01-09T15:00:00.000Z", note: "Documents approved" },
@@ -165,7 +153,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 720000, reportDate: "2026-02-08",
     createdAt: "2026-02-08T00:00:00.000Z", updatedAt: "2026-02-13T14:00:00.000Z",
     commissionPercentage: 2.5,
-    subsidyAmount: 4000,
     statusHistory: [
       { from: "pending-details",  to: "under-review",           timestamp: "2026-02-10T10:00:00.000Z" },
       { from: "under-review",     to: "pending-agent-approval", timestamp: "2026-02-13T14:00:00.000Z" },
@@ -184,7 +171,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 1250000, reportDate: "2026-03-03",
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-03T00:00:00.000Z",
     commissionPercentage: 2,
-    subsidyAmount: 6000,
   }),
   expand({
     id: "deal-005", offerId: "offer-005",
@@ -192,7 +178,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 540000, reportDate: "2026-02-15",
     createdAt: "2026-02-15T00:00:00.000Z", updatedAt: "2026-02-17T10:00:00.000Z",
     commissionPercentage: 2.5,
-    rebatePercentage: 2.0,
     statusHistory: [
       { from: "pending-details", to: "under-review", timestamp: "2026-02-17T10:00:00.000Z" },
     ],
@@ -203,7 +188,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 320000, reportDate: "2026-02-20",
     createdAt: "2026-02-20T00:00:00.000Z", updatedAt: "2026-02-26T14:00:00.000Z",
     commissionPercentage: 3,
-    subsidyAmount: 2500,
     statusHistory: [
       { from: "pending-details",  to: "under-review",           timestamp: "2026-02-23T10:00:00.000Z" },
       { from: "under-review",     to: "pending-agent-approval", timestamp: "2026-02-26T14:00:00.000Z" },
@@ -215,7 +199,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 475000, reportDate: "2026-03-05",
     createdAt: "2026-03-05T00:00:00.000Z", updatedAt: "2026-03-07T09:00:00.000Z",
     commissionPercentage: 2.5,
-    subsidyAmount: 3000,
     statusHistory: [
       { from: "pending-details", to: "under-review", timestamp: "2026-03-07T09:00:00.000Z" },
     ],
@@ -226,7 +209,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 580000, reportDate: "2026-03-03",
     createdAt: "2026-03-03T00:00:00.000Z", updatedAt: "2026-03-05T10:00:00.000Z",
     commissionPercentage: 2.5,
-    subsidyAmount: 5000,
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-03-04T10:00:00.000Z" },
       { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-03-04T16:00:00.000Z" },
@@ -239,7 +221,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 1850000, reportDate: "2026-05-01",
     createdAt: "2026-05-01T00:00:00.000Z", updatedAt: "2026-05-03T09:00:00.000Z",
     commissionPercentage: 2,
-    rebatePercentage: 2.0,
     statusHistory: [
       { from: "pending-details", to: "under-review", timestamp: "2026-05-03T09:00:00.000Z" },
     ],
@@ -291,7 +272,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 620000, reportDate: "2026-04-10",
     createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-15T14:00:00.000Z",
     commissionPercentage: 3,
-    subsidyAmount: 4500,
     statusHistory: [
       { from: "pending-details",  to: "under-review",           timestamp: "2026-04-12T10:00:00.000Z" },
       { from: "under-review",     to: "pending-agent-approval", timestamp: "2026-04-15T14:00:00.000Z" },
@@ -329,7 +309,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 2100000, reportDate: "2026-05-01",
     createdAt: "2026-05-01T00:00:00.000Z", updatedAt: "2026-05-05T11:00:00.000Z",
     commissionPercentage: 2, paymentDate: "2026-05-04",
-    rebatePercentage: 1.5,
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-05-02T09:00:00.000Z" },
       { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-05-03T15:00:00.000Z" },
@@ -343,7 +322,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 530000, reportDate: "2026-04-28",
     createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-04-30T09:00:00.000Z",
     commissionPercentage: 3,
-    rebatePercentage: 1.5,
     statusHistory: [
       { from: "pending-details", to: "under-review", timestamp: "2026-04-30T09:00:00.000Z" },
     ],
@@ -354,7 +332,6 @@ export const sharedDeals: Deal[] = [
     dealAmount: 1250000, reportDate: "2026-04-12",
     createdAt: "2026-04-12T00:00:00.000Z", updatedAt: "2026-04-22T15:30:00.000Z",
     commissionPercentage: 2.5,
-    subsidyAmount: 7000,
     statusHistory: [
       { from: "pending-details",        to: "under-review",           timestamp: "2026-04-13T09:00:00.000Z" },
       { from: "under-review",           to: "pending-agent-approval", timestamp: "2026-04-14T15:00:00.000Z" },

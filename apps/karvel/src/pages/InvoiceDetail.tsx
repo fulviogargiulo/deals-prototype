@@ -3,8 +3,7 @@ import { useState, useRef, useMemo } from "react";
 import { sharedInvoices, sharedParties, sharedDeals, sharedLedgers, sharedPostings, sharedPostingLines, getPostingLinesForInvoice } from "@huspy/shared-domain";
 import type { Invoice } from "@huspy/shared-domain";
 import { saveSharedInvoices } from "@/data/sharedEntityStore";
-import { findDeal, updateDeal } from "@/data/dealStore";
-import { fireCommissionAccrualOnTransition } from "@/lib/dealCalculations";
+import { createPaidPosting, autoFinalizeDealIfComplete } from "@/lib/invoiceActions";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { ArrowLeft, Upload, X, AlertTriangle, Check, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -82,39 +81,6 @@ function createIssuedPosting(inv: Invoice): void {
     if (vat > 0)
       sharedPostingLines.push({ id: `${pid}-2`, postingId: pid, ledgerId: l.VAT, side: "DEBIT",  amount: vat });
     sharedPostingLines.push({ id: `${pid}-3`, postingId: pid, ledgerId: l.AP,  side: "CREDIT", amount: gross,        invoiceId: inv.id });
-  }
-}
-
-function createPaidPosting(inv: Invoice): void {
-  const l = LEDGERS[inv.currency] ?? LEDGERS.EUR;
-  const deal = sharedDeals.find((d) => d.id === inv.dealId);
-  const now = new Date().toISOString();
-  const today = now.slice(0, 10);
-  const pid = `posting-auto-${inv.id}-paid-${Date.now()}`;
-  const vat = inv.vatAmount ?? 0;
-  const gross = inv.subtotal + vat;
-
-  const posting = {
-    id: pid,
-    dealId: inv.dealId,
-    businessUnit: deal?.businessUnit ?? null,
-    businessProcess: (inv.direction === "outbound" ? "bank_statement_inbound_matched" : "bank_statement_outbound_matched") as any,
-    createdBy: "ops",
-    createdAt: now,
-    valueDate: today,
-    currency: inv.currency,
-    description: `${inv.direction === "outbound" ? "Payment received" : "Payment disbursed"} — ${inv.invoiceNumber}`,
-  };
-  sharedPostings.push(posting);
-
-  if (inv.direction === "outbound") {
-    // DR Bank, CR AR (clears the receivable)
-    sharedPostingLines.push({ id: `${pid}-1`, postingId: pid, ledgerId: l.BANK, side: "DEBIT",  amount: gross });
-    sharedPostingLines.push({ id: `${pid}-2`, postingId: pid, ledgerId: l.AR,   side: "CREDIT", amount: gross, invoiceId: inv.id });
-  } else {
-    // DR AP, CR Bank (clears the payable)
-    sharedPostingLines.push({ id: `${pid}-1`, postingId: pid, ledgerId: l.AP,   side: "DEBIT",  amount: gross, invoiceId: inv.id });
-    sharedPostingLines.push({ id: `${pid}-2`, postingId: pid, ledgerId: l.BANK, side: "CREDIT", amount: gross });
   }
 }
 
@@ -258,15 +224,6 @@ export default function InvoiceDetail() {
   };
 
   const handleMarkAsPaid = async () => {
-    if (!proofFile && !invoice.proofFileName) {
-      alert("Please upload a proof document.");
-      return;
-    }
-    if (!paymentReference) {
-      alert("Please enter a payment reference.");
-      return;
-    }
-
     setIsSaving(true);
     // Simulate upload delay
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -281,20 +238,7 @@ export default function InvoiceDetail() {
     invoice.paidDate = new Date().toISOString().slice(0, 10);
     invoice.updatedAt = new Date().toISOString();
 
-    // Auto-finalize the deal if all its invoices are now paid
-    if (invoice.dealId) {
-      const deal = findDeal(invoice.dealId);
-      if (deal && deal.status === "invoicing") {
-        const dealInvoices = sharedInvoices.filter((i) => i.dealId === invoice.dealId);
-        if (dealInvoices.length > 0 && dealInvoices.every((i) => i.status === "paid")) {
-          const now = new Date().toISOString();
-          const finalized = { ...deal, status: "finalized" as const, statusHistory: [...(deal.statusHistory ?? []), { from: "invoicing", to: "finalized", timestamp: now, note: "Auto-finalized: all invoices paid" }] };
-          updateDeal(finalized);
-          fireCommissionAccrualOnTransition(deal, "finalized");
-        }
-      }
-    }
-
+    autoFinalizeDealIfComplete(invoice);
     saveSharedInvoices();
     createPaidPosting(invoice);
     setPostingsVersion((v) => v + 1);
@@ -742,7 +686,7 @@ export default function InvoiceDetail() {
               <div className="flex gap-3 pt-3">
                 <button
                   onClick={handleMarkAsPaid}
-                  disabled={isSaving || (!proofFile && !invoice.proofFileName) || !paymentReference}
+                  disabled={isSaving}
                   className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
                 >
                   {isSaving ? "Saving…" : "Mark as Paid"}

@@ -17,15 +17,17 @@ import type { DealStakeholder } from "../entities";
 // Fixed service costs (conveyances, notarial fees). financialAmount is negative (cost).
 export const sharedDealStakeholders: DealStakeholder[] = [
 
-  // ── deal-001 — buy, agent-001, client-001 | rebate 1.5% × 11 550 = 173 → net 11 377
-  { id: "ds-deal-001-client", dealId: "deal-001", partyId: "party-client-001",           role: "REVENUE_SOURCE",        financialAmount: 11377 },
+  // ── deal-001 — buy, agent-001, client-001 | rebate 1.5% × 11 550 = 173
+  { id: "ds-deal-001-client",  dealId: "deal-001", partyId: "party-client-001",           role: "REVENUE_SOURCE",        financialAmount: 11550 },
+  { id: "ds-deal-001-rebate",  dealId: "deal-001", partyId: "party-client-001",           role: "ACQUISITION_DEDUCTION", financialAmount: -173 },
   { id: "ds-deal-001-agent",  dealId: "deal-001", partyId: "party-agent-001",            role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-001-conv",   dealId: "deal-001", partyId: "party-conv-gestoria-lopez",  role: "OPERATIONAL_DEDUCTION", financialAmount: -800 },
   { id: "ds-deal-001-demand", dealId: "deal-001", partyId: "party-client-001",           role: "DEMAND" },
   { id: "ds-deal-001-supply", dealId: "deal-001", partyId: "party-dev-neinor",           role: "SUPPLY" },
 
-  // ── deal-002 — sell, agent-002, client-002 | subsidy 4 000 → net 14 000
-  { id: "ds-deal-002-client", dealId: "deal-002", partyId: "party-client-002",           role: "REVENUE_SOURCE",        financialAmount: 14000 },
+  // ── deal-002 — sell, agent-002, client-002 | subsidy 4 000
+  { id: "ds-deal-002-client",  dealId: "deal-002", partyId: "party-client-002",           role: "REVENUE_SOURCE",        financialAmount: 18000 },
+  { id: "ds-deal-002-subsidy", dealId: "deal-002", partyId: "party-client-002",           role: "ACQUISITION_DEDUCTION", financialAmount: -4000 },
   { id: "ds-deal-002-agent",  dealId: "deal-002", partyId: "party-agent-002",            role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-002-conv",   dealId: "deal-002", partyId: "party-conv-gestoria-lopez",  role: "OPERATIONAL_DEDUCTION", financialAmount: -800 },
   { id: "ds-deal-002-demand", dealId: "deal-002", partyId: "party-client-002",           role: "DEMAND" },
@@ -38,45 +40,51 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   { id: "ds-deal-003-demand", dealId: "deal-003", partyId: "party-client-003",           role: "DEMAND" },
   { id: "ds-deal-003-supply", dealId: "deal-003", partyId: "party-seller-003",           role: "SUPPLY" },
 
-  // ── deal-004 — buy, agent-002, client-004 | subsidy 6 000 → net 19 000
-  { id: "ds-deal-004-client", dealId: "deal-004", partyId: "party-client-004",           role: "REVENUE_SOURCE",        financialAmount: 19000 },
+  // ── deal-004 — buy, agent-002, client-004 | subsidy 6 000
+  { id: "ds-deal-004-client",  dealId: "deal-004", partyId: "party-client-004",           role: "REVENUE_SOURCE",        financialAmount: 25000 },
+  { id: "ds-deal-004-subsidy", dealId: "deal-004", partyId: "party-client-004",           role: "ACQUISITION_DEDUCTION", financialAmount: -6000 },
   { id: "ds-deal-004-agent",  dealId: "deal-004", partyId: "party-agent-002",            role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-004-conv",   dealId: "deal-004", partyId: "party-conv-gestoria-lopez",  role: "OPERATIONAL_DEDUCTION", financialAmount: -1200 },
   { id: "ds-deal-004-demand", dealId: "deal-004", partyId: "party-client-004",           role: "DEMAND" },
   { id: "ds-deal-004-supply", dealId: "deal-004", partyId: "party-seller-004",           role: "SUPPLY" },
 
-  // ── deal-005 — buy, agent-003, client-005 | rebate 2% × 13 500 = 270 → net 13 230
-  { id: "ds-deal-005-client", dealId: "deal-005", partyId: "party-client-005",           role: "REVENUE_SOURCE",        financialAmount: 13230 },
+  // ── deal-005 — buy, agent-003, client-005 | rebate 2% × 13 500 = 270
+  { id: "ds-deal-005-client",  dealId: "deal-005", partyId: "party-client-005",           role: "REVENUE_SOURCE",        financialAmount: 13500 },
+  { id: "ds-deal-005-rebate",  dealId: "deal-005", partyId: "party-client-005",           role: "ACQUISITION_DEDUCTION", financialAmount: -270 },
   { id: "ds-deal-005-agent",  dealId: "deal-005", partyId: "party-agent-003",            role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-005-conv",   dealId: "deal-005", partyId: "party-conv-alrajhi-notarial", role: "OPERATIONAL_DEDUCTION", financialAmount: -2000 },
   { id: "ds-deal-005-demand", dealId: "deal-005", partyId: "party-client-005",           role: "DEMAND" },
   { id: "ds-deal-005-supply", dealId: "deal-005", partyId: "party-dev-dar-al-arkan",     role: "SUPPLY" },
 
-  // ── deal-006 — sell, felicia 70% / guilherme 30% co-listing | subsidy 2 500 → net 7 100
-  { id: "ds-deal-006-client",   dealId: "deal-006", partyId: "party-client-006",           role: "REVENUE_SOURCE",        financialAmount: 7100 },
+  // ── deal-006 — sell, felicia 70% / guilherme 30% co-listing | subsidy 2 500
+  { id: "ds-deal-006-client",   dealId: "deal-006", partyId: "party-client-006",           role: "REVENUE_SOURCE",        financialAmount: 9600 },
+  { id: "ds-deal-006-subsidy",  dealId: "deal-006", partyId: "party-client-006",           role: "ACQUISITION_DEDUCTION", financialAmount: -2500 },
   { id: "ds-deal-006-agent",    dealId: "deal-006", partyId: "party-agent-001",            role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 70 },
   { id: "ds-deal-006-agent-co", dealId: "deal-006", partyId: "party-agent-002",            role: "AGENT_PAYOUT",          splitPercentage: 30 },
   { id: "ds-deal-006-conv",     dealId: "deal-006", partyId: "party-conv-gestoria-lopez",  role: "OPERATIONAL_DEDUCTION", financialAmount: -800 },
   { id: "ds-deal-006-demand",   dealId: "deal-006", partyId: "party-client-006",           role: "DEMAND" },
   { id: "ds-deal-006-supply",   dealId: "deal-006", partyId: "party-seller-006",           role: "SUPPLY" },
 
-  // ── deal-007 — buy, agent-001, client-001 | subsidy 3 000 → net 8 875
-  { id: "ds-deal-007-client", dealId: "deal-007", partyId: "party-client-001",           role: "REVENUE_SOURCE",        financialAmount: 8875 },
+  // ── deal-007 — buy, agent-001, client-001 | subsidy 3 000
+  { id: "ds-deal-007-client",  dealId: "deal-007", partyId: "party-client-001",           role: "REVENUE_SOURCE",        financialAmount: 11875 },
+  { id: "ds-deal-007-subsidy", dealId: "deal-007", partyId: "party-client-001",           role: "ACQUISITION_DEDUCTION", financialAmount: -3000 },
   { id: "ds-deal-007-agent",  dealId: "deal-007", partyId: "party-agent-001",            role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-007-conv",   dealId: "deal-007", partyId: "party-conv-gestoria-lopez",  role: "OPERATIONAL_DEDUCTION", financialAmount: -800 },
   { id: "ds-deal-007-demand", dealId: "deal-007", partyId: "party-client-001",           role: "DEMAND" },
   { id: "ds-deal-007-supply", dealId: "deal-007", partyId: "party-seller-007",           role: "SUPPLY" },
 
-  // ── deal-008 — sell, agent-002, client-002 + developer split | subsidy 5 000 → client net 3 700
-  { id: "ds-deal-008-client",    dealId: "deal-008", partyId: "party-client-002",                        role: "REVENUE_SOURCE",        financialAmount: 3700 },
+  // ── deal-008 — sell, agent-002, client-002 + developer split | subsidy 5 000
+  { id: "ds-deal-008-client",    dealId: "deal-008", partyId: "party-client-002",                        role: "REVENUE_SOURCE",        financialAmount: 8700 },
   { id: "ds-deal-008-developer", dealId: "deal-008", partyId: "party-third-inmobiliaria-grupo-norte",    role: "REVENUE_SOURCE",        financialAmount: 5800 },
+  { id: "ds-deal-008-subsidy",   dealId: "deal-008", partyId: "party-client-002",                        role: "ACQUISITION_DEDUCTION", financialAmount: -5000 },
   { id: "ds-deal-008-agent",     dealId: "deal-008", partyId: "party-agent-002",                         role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-008-conv",      dealId: "deal-008", partyId: "party-conv-gestoria-lopez",               role: "OPERATIONAL_DEDUCTION", financialAmount: -800 },
   { id: "ds-deal-008-demand",    dealId: "deal-008", partyId: "party-client-002",                        role: "DEMAND" },
   { id: "ds-deal-008-supply",    dealId: "deal-008", partyId: "party-third-inmobiliaria-grupo-norte",    role: "SUPPLY" },
 
-  // ── deal-009 — buy, agent-005, client-007
-  { id: "ds-deal-009-client", dealId: "deal-009", partyId: "party-client-007",       role: "REVENUE_SOURCE",        financialAmount: 37000 },
+  // ── deal-009 — buy, agent-005, client-007 | rebate 2% × 37 000 = 740
+  { id: "ds-deal-009-client",  dealId: "deal-009", partyId: "party-client-007",       role: "REVENUE_SOURCE",        financialAmount: 37000 },
+  { id: "ds-deal-009-rebate",  dealId: "deal-009", partyId: "party-client-007",       role: "ACQUISITION_DEDUCTION", financialAmount: -740 },
   { id: "ds-deal-009-agent",  dealId: "deal-009", partyId: "party-agent-005",        role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-009-conv",   dealId: "deal-009", partyId: "party-conv-tamm-legal",  role: "OPERATIONAL_DEDUCTION", financialAmount: -3000 },
   { id: "ds-deal-009-demand", dealId: "deal-009", partyId: "party-client-007",       role: "DEMAND" },
@@ -103,8 +111,9 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   { id: "ds-deal-012-demand", dealId: "deal-012", partyId: "party-client-008", role: "DEMAND" },
   { id: "ds-deal-012-supply", dealId: "deal-012", partyId: "party-third-fab",  role: "SUPPLY" },
 
-  // ── deal-013 — buy, agent-002, client-009 | subsidy 4 500 → net 14 100
-  { id: "ds-deal-013-client", dealId: "deal-013", partyId: "party-client-009",          role: "REVENUE_SOURCE",        financialAmount: 14100 },
+  // ── deal-013 — buy, agent-002, client-009 | subsidy 4 500
+  { id: "ds-deal-013-client",  dealId: "deal-013", partyId: "party-client-009",          role: "REVENUE_SOURCE",        financialAmount: 18600 },
+  { id: "ds-deal-013-subsidy", dealId: "deal-013", partyId: "party-client-009",          role: "ACQUISITION_DEDUCTION", financialAmount: -4500 },
   { id: "ds-deal-013-agent",  dealId: "deal-013", partyId: "party-agent-002",           role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-013-conv",   dealId: "deal-013", partyId: "party-conv-gestoria-lopez", role: "OPERATIONAL_DEDUCTION", financialAmount: -800 },
   { id: "ds-deal-013-demand", dealId: "deal-013", partyId: "party-client-009",          role: "DEMAND" },
@@ -122,24 +131,27 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   { id: "ds-deal-015-demand", dealId: "deal-015", partyId: "party-client-003", role: "DEMAND" },
   { id: "ds-deal-015-supply", dealId: "deal-015", partyId: "party-third-snb",  role: "SUPPLY" },
 
-  // ── deal-016 — sell, agent-004, client-007 + developer split | rebate 1.5% × 42 000 = 630 → client net 24 570
-  { id: "ds-deal-016-client",    dealId: "deal-016", partyId: "party-client-007",       role: "REVENUE_SOURCE",        financialAmount: 24570 },
+  // ── deal-016 — sell, agent-004, client-007 + developer split | rebate 1.5% × 42 000 = 630
+  { id: "ds-deal-016-client",    dealId: "deal-016", partyId: "party-client-007",       role: "REVENUE_SOURCE",        financialAmount: 25200 },
   { id: "ds-deal-016-developer", dealId: "deal-016", partyId: "party-third-emaar",      role: "REVENUE_SOURCE",        financialAmount: 16800 },
+  { id: "ds-deal-016-rebate",    dealId: "deal-016", partyId: "party-client-007",       role: "ACQUISITION_DEDUCTION", financialAmount: -630 },
   { id: "ds-deal-016-agent",     dealId: "deal-016", partyId: "party-agent-004",        role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-016-conv",      dealId: "deal-016", partyId: "party-conv-tamm-legal",  role: "OPERATIONAL_DEDUCTION", financialAmount: -3000 },
   { id: "ds-deal-016-demand",    dealId: "deal-016", partyId: "party-client-007",       role: "DEMAND" },
   { id: "ds-deal-016-supply",    dealId: "deal-016", partyId: "party-third-emaar",      role: "SUPPLY" },
 
-  // ── deal-017 — buy, felicia 60% / omar 40% referral split | rebate 1.5% × 15 900 = 239 → net 15 661
-  { id: "ds-deal-017-client",   dealId: "deal-017", partyId: "party-client-002",          role: "REVENUE_SOURCE",        financialAmount: 15661 },
+  // ── deal-017 — buy, felicia 60% / omar 40% referral split | rebate 1.5% × 15 900 = 239
+  { id: "ds-deal-017-client",   dealId: "deal-017", partyId: "party-client-002",          role: "REVENUE_SOURCE",        financialAmount: 15900 },
+  { id: "ds-deal-017-rebate",   dealId: "deal-017", partyId: "party-client-002",          role: "ACQUISITION_DEDUCTION", financialAmount: -239 },
   { id: "ds-deal-017-agent",    dealId: "deal-017", partyId: "party-agent-001",           role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 60 },
   { id: "ds-deal-017-agent-co", dealId: "deal-017", partyId: "party-agent-003",           role: "AGENT_PAYOUT",          splitPercentage: 40 },
   { id: "ds-deal-017-conv",     dealId: "deal-017", partyId: "party-conv-gestoria-lopez", role: "OPERATIONAL_DEDUCTION", financialAmount: -800 },
   { id: "ds-deal-017-demand",   dealId: "deal-017", partyId: "party-client-002",          role: "DEMAND" },
   { id: "ds-deal-017-supply",   dealId: "deal-017", partyId: "party-dev-neinor",          role: "SUPPLY" },
 
-  // ── deal-018 — buy, agent-001, client-004 | subsidy 7 000 → net 24 250
-  { id: "ds-deal-018-client", dealId: "deal-018", partyId: "party-client-004",          role: "REVENUE_SOURCE",        financialAmount: 24250 },
+  // ── deal-018 — buy, agent-001, client-004 | subsidy 7 000
+  { id: "ds-deal-018-client",  dealId: "deal-018", partyId: "party-client-004",          role: "REVENUE_SOURCE",        financialAmount: 31250 },
+  { id: "ds-deal-018-subsidy", dealId: "deal-018", partyId: "party-client-004",          role: "ACQUISITION_DEDUCTION", financialAmount: -7000 },
   { id: "ds-deal-018-agent",  dealId: "deal-018", partyId: "party-agent-001",           role: "AGENT_PAYOUT",          isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-018-conv",   dealId: "deal-018", partyId: "party-conv-gestoria-lopez", role: "OPERATIONAL_DEDUCTION", financialAmount: -1200 },
   { id: "ds-deal-018-demand", dealId: "deal-018", partyId: "party-client-004",          role: "DEMAND" },

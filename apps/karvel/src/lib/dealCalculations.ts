@@ -398,15 +398,9 @@ function recalculateREBU(deal: Deal): Deal {
   const totalReferralAmount = agents.reduce((sum, a) => sum + a.referralAmount, 0);
   const totalClientKickback = agents.reduce((sum, a) => sum + (a.clientKickback || 0), 0);
 
-  // Rebates & Subsidy
-  const rebateAmount = deal.market === "primary" ? (deal.rebatePercentage / 100) * huspyRevenue : 0;
-  const subsidyAmount = deal.market === "secondary" ? (deal.subsidyAmount || 0) : 0;
-
   const cogsInternal = totalAgentPayout + totalTeamLeadShare + totalManagerOverride + conveyanceAgentPayout;
-  const cogsExternal = extPayout + Math.max(0, rebateAmount) + Math.max(0, subsidyAmount);
+  const cogsExternal = extPayout;
   const cogsReferrals = Math.max(0, totalReferralAmount) + totalClientKickback;
-  const cogsRebates = Math.max(0, rebateAmount);
-  const cogsSubsidy = Math.max(0, subsidyAmount);
   const totalCOGS = cogsInternal + cogsExternal + cogsReferrals;
   // Conveyance fee is Huspy additional revenue only in legacy (non-stakeholder) model.
   const conveyanceAsRevenue = opDeductionStakes.length > 0 ? 0 : conveyanceFeeTotal;
@@ -471,10 +465,6 @@ function recalculateREBU(deal: Deal): Deal {
     cogsInternal: Math.max(0, cogsInternal),
     cogsExternal: Math.max(0, cogsExternal),
     cogsReferrals: Math.max(0, cogsReferrals),
-    cogsRebates,
-    cogsSubsidy,
-    rebateAmount,
-    subsidyAmount,
     netHuspyRevenue,
     payables,
     payableRefNumber: firstPayable?.refNumber,

@@ -35,7 +35,7 @@ function resolveParty(partyId: string): string {
 
 type SortKey = "invoiceNumber" | "amount" | "party" | "dealId" | "issueDate" | "dueDate";
 
-export function InvoicesView() {
+export function InvoicesView({ globalSearch = "" }: { globalSearch?: string }) {
   const navigate = useNavigate();
   const [directionFilter, setDirectionFilter] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
@@ -51,7 +51,9 @@ export function InvoicesView() {
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
+    const q = globalSearch.toLowerCase();
     return sharedInvoices.filter((inv) => {
+      if (q && !inv.invoiceNumber.toLowerCase().includes(q) && !resolveParty(inv.partyId).toLowerCase().includes(q)) return false;
       if (directionFilter.size > 0 && !directionFilter.has(inv.direction)) return false;
       if (statusFilter.size > 0 && !statusFilter.has(inv.status)) return false;
       if (currencyFilter.size > 0 && !currencyFilter.has(inv.currency)) return false;
@@ -64,7 +66,7 @@ export function InvoicesView() {
       if (dueDateRange.to && (inv.dueDate ?? "") > dueDateRange.to) return false;
       return true;
     });
-  }, [directionFilter, statusFilter, currencyFilter, partySearch, invoiceSearch, dealSearch, issueDateRange, dueDateRange]);
+  }, [globalSearch, directionFilter, statusFilter, currencyFilter, partySearch, invoiceSearch, dealSearch, issueDateRange, dueDateRange]);
 
   const sorted = useMemo(() => {
     if (!sortKey || !sortDir) return filtered;

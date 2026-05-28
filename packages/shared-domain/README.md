@@ -1,5 +1,8 @@
 # Shared Domain Proposal
 
+> **Domain model reference:** [docs/product/domain-model.md](../../docs/product/domain-model.md)
+
+
 Canonical types and enums that both apps will agree on. Lives in [packages/shared-domain/src/](packages/shared-domain/src/).
 
 This is the type-level equivalent of "shared tables" — the schema both apps speak. Real DB tables (Postgres/Supabase) will mirror these later.

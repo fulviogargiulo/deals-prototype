@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Settings, Upload, Plus, UserRound, DollarSign, List, Receipt, ClipboardList, BookOpen, Settings2 } from "lucide-react";
+import { Settings, Upload, Plus, UserRound, DollarSign, List, Receipt, ClipboardList, BookOpen, Settings2, Search, FileUp } from "lucide-react";
 import { getDeals, setDeals as setStoreDeals, addDeals as addStoreDeals } from "@/data/dealStore";
 import { DealListingView } from "@/components/DealListingView";
 import { InvoicesView } from "@/components/InvoicesView";
 import { Deal } from "@/data/types";
 import { BulkUploadDialog } from "@/components/BulkUploadDialog";
+import { PaymentReconciliationDialog } from "@/components/PaymentReconciliationDialog";
 import { AddDealDialog } from "@/components/AddDealDialog";
 import { DocRequirementsView } from "@/components/DocRequirementsView";
 import { LedgerView } from "@/components/LedgerView";
@@ -37,6 +38,8 @@ const Deals = () => {
   };
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [addDealOpen, setAddDealOpen] = useState(false);
+  const [reconcileOpen, setReconcileOpen] = useState(false);
+  const [invoiceSearch, setInvoiceSearch] = useState("");
 
   const handleDealUpdate = (updated: Deal) => {
     setAllDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
@@ -102,7 +105,6 @@ const Deals = () => {
 
             {viewMode === "listing" && (
               <div className="flex items-center gap-3">
-
                 <button onClick={() => setBulkUploadOpen(true)} className="flex items-center gap-2 px-4 py-2 border border-border rounded-md text-[13px] font-medium text-foreground bg-card hover:bg-muted transition-colors">
                   <Upload className="h-4 w-4" />
                   Bulk Upload
@@ -113,13 +115,31 @@ const Deals = () => {
                 </button>
               </div>
             )}
+            {viewMode === "invoices" && (
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    value={invoiceSearch}
+                    onChange={(e) => setInvoiceSearch(e.target.value)}
+                    placeholder="Search invoices..."
+                    className="pl-9 pr-3 py-2 border border-border rounded-md text-[13px] bg-card focus:outline-none focus:ring-1 focus:ring-ring w-56"
+                  />
+                </div>
+                <button onClick={() => setReconcileOpen(true)} className="flex items-center gap-2 px-4 py-2 border border-border rounded-md text-[13px] font-medium text-foreground bg-card hover:bg-muted transition-colors">
+                  <FileUp className="h-4 w-4" />
+                  Reconcile Payments
+                </button>
+              </div>
+            )}
           </div>
 
           {/* View */}
           {viewMode === "listing" ? (
             <DealListingView deals={allDeals} />
           ) : viewMode === "invoices" ? (
-            <InvoicesView />
+            <InvoicesView globalSearch={invoiceSearch} />
           ) : viewMode === "ledger" ? (
             <LedgerView />
           ) : (
@@ -162,6 +182,7 @@ const Deals = () => {
       </div>
 
       {/* Dialogs */}
+      <PaymentReconciliationDialog open={reconcileOpen} onClose={() => setReconcileOpen(false)} />
       <BulkUploadDialog
         open={bulkUploadOpen}
         onClose={() => setBulkUploadOpen(false)}

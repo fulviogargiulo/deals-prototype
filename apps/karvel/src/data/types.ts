@@ -81,12 +81,9 @@ export type Deal = BaseDeal & {
   referralAmount?: number;
 
   // Derived P&L
-  rebateAmount?: number;
   cogsInternal?: number;
   cogsExternal?: number;
   cogsReferrals?: number;
-  cogsRebates?: number;
-  cogsSubsidy?: number;
 
   // External partners
   externalPartners?: ExternalPartnerEntry[];

@@ -383,12 +383,6 @@ export interface Deal {
   /** Blueprint id the engine used for the most recent projection. */
   blueprintId?: string;
 
-  // Rebates / Subsidy (inputs — kept as deal config)
-  rebatePercentage?: number;
-  /** Computed at deal-creation time: grossRevenue × rebatePercentage / 100. Used by P&L engine directly. */
-  rebateAmount?: number;
-  subsidyAmount?: number;
-
   // MBU-specific
   bankName?: string;
   accountManager?: string;

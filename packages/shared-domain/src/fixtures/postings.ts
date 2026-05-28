@@ -433,7 +433,7 @@ export const sharedPostings: Posting[] = [
     valueDate: "2026-04-15",
     currency: "EUR",
 
-    description: "Invoice to client — deal-018 (EUR 24 250 net of subsidy)",
+    description: "Invoice to client — deal-018 (EUR 31 250 gross, subsidy deducted via ACQUISITION_DEDUCTION stakeholder)",
   },
 
   {
