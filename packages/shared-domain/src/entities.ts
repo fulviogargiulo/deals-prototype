@@ -505,6 +505,9 @@ export interface ConnectedAgent {
 export interface AgentFinancials {
   id: string;
   agentId: string;
+  /** The P&L engine this config applies to. One agent can have multiple AgentFinancials records,
+   *  one per engine they participate in (e.g. REBU agent who also acts as a broker on MBU deals). */
+  pnlEngine: PnlEngine;
   /** Strategy used to compute the agent's payout against deal net revenue. */
   strategy: AgentStrategy;
   /** Connected agents (team leads, managers, etc.) — overhead paid by Huspy on top of agent commission. */

@@ -63,7 +63,9 @@ Settlement path is driven by whether the **party** has a subledger registered in
 
 **Connected agents rule**
 
-Every Huspy agent can have **Connected Agents** (i.e. team lead, manager…) configured in their profile (set by Finance via Agent Financials). When present, the system automatically calculates their payouts from the agent's net commission and adds them to Huspy's cost — they are **never** deducted from the agent's take-home. This applies to `rebu`, `mbu-ma-broker`, and `mbu-direct`.
+Every Huspy agent can have **Connected Agents** (i.e. team lead, manager…) configured in their Agent Financials **per engine**. When present, the system automatically calculates their payouts from the agent's net commission and adds them to Huspy's cost — they are **never** deducted from the agent's take-home. This applies to `rebu`, `mbu-ma-broker`, and `mbu-direct`.
+
+Connected agents are per-AF record: an agent's team lead on a REBU deal may differ from their team lead on an MBU direct deal. Finance configures them separately in the agent's profile under each engine tab.
 
 For `manual`, connected agent payouts are **not** auto-calculated. Declare them explicitly as additional `AGENT_PAYOUT` stakeholders with a fixed `financialAmount`.
 
@@ -413,10 +415,14 @@ Gross revenue AED 30,000. Sub-channel: Self-Generated (60% / 5%).
 
 | Engine | Rate table | Who updates | How often | Where in Karvel |
 | --- | --- | --- | --- | --- |
-| `rebu` | Agent Financials (flat / slab / cap) | Finance | Per agent change | Agents page → Agent Financials upload |
+| `rebu` | Agent Financials (flat / slab / cap) | Finance | Per agent change | Agents page → Agent profile → Financials tab |
 | `mbu-ma-broker` | Broker Rate Slabs (bank × GMV tier) | BizOps | Monthly | Deal Config → Broker Rate Slabs |
 | `mbu-direct` | MBU Direct Rates (channel × sourcing type) | BizOps/Finance | Monthly | Deal Config → MBU Direct Rates |
 | `manual` | — no rate table | Deal creator | Per deal | Entered directly on each deal stakeholder |
+
+**Agent Financials are per engine.** Before an agent can be added to a deal, they must have an AF record configured for that deal's engine (Finance → Agent profile → Financials tab → Add engine config). The system enforces this at deal creation and bulk upload — it will block if a non-fixed-amount agent stake has no matching AF record. The `manual` engine is exempt: all payouts are fixed amounts declared on the deal.
+
+An agent can hold AF records for multiple engines (e.g. a REBU agent who also closes B2C mortgage deals has separate `rebu` and `mbu-direct` configs with different commission terms and connected agents).
 
 # 5. Glossary
 

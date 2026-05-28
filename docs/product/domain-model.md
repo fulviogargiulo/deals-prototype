@@ -23,9 +23,10 @@ erDiagram
     AgentFinancials {
         string id
         string agentId FK
+        PnlEngine pnlEngine "rebu | mbu-ma-broker | mbu-direct"
         AgentStrategy strategy
-        number teamLeadRate
-        number managerRate
+        ConnectedAgent[] connectedAgents "team lead, manager, etc."
+        number byobPenaltyRate "BYOB only — pct points off slab rate"
         string effectiveFrom
     }
     AgentDocument {
@@ -260,9 +261,18 @@ Agent/brokers/MCs/DS have subledgers set under general ledger `LIAB_AGENT_{CUR}`
 
 ### 2.3 Agent → AgentFinancials → commission strategy
 
-`Agent` is Huspy's own agent/broker/MC record. It extends `Party` (via `partyId`), carries the country and employment type (`commission` or `salaried`), and links to `AgentFinancials`, which stores the commission strategy. A commission strategy defines how the agent commission is supposed to be calculated depending on the deal nature (BU, channel, country).
+`Agent` is Huspy's own agent/broker/MC record. It extends `Party` (via `partyId`), carries the country and employment type (`commission` or `salaried`), and links to one or more `AgentFinancials` records.
 
-`AgentFinancials` also tracks connected agents (e.g. Team Lead, Manager) and their overhead rates, which are calculated on top of the base agent's payout.
+`AgentFinancials` is keyed by `(agentId, pnlEngine)` — one record per engine the agent participates in. This supports multi-role agents: the same person can act as a REBU agent on some deals and a mortgage advisor (`mbu-direct`) on others, with different commission terms per role.
+
+The `strategy` field defines how the agent commission is calculated:
+- `rebu`: flat %, slab, or max/cap — stored per agent and applied as-is
+- `mbu-ma-broker` and `mbu-direct`: rate resolved at runtime from monthly rate tables (BrokerRateSlabs / MBUDirectRates); the stored strategy is a marker (`broker-rate-slab` / `mbu-direct-rate-slab`)
+- `manual`: no AF record needed — all payouts are fixed amounts declared on the deal
+
+`connectedAgents` (team lead, manager, etc.) are configured per AF record and therefore per engine. They are auto-calculated on top of the agent's payout and never deducted from the agent's take-home. The `manual` engine does not auto-calculate connected agents — declare them as explicit `AGENT_PAYOUT` stakeholders.
+
+An agent must have an AF record for the deal's engine before they can be added to a deal (validation enforced at deal creation and bulk upload). Fixed-amount stakes (`financialAmount` set) are exempt from this requirement.
 
 ### 2.4 Deal → Invoice → PostingLine
 

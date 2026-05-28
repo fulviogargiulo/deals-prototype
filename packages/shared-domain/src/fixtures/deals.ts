@@ -46,6 +46,7 @@ interface BaseInput {
   commissionPercentage: number;
   paymentDate?: string;
   channel?: string;
+  pnlEngine?: Deal["pnlEngine"];
   rebatePercentage?: number;
   subsidyAmount?: number;
   statusHistory?: Deal["statusHistory"];

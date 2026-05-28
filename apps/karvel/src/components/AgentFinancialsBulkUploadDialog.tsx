@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, CheckCircle, AlertTriangle, X, Download } from "lucide-react";
 import { sharedAgentFinancials, sharedAgents, sharedParties } from "@huspy/shared-domain";
-import type { AgentFinancials, ConnectedAgent, AgentStrategy } from "@huspy/shared-domain";
+import type { AgentFinancials, ConnectedAgent, AgentStrategy, PnlEngine } from "@huspy/shared-domain";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -40,6 +40,8 @@ function parseCSV(text: string): { headers: string[]; rows: Record<string, strin
 
 function parseStrategy(row: Record<string, string>): AgentStrategy {
   const kind = row.strategyKind?.trim();
+  if (kind === "broker-rate-slab") return { kind: "broker-rate-slab" };
+  if (kind === "mbu-direct-rate-slab") return { kind: "mbu-direct-rate-slab" };
   if (kind === "slab") {
     const slabs: { upTo: number | null; pct: number }[] = [];
     for (let i = 1; i <= 5; i++) {
@@ -63,6 +65,8 @@ function parseStrategy(row: Record<string, string>): AgentStrategy {
   return { kind: "flat", pct: parseFloat(row.strategyPct) || 0 };
 }
 
+const VALID_ENGINES: PnlEngine[] = ["rebu", "mbu-ma-broker", "mbu-direct", "manual"];
+
 function parseRow(row: Record<string, string>, rowIndex: number): ParsedRow | null {
   const agentId = row.agentId?.trim();
   if (!agentId) return null;
@@ -70,6 +74,12 @@ function parseRow(row: Record<string, string>, rowIndex: number): ParsedRow | nu
   const warnings: string[] = [];
   const agent = sharedAgents.find((a) => a.id === agentId);
   if (!agent) warnings.push(`Agent "${agentId}" not found — will create new financials record`);
+
+  const pnlEngine = row.pnlEngine?.trim() as PnlEngine;
+  if (!VALID_ENGINES.includes(pnlEngine)) {
+    warnings.push(`pnlEngine "${pnlEngine}" is not valid — must be one of: ${VALID_ENGINES.join(", ")}`);
+    return null;
+  }
 
   const strategy = parseStrategy(row);
 
@@ -87,10 +97,11 @@ function parseRow(row: Record<string, string>, rowIndex: number): ParsedRow | nu
     });
   }
 
-  const existing = sharedAgentFinancials.find((af) => af.agentId === agentId);
+  const existing = sharedAgentFinancials.find((af) => af.agentId === agentId && af.pnlEngine === pnlEngine);
   const financials: AgentFinancials = {
-    id: existing?.id ?? `af-bulk-${agentId}`,
+    id: existing?.id ?? `af-bulk-${agentId}-${pnlEngine}`,
     agentId,
+    pnlEngine,
     strategy,
     connectedAgents,
   };
@@ -106,10 +117,11 @@ function strategyLabel(s: AgentStrategy): string {
   return `Slab (${s.slabs.length} tiers)`;
 }
 
-const TEMPLATE_CSV = `agentId,strategyKind,strategyPct,capAmount,slab1_upTo,slab1_pct,slab2_upTo,slab2_pct,slab3_upTo,slab3_pct,ca1_agentId,ca1_label,ca1_rate,ca2_agentId,ca2_label,ca2_rate
-agent-001,flat,40,,,,,,,,,agent-008,Team Lead,10,agent-009,Manager,5
-agent-005,slab,,,5000,35,20000,45,null,55,agent-010,Team Lead,10,agent-011,Manager,5
-agent-006,max,50,25000,,,,,,,,agent-010,Team Lead,10,agent-011,Manager,5`;
+const TEMPLATE_CSV = `agentId,pnlEngine,strategyKind,strategyPct,capAmount,slab1_upTo,slab1_pct,slab2_upTo,slab2_pct,slab3_upTo,slab3_pct,ca1_agentId,ca1_label,ca1_rate,ca2_agentId,ca2_label,ca2_rate
+agent-001,rebu,flat,40,,,,,,,,agent-008,Team Lead,10,agent-009,Manager,5
+agent-005,rebu,slab,,,5000,35,20000,45,null,55,agent-010,Team Lead,10,agent-011,Manager,5
+agent-006,rebu,max,50,25000,,,,,,,agent-010,Team Lead,10,agent-011,Manager,5
+broker-001,mbu-ma-broker,broker-rate-slab,,,,,,,,,,,,,`;
 
 export function AgentFinancialsBulkUploadDialog({ open, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
@@ -166,7 +178,9 @@ export function AgentFinancialsBulkUploadDialog({ open, onClose }: Props) {
 
   const handleApply = () => {
     parsed.forEach(({ financials }) => {
-      const idx = sharedAgentFinancials.findIndex((af) => af.agentId === financials.agentId);
+      const idx = sharedAgentFinancials.findIndex(
+        (af) => af.agentId === financials.agentId && af.pnlEngine === financials.pnlEngine
+      );
       if (idx >= 0) sharedAgentFinancials[idx] = financials;
       else sharedAgentFinancials.push(financials);
     });

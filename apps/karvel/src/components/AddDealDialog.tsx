@@ -22,7 +22,7 @@ import {
   type StatusHistoryEntry,
 } from "@huspy/shared-domain";
 import { PartyPicker } from "@/components/PartyPicker";
-import { recalculateDeal, derivePnlEngine } from "@/lib/dealCalculations";
+import { recalculateDeal, derivePnlEngine, getMissingAgentFinancials, type DealEngineKey } from "@/lib/dealCalculations";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -196,10 +196,12 @@ function RevenueLinePicker({
 
 function PayoutPicker({
   excludePartyIds,
+  engine,
   onConfirm,
   onCancel,
 }: {
   excludePartyIds: string[];
+  engine: DealEngineKey;
   onConfirm: (agentId: string, partyId: string, displayName: string, splitPct: number) => void;
   onCancel: () => void;
 }) {
@@ -213,16 +215,23 @@ function PayoutPicker({
     : options.slice(0, 8);
 
   const split = parseFloat(splitStr);
-  const canConfirm = selected != null && !isNaN(split) && split > 0 && split <= 100;
+  const hasAf = (agentId: string) =>
+    engine === "manual" || !!sharedAgentFinancials.find((f) => f.agentId === agentId && f.pnlEngine === engine);
 
   const strategyLabel = (agentId: string) => {
-    const af = sharedAgentFinancials.find((f) => f.agentId === agentId);
-    if (!af) return "No financials";
+    if (engine === "manual") return "Fixed amount";
+    const af = sharedAgentFinancials.find((f) => f.agentId === agentId && f.pnlEngine === engine);
+    if (!af) return "⚠ No engine config";
     if (af.strategy.kind === "broker-rate-slab") return "Broker rate slab";
     if (af.strategy.kind === "mbu-direct-rate-slab") return "MBU direct rate";
     if (af.strategy.kind === "flat") return `Flat ${(af.strategy as { pct: number }).pct}%`;
+    if (af.strategy.kind === "slab") return `Slab (${af.strategy.slabs.length} tiers)`;
+    if (af.strategy.kind === "max") return `Max ${(af.strategy as { pct: number }).pct}%`;
     return af.strategy.kind;
   };
+
+  const selectedHasAf = selected ? hasAf(selected.agentId) : true;
+  const canConfirm = selected != null && !isNaN(split) && split > 0 && split <= 100 && selectedHasAf;
 
   return (
     <div className="mt-2 bg-muted/30 border border-border/60 rounded-md px-3 py-3 space-y-2">
@@ -238,16 +247,19 @@ function PayoutPicker({
             className="w-full px-2 py-1.5 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
           />
           <div className="space-y-1 max-h-40 overflow-y-auto">
-            {filtered.map((a) => (
-              <button
-                key={a.agentId}
-                onMouseDown={() => setSelected({ agentId: a.agentId, partyId: a.partyId, name: a.displayName })}
-                className="w-full text-left px-3 py-2 text-[13px] rounded border border-dashed border-border hover:bg-muted flex items-center justify-between"
-              >
-                <span>{a.displayName}</span>
-                <span className="text-[11px] text-muted-foreground">{strategyLabel(a.agentId)}</span>
-              </button>
-            ))}
+            {filtered.map((a) => {
+              const missing = !hasAf(a.agentId);
+              return (
+                <button
+                  key={a.agentId}
+                  onMouseDown={() => setSelected({ agentId: a.agentId, partyId: a.partyId, name: a.displayName })}
+                  className={`w-full text-left px-3 py-2 text-[13px] rounded border border-dashed hover:bg-muted flex items-center justify-between ${missing ? "border-amber-300 opacity-70" : "border-border"}`}
+                >
+                  <span>{a.displayName}</span>
+                  <span className={`text-[11px] ${missing ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>{strategyLabel(a.agentId)}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : (
@@ -256,7 +268,17 @@ function PayoutPicker({
             <p className="text-[13px] font-medium">{selected.name}</p>
             <button onClick={() => setSelected(null)} className="text-[11px] text-muted-foreground hover:text-foreground underline">Change</button>
           </div>
-          <p className="text-[11px] text-muted-foreground">Strategy: <span className="font-medium text-foreground">{strategyLabel(selected.agentId)}</span></p>
+          <p className="text-[11px] text-muted-foreground">
+            Engine config:{" "}
+            <span className={`font-medium ${selectedHasAf ? "text-foreground" : "text-amber-600"}`}>
+              {strategyLabel(selected.agentId)}
+            </span>
+          </p>
+          {!selectedHasAf && (
+            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              This agent has no <strong>{engine}</strong> engine config. Set it up in their Agent profile before saving this deal.
+            </p>
+          )}
           <div className="flex items-center gap-3">
             <label className="text-[12px] text-muted-foreground w-[120px] shrink-0">Pool Split %</label>
             <input
@@ -452,14 +474,33 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
   const demandLabel = businessUnit === "mortgage" ? "Borrower" : market === "leasing" ? "Tenant" : "Buyer";
   const supplyLabel = businessUnit === "mortgage" ? "Bank / Lender" : market === "primary" ? "Developer" : market === "leasing" ? "Landlord" : "Seller";
 
+  const currentEngine = derivePnlEngine({ businessUnit, channel });
+
   const splitSum = payouts.reduce((s, p) => s + p.splitPct, 0);
   const splitsValid = payouts.length === 0 || Math.abs(splitSum - 100) < 0.01;
+
+  // Agents on non-manual deals that are missing an AF config for the deal's engine.
+  const missingAfAgents = useMemo(() => {
+    if (currentEngine === "manual") return [];
+    return payouts.filter((p) =>
+      !sharedAgentFinancials.find((f) => f.agentId === p.agentId && f.pnlEngine === currentEngine)
+    );
+  }, [payouts, currentEngine]);
 
   const canLeaveContext = !!dealTitle.trim();
   const revenueShortfall = commissionHint > 0 && grossRevenue < commissionHint;
   const canLeaveParties = grossRevenue > 0 && !revenueShortfall && demandParty !== null && supplyParty !== null;
+  const canLeavePayouts = splitsValid && missingAfAgents.length === 0;
 
   const handleCreate = () => {
+    if (missingAfAgents.length > 0) {
+      toast({
+        title: "Missing engine config",
+        description: `${missingAfAgents.map((p) => p.displayName).join(", ")} do not have a "${currentEngine}" engine config. Set it up in their Agent profile first.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const id = `DEAL-${String(Date.now()).slice(-6)}`;
     const dealAmount = parseFloat(dealAmountStr) || 0;
     const takeRate = parseFloat(rateStr) || 0;
@@ -834,17 +875,19 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                 {payouts.length > 0 && (
                   <div className="space-y-2 mb-3">
                     {payouts.map((p, i) => {
-                      const af = sharedAgentFinancials.find((f) => f.agentId === p.agentId);
-                      const label = !af ? "No financials" :
+                      const af = sharedAgentFinancials.find((f) => f.agentId === p.agentId && f.pnlEngine === currentEngine);
+                      const missing = currentEngine !== "manual" && !af;
+                      const label = currentEngine === "manual" ? "Fixed amount" :
+                        !af ? "⚠ No engine config" :
                         af.strategy.kind === "broker-rate-slab" ? "Broker rate slab" :
                         af.strategy.kind === "mbu-direct-rate-slab" ? "MBU direct rate" :
                         af.strategy.kind === "flat" ? `Flat ${(af.strategy as { pct: number }).pct}%` :
                         af.strategy.kind;
                       return (
-                        <div key={i} className="flex items-center justify-between px-3 py-2 rounded-md border border-border bg-accent/10">
+                        <div key={i} className={`flex items-center justify-between px-3 py-2 rounded-md border bg-accent/10 ${missing ? "border-amber-300" : "border-border"}`}>
                           <div>
                             <p className="text-[13px] font-medium">{p.displayName}</p>
-                            <p className="text-[12px] text-muted-foreground">Split: {p.splitPct}% · Strategy: {label}</p>
+                            <p className={`text-[12px] ${missing ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>Split: {p.splitPct}% · {label}</p>
                           </div>
                           <button onClick={() => setPayouts((prev) => prev.filter((_, idx) => idx !== i))} className="p-1 hover:text-destructive text-muted-foreground transition-colors">
                             <X className="h-4 w-4" />
@@ -856,11 +899,17 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                       Split total: <span className="font-semibold">{splitSum.toFixed(0)}%</span>
                       {!splitsValid && <span className="ml-1">— must equal 100%</span>}
                     </p>
+                    {missingAfAgents.length > 0 && (
+                      <p className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                        ⚠ {missingAfAgents.map((p) => p.displayName).join(", ")} need a <strong>{currentEngine}</strong> engine config before this deal can be saved.
+                      </p>
+                    )}
                   </div>
                 )}
                 {showPayoutPicker ? (
                   <PayoutPicker
                     excludePartyIds={payouts.map((p) => p.partyId)}
+                    engine={currentEngine}
                     onConfirm={(agentId, partyId, displayName, splitPct) => {
                       setPayouts((prev) => [...prev, { agentId, partyId, displayName, splitPct }]);
                       setShowPayoutPicker(false);
@@ -995,7 +1044,7 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
                 </>
               )}
               {step === "payouts" && (
-                <Button onClick={handleCreate} disabled={!splitsValid}>Create Deal</Button>
+                <Button onClick={handleCreate} disabled={!canLeavePayouts}>Create Deal</Button>
               )}
             </div>
           </div>

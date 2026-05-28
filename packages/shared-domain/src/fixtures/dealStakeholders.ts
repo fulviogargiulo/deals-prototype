@@ -96,9 +96,10 @@ export const sharedDealStakeholders: DealStakeholder[] = [
   { id: "ds-deal-011-demand", dealId: "deal-011", partyId: "party-client-011",         role: "DEMAND" },
   { id: "ds-deal-011-supply", dealId: "deal-011", partyId: "party-third-dib",          role: "SUPPLY" },
 
-  // ── deal-012 — MBU B2C, FAB (internal MC TBD when B2C channel is built)
-  // Revenue: 3,200,000 × 1.00% = 32,000
-  { id: "ds-deal-012-bank",   dealId: "deal-012", partyId: "party-third-fab", role: "REVENUE_SOURCE", financialAmount: 32_000 },
+  // ── deal-012 — MBU B2C, FAB, Ravi Nair (self-sourced, 28% rate)
+  // Revenue: 3,200,000 × 1.00% = 32,000 | Agent: 28% × 32,000 = 8,960
+  { id: "ds-deal-012-bank",   dealId: "deal-012", partyId: "party-third-fab",  role: "REVENUE_SOURCE", financialAmount: 32_000 },
+  { id: "ds-deal-012-agent",  dealId: "deal-012", partyId: "party-agent-005",  role: "AGENT_PAYOUT",   isPrimary: true, splitPercentage: 100 },
   { id: "ds-deal-012-demand", dealId: "deal-012", partyId: "party-client-008", role: "DEMAND" },
   { id: "ds-deal-012-supply", dealId: "deal-012", partyId: "party-third-fab",  role: "SUPPLY" },
 

@@ -5,7 +5,7 @@ import { Upload, FileText, CheckCircle, AlertTriangle, X, Download } from "lucid
 import { Deal } from "@/data/types";
 import { DealStakeholder, StakeholderType, sharedDealStakeholders, sharedDealDocumentRequirements, sharedDocumentRequirementTemplates, sharedParties, sharedAgents, type StatusHistoryEntry } from "@huspy/shared-domain";
 import { toast } from "@/hooks/use-toast";
-import { recalculateDeal, derivePnlEngine } from "@/lib/dealCalculations";
+import { recalculateDeal, derivePnlEngine, getMissingAgentFinancials, type DealEngineKey } from "@/lib/dealCalculations";
 import { getBlueprint } from "@huspy/shared-domain";
 
 interface Props {
@@ -232,6 +232,16 @@ function validateRows(rows: Record<string, string>[]): string[] {
       if (row.stakeRole === "AGENT_PAYOUT" && row.partyId && !sharedAgents.some(a => a.partyId === row.partyId))
         errs.push(`Deal ${id} row ${i + 1}: partyId "${row.partyId}" not found in agent registry — P&L cannot be calculated`);
       if (row.stakeRole === "OPERATIONAL_DEDUCTION" && row.chargedTo) errs.push(`Deal ${id} row ${i + 1}: OPERATIONAL_DEDUCTION cannot use chargedTo — use ACQUISITION_DEDUCTION for agent-borne costs`);
+    }
+    // AF validation: agents on non-manual deals without a fixed amount must have an AF config for the engine.
+    const engine = derivePnlEngine({ businessUnit: header.businessUnit as any, channel: header.channel }) as DealEngineKey;
+    if (engine !== "manual") {
+      const agentStakes = dealRows
+        .filter(r => r.stakeRole === "AGENT_PAYOUT" && r.partyId && !r.financialAmount)
+        .map(r => ({ role: "AGENT_PAYOUT" as const, partyId: r.partyId, financialAmount: undefined, id: "", dealId: id }));
+      const missing = getMissingAgentFinancials(engine, agentStakes);
+      for (const m of missing)
+        errs.push(`Deal ${id}: agent "${m.displayName}" has no "${engine}" engine config — set it up in their Agent profile first`);
     }
   }
   return errs;

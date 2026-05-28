@@ -150,6 +150,7 @@ const DealDetail = () => {
   const [status, setStatus] = useState<DealStatus>(deal?.status ?? "pending-details");
   const [statusHistory, setStatusHistory] = useState(deal?.statusHistory ?? []);
   const [invoicesVersion, setInvoicesVersion] = useState(0);
+  const [postingsVersion, setPostingsVersion] = useState(0);
   const [docs, setDocs] = useState<DealDocumentRequirement[]>(() =>
     sharedDealDocumentRequirements.filter((r) => r.dealId === (deal?.id ?? ""))
   );
@@ -406,7 +407,8 @@ const DealDetail = () => {
     // Persist immediately (C2 — no Save button).
     const updated: Deal = { ...deal, status: to, statusHistory: nextHistory };
     updateDeal(updated);
-    fireCommissionAccrualOnTransition(updated, to);
+    fireCommissionAccrualOnTransition(deal, to);
+    setPostingsVersion((v) => v + 1);
 
     if (to === "canceled") toast.success("Deal canceled");
     else if (to === "pending-details") toast.success("Sent back to agent");
@@ -505,7 +507,7 @@ const DealDetail = () => {
             <InvoicesSection dealId={deal.id} navigate={navigate} invoicesVersion={invoicesVersion} />
 
             {/* Accounting Events */}
-            <PostingsSection dealId={deal.id} />
+            <PostingsSection dealId={deal.id} version={postingsVersion} />
 
             {/* Ops ↔ Agent thread */}
             <CommentsSection dealId={deal.id} canAdd={canEditOps} />
@@ -590,7 +592,7 @@ function ledgerLabel(ledgerId: number): string {
   return sharedLedgers.find((l) => l.id === ledgerId)?.description ?? String(ledgerId);
 }
 
-function PostingsSection({ dealId }: { dealId: string }) {
+function PostingsSection({ dealId, version }: { dealId: string; version: number }) {
   const [selectedPostingId, setSelectedPostingId] = useState<string | null>(null);
 
   const { postings, linesByPosting } = useMemo(() => {
@@ -611,9 +613,7 @@ function PostingsSection({ dealId }: { dealId: string }) {
       linesByPosting[p.id] = sharedPostingLines.filter((l) => l.postingId === p.id);
     }
     return { postings, linesByPosting };
-  }, [dealId]);
-
-  if (postings.length === 0) return null;
+  }, [dealId, version]);
 
   return (
     <>
@@ -628,6 +628,13 @@ function PostingsSection({ dealId }: { dealId: string }) {
               </tr>
             </thead>
             <tbody>
+              {postings.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-6 text-center text-[12px] text-muted-foreground">
+                    No accounting entries yet
+                  </td>
+                </tr>
+              )}
               {postings.map((posting) => {
                 const lines = linesByPosting[posting.id] ?? [];
                 return (

@@ -4,7 +4,7 @@ import { sharedInvoices, sharedParties, sharedDeals, sharedLedgers, sharedPostin
 import type { Invoice } from "@huspy/shared-domain";
 import { saveSharedInvoices } from "@/data/sharedEntityStore";
 import { findDeal, updateDeal } from "@/data/dealStore";
-import { createCommissionAccrualPosting } from "@/lib/dealCalculations";
+import { fireCommissionAccrualOnTransition } from "@/lib/dealCalculations";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { ArrowLeft, Upload, X, AlertTriangle, Check, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -290,7 +290,7 @@ export default function InvoiceDetail() {
           const now = new Date().toISOString();
           const finalized = { ...deal, status: "finalized" as const, statusHistory: [...(deal.statusHistory ?? []), { from: "invoicing", to: "finalized", timestamp: now, note: "Auto-finalized: all invoices paid" }] };
           updateDeal(finalized);
-          createCommissionAccrualPosting(finalized);
+          fireCommissionAccrualOnTransition(deal, "finalized");
         }
       }
     }

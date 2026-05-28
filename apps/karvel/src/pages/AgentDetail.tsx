@@ -16,6 +16,7 @@ import type {
   AgentStrategy,
   ConnectedAgent,
   DocumentRequirementStatus,
+  PnlEngine,
   Posting,
   PostingLine,
 } from "@huspy/shared-domain";
@@ -100,27 +101,23 @@ const PROCESS_LABELS: Record<string, string> = {
 
 
 // ─── Financials per-agent state (canonical shared fixture) ───────────────────
-// Replaces the previous in-memory `agentFinancialsStore`; reads/writes the
-// shared-domain fixture array so edits persist across navigation within the
-// session. Edit semantics remain in-memory only (no backend).
+// One agent can have multiple AgentFinancials records — one per P&L engine they
+// participate in. Reads/writes the shared-domain fixture array so edits persist
+// across navigation within the session (in-memory only, no backend).
 
-function findOrSeedAgentFinancials(agentId: string): SharedAgentFinancials {
-  const existing = sharedAgentFinancials.find((af) => af.agentId === agentId);
-  if (existing) return existing;
-  const seeded: SharedAgentFinancials = {
-    id: `af-${agentId}`,
-    agentId,
-    strategy: { kind: "flat", pct: 40 },
-    connectedAgents: [],
-    teamLeadRate: 10,
-    managerRate: 5,
-  };
-  sharedAgentFinancials.push(seeded);
-  return seeded;
-}
+const ENGINE_LABELS: Record<PnlEngine, string> = {
+  "rebu":          "REBU — Real Estate",
+  "mbu-ma-broker": "MBU — MA / Broker",
+  "mbu-direct":    "MBU — Direct (REA / DS / B2C)",
+  "manual":        "Manual",
+};
+// manual is excluded: payouts are declared as explicit stakes on the deal, no AF needed.
+const CONFIGURABLE_ENGINES: PnlEngine[] = ["rebu", "mbu-ma-broker", "mbu-direct"];
 
-function persistAgentFinancials(next: SharedAgentFinancials) {
-  const idx = sharedAgentFinancials.findIndex((af) => af.agentId === next.agentId);
+function upsertAgentFinancials(next: SharedAgentFinancials) {
+  const idx = sharedAgentFinancials.findIndex(
+    (af) => af.agentId === next.agentId && af.pnlEngine === next.pnlEngine
+  );
   if (idx >= 0) sharedAgentFinancials[idx] = next;
   else sharedAgentFinancials.push(next);
 }
@@ -229,19 +226,46 @@ export default function AgentDetail() {
     );
   }
 
-  // Financials local state — sourced from the shared fixture
-  const [fin, setFin] = useState<SharedAgentFinancials>(() => findOrSeedAgentFinancials(agentId ?? ""));
-  const [finEditing, setFinEditing] = useState(false);
-  const [finDraft, setFinDraft] = useState<SharedAgentFinancials>(fin);
+  // Financials local state — all engine configs for this agent
+  const [fins, setFins] = useState<SharedAgentFinancials[]>(
+    () => sharedAgentFinancials.filter((af) => af.agentId === agentId)
+  );
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<SharedAgentFinancials | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newDraft, setNewDraft] = useState<Partial<SharedAgentFinancials>>({});
 
-  const saveFinancials = () => {
-    persistAgentFinancials(finDraft);
-    setFin(finDraft);
-    setFinEditing(false);
+  const refreshFins = () => setFins(sharedAgentFinancials.filter((af) => af.agentId === agentId));
+
+  const saveEdit = () => {
+    if (!editDraft) return;
+    upsertAgentFinancials(editDraft);
+    refreshFins();
+    setEditingId(null);
+    setEditDraft(null);
   };
-  const cancelFinancials = () => {
-    setFinDraft(fin);
-    setFinEditing(false);
+  const cancelEdit = () => { setEditingId(null); setEditDraft(null); };
+
+  const deleteFinancials = (id: string) => {
+    const idx = sharedAgentFinancials.findIndex((af) => af.id === id);
+    if (idx >= 0) sharedAgentFinancials.splice(idx, 1);
+    refreshFins();
+  };
+
+  const saveNew = () => {
+    if (!newDraft.pnlEngine || !newDraft.strategy) return;
+    const newAf: SharedAgentFinancials = {
+      id: `af-${agentId}-${newDraft.pnlEngine}`,
+      agentId: agentId ?? "",
+      pnlEngine: newDraft.pnlEngine as PnlEngine,
+      strategy: newDraft.strategy,
+      connectedAgents: newDraft.connectedAgents ?? [],
+      byobPenaltyRate: newDraft.byobPenaltyRate,
+    };
+    upsertAgentFinancials(newAf);
+    refreshFins();
+    setAddOpen(false);
+    setNewDraft({});
   };
 
   // Ledger local state
@@ -746,154 +770,253 @@ export default function AgentDetail() {
 
         {/* FINANCIALS */}
         {activeTab === "financials" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold text-foreground">
+                Engine Configs · {fins.length}
+              </h2>
+              {!addOpen && (
+                <Button size="sm" className="gap-1.5"
+                  onClick={() => { setAddOpen(true); setNewDraft({ strategy: { kind: "flat", pct: 40 }, connectedAgents: [] }); }}>
+                  <Plus className="h-3.5 w-3.5" /> Add engine config
+                </Button>
+              )}
+            </div>
 
-            {/* Commission Structure */}
-            <Card>
-              <CardHeader className="gap-0">
-                <CardTitle className="flex items-center justify-between gap-2 text-sm font-bold">
-                  Commission Structure
-                  {!isRuntimeResolvedStrategy(fin.strategy) && (
-                    <Button variant="ghost" size="icon"
-                      onClick={() => { setFinEditing(!finEditing); setFinDraft(fin); }}>
-                      {finEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                    </Button>
-                  )}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {isRuntimeResolvedStrategy(fin.strategy)
-                    ? "Rate is resolved at calculation time from the monthly rate table. Edit via Deal Config."
-                    : "Agent take rate and commission strategy. Strategy is applied by the waterfall engine to the agent's allocated net revenue."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-2 space-y-4">
-                <StrategyEditor
-                  strategy={finEditing ? finDraft.strategy : fin.strategy}
-                  editing={finEditing}
-                  onChange={(s) => setFinDraft((d) => ({ ...d, strategy: s }))}
-                />
+            {fins.length === 0 && !addOpen && (
+              <p className="text-[14px] text-muted-foreground py-10 text-center">
+                No engine configs set for this agent.
+              </p>
+            )}
 
-                {(finEditing ? finDraft.strategy : fin.strategy).kind === "broker-rate-slab" && (
-                  <div className="flex flex-wrap items-center border border-transparent gap-4 p-0 text-sm">
-                    <div className="flex flex-1 flex-col gap-2">
-                      <div className="h-3.5 text-sm font-medium leading-snug">BYOB Penalty Rate</div>
-                      {finEditing ? (
-                        <div className="flex items-center gap-1.5 px-3 py-[3px]">
-                          <input
-                            type="number" min={0} max={100} step={0.5}
-                            value={(finDraft.byobPenaltyRate ?? 0)}
-                            onChange={(e) => setFinDraft((d) => ({ ...d, byobPenaltyRate: Number(e.target.value) || undefined }))}
-                            className="w-[72px] border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                          />
-                          <span className="text-muted-foreground text-[13px]">%</span>
-                          <span className="text-[11px] text-muted-foreground ml-1">0 = MA channel (no penalty)</span>
+            {fins.map((fin) => {
+              const isEditing = editingId === fin.id;
+              const draft = isEditing ? editDraft! : fin;
+              return (
+                <Card key={fin.id}>
+                  <CardHeader className="gap-0 pb-2">
+                    <CardTitle className="flex items-center justify-between gap-2 text-sm font-bold">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {fin.pnlEngine}
+                        </span>
+                        <span>{ENGINE_LABELS[fin.pnlEngine]}</span>
+                      </div>
+                      {!isEditing && (
+                        <div className="flex items-center gap-0.5">
+                          <Button variant="ghost" size="icon"
+                            onClick={() => { setEditingId(fin.id); setEditDraft({ ...fin, connectedAgents: [...(fin.connectedAgents ?? [])] }); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive"
+                            onClick={() => deleteFinancials(fin.id)}>
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                      ) : (
-                        <p className="px-3 py-[6.5px] text-muted-foreground text-sm">
-                          {fin.byobPenaltyRate ? `${fin.byobPenaltyRate}%` : "—"}
-                          <span className="text-[11px] ml-1">{fin.byobPenaltyRate ? "— BYOB channel" : "MA channel"}</span>
-                        </p>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                {finEditing && (
-                  <div className="flex gap-2 pt-1">
-                    <Button size="sm" onClick={saveFinancials}>Save</Button>
-                    <Button size="sm" variant="ghost" onClick={cancelFinancials}>Cancel</Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Connected Agents */}
-            <Card>
-              <CardHeader className="gap-0">
-                <CardTitle className="flex items-center justify-between gap-2 text-sm font-bold">
-                  Connected Agents
-                  <Button variant="ghost" size="icon"
-                    onClick={() => { setFinEditing(!finEditing); setFinDraft(fin); }}>
-                    {finEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                  </Button>
-                </CardTitle>
-                <CardDescription className="text-xs">Team lead and manager cuts — Huspy-borne, do not reduce agent earnings</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-2 space-y-3">
-                {!finEditing && (fin.connectedAgents ?? []).length === 0 && (
-                  <p className="text-xs text-muted-foreground">No connected agents configured.</p>
-                )}
-                {(finEditing ? finDraft.connectedAgents : fin.connectedAgents)?.map((ca, idx) => {
-                  const caAgent = sharedAgents.find((a) => a.id === ca.agentId);
-                  const caParty = caAgent ? sharedParties.find((p) => p.id === caAgent.partyId) : undefined;
-                  const caName = caParty?.displayName ?? ca.agentId;
-                  return finEditing ? (
-                    <div key={ca.id} className="grid grid-cols-[1fr_1fr_80px_32px] gap-2 items-end">
-                      <div>
-                        <p className="text-[11px] text-muted-foreground mb-1">Label</p>
-                        <input
-                          value={ca.label}
-                          onChange={(e) => setFinDraft((d) => ({ ...d, connectedAgents: d.connectedAgents?.map((x, i) => i === idx ? { ...x, label: e.target.value } : x) }))}
-                          className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-muted-foreground mb-1">Agent</p>
-                        <select
-                          value={ca.agentId}
-                          onChange={(e) => setFinDraft((d) => ({ ...d, connectedAgents: d.connectedAgents?.map((x, i) => i === idx ? { ...x, agentId: e.target.value } : x) }))}
-                          className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                        >
-                          <option value="">— select —</option>
-                          {sharedAgents.map((a) => {
-                            const p = sharedParties.find((p) => p.id === a.partyId);
-                            return <option key={a.id} value={a.id}>{p?.displayName ?? a.id}</option>;
-                          })}
-                        </select>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-muted-foreground mb-1">Rate</p>
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number" min={0} max={100} step={0.5}
-                            value={ca.rate}
-                            onChange={(e) => setFinDraft((d) => ({ ...d, connectedAgents: d.connectedAgents?.map((x, i) => i === idx ? { ...x, rate: Number(e.target.value) } : x) }))}
-                            className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                          />
-                          <span className="text-[13px] text-muted-foreground shrink-0">%</span>
+                    </CardTitle>
+                    {isRuntimeResolvedStrategy(fin.strategy) && (
+                      <CardDescription className="text-xs">
+                        {fin.pnlEngine === "mbu-ma-broker"
+                          ? "Rate resolved from monthly Broker Rate Slabs. Configure BYOB penalty and connected agents below."
+                          : "Rate resolved from monthly MBU Direct Rates. Configure connected agents below."}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-4">
+                    {/* Strategy editor only for rebu — rate-resolved engines have no per-agent configurable rate */}
+                    {fin.pnlEngine === "rebu" && (
+                      <StrategyEditor
+                        strategy={draft.strategy}
+                        editing={isEditing}
+                        onChange={(s) => setEditDraft((d) => d ? { ...d, strategy: s } : d)}
+                      />
+                    )}
+                    {fin.pnlEngine !== "rebu" && (
+                      <div className="flex flex-wrap items-center gap-4 text-sm">
+                        <div className="flex flex-1 flex-col gap-2">
+                          <div className="h-3.5 text-sm font-medium leading-snug">Commission Strategy</div>
+                          <p className="px-3 py-[6.5px] text-muted-foreground text-sm">{describeStrategy(fin.strategy)}</p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 mb-0.5 text-muted-foreground hover:text-destructive"
-                        onClick={() => setFinDraft((d) => ({ ...d, connectedAgents: d.connectedAgents?.filter((_, i) => i !== idx) }))}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div key={ca.id} className="grid grid-cols-3 gap-4">
-                      <NonEditableField label="Label" value={ca.label} />
-                      <NonEditableField label="Agent" value={caName} />
-                      <NonEditableField label="Rate" value={`${ca.rate}%`} />
-                    </div>
-                  );
-                })}
-                {finEditing && (
-                  <Button size="sm" variant="outline" className="w-full"
-                    onClick={() => setFinDraft((d) => ({
-                      ...d,
-                      connectedAgents: [...(d.connectedAgents ?? []), { id: `ca-${Date.now()}`, agentId: "", label: "Team Lead", rate: 10 }],
-                    }))}>
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add connected agent
-                  </Button>
-                )}
-                {finEditing && (
-                  <div className="flex gap-2 pt-1">
-                    <Button size="sm" onClick={saveFinancials}>Save</Button>
-                    <Button size="sm" variant="ghost" onClick={cancelFinancials}>Cancel</Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    )}
 
+                    {draft.strategy.kind === "broker-rate-slab" && (
+                      <div className="flex flex-wrap items-center gap-4 text-sm">
+                        <div className="flex flex-1 flex-col gap-2">
+                          <div className="h-3.5 text-sm font-medium leading-snug">BYOB Penalty Rate</div>
+                          {isEditing ? (
+                            <div className="flex items-center gap-1.5 px-3 py-[3px]">
+                              <input
+                                type="number" min={0} max={100} step={0.01}
+                                value={draft.byobPenaltyRate ?? 0}
+                                onChange={(e) => setEditDraft((d) => d ? { ...d, byobPenaltyRate: Number(e.target.value) || undefined } : d)}
+                                className="w-[72px] border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                              />
+                              <span className="text-muted-foreground text-[13px]">%</span>
+                              <span className="text-[11px] text-muted-foreground ml-1">0 = MA channel (no penalty)</span>
+                            </div>
+                          ) : (
+                            <p className="px-3 py-[6.5px] text-muted-foreground text-sm">
+                              {fin.byobPenaltyRate ? `${fin.byobPenaltyRate}%` : "—"}
+                              <span className="text-[11px] ml-1">{fin.byobPenaltyRate ? "— BYOB" : "MA channel"}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Connected Agents */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium">Connected Agents</p>
+                        {isEditing && (
+                          <Button size="sm" variant="outline" className="h-7 text-[12px] gap-1"
+                            onClick={() => setEditDraft((d) => d ? {
+                              ...d,
+                              connectedAgents: [...(d.connectedAgents ?? []), { id: `ca-${Date.now()}`, agentId: "", label: "Team Lead", rate: 10 }],
+                            } : d)}>
+                            <Plus className="h-3 w-3" /> Add
+                          </Button>
+                        )}
+                      </div>
+                      {!isEditing && (draft.connectedAgents ?? []).length === 0 && (
+                        <p className="text-xs text-muted-foreground">None</p>
+                      )}
+                      <div className="space-y-2">
+                        {(draft.connectedAgents ?? []).map((ca, idx) => {
+                          const caAgent = sharedAgents.find((a) => a.id === ca.agentId);
+                          const caParty = caAgent ? sharedParties.find((p) => p.id === caAgent.partyId) : undefined;
+                          const caName = caParty?.displayName ?? ca.agentId;
+                          return isEditing ? (
+                            <div key={ca.id} className="grid grid-cols-[1fr_1fr_80px_32px] gap-2 items-end">
+                              <div>
+                                <p className="text-[11px] text-muted-foreground mb-1">Label</p>
+                                <input value={ca.label}
+                                  onChange={(e) => setEditDraft((d) => d ? { ...d, connectedAgents: d.connectedAgents?.map((x, i) => i === idx ? { ...x, label: e.target.value } : x) } : d)}
+                                  className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-[11px] text-muted-foreground mb-1">Agent</p>
+                                <select value={ca.agentId}
+                                  onChange={(e) => setEditDraft((d) => d ? { ...d, connectedAgents: d.connectedAgents?.map((x, i) => i === idx ? { ...x, agentId: e.target.value } : x) } : d)}
+                                  className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring">
+                                  <option value="">— select —</option>
+                                  {sharedAgents.map((a) => {
+                                    const p = sharedParties.find((p) => p.id === a.partyId);
+                                    return <option key={a.id} value={a.id}>{p?.displayName ?? a.id}</option>;
+                                  })}
+                                </select>
+                              </div>
+                              <div>
+                                <p className="text-[11px] text-muted-foreground mb-1">Rate</p>
+                                <div className="flex items-center gap-1">
+                                  <input type="number" min={0} max={100} step={0.5} value={ca.rate}
+                                    onChange={(e) => setEditDraft((d) => d ? { ...d, connectedAgents: d.connectedAgents?.map((x, i) => i === idx ? { ...x, rate: Number(e.target.value) } : x) } : d)}
+                                    className="w-full border border-border rounded px-2 py-1 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                                  />
+                                  <span className="text-[13px] text-muted-foreground shrink-0">%</span>
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 mb-0.5 text-muted-foreground hover:text-destructive"
+                                onClick={() => setEditDraft((d) => d ? { ...d, connectedAgents: d.connectedAgents?.filter((_, i) => i !== idx) } : d)}>
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div key={ca.id} className="grid grid-cols-3 gap-4">
+                              <NonEditableField label="Label" value={ca.label} />
+                              <NonEditableField label="Agent" value={caName} />
+                              <NonEditableField label="Rate" value={`${ca.rate}%`} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {isEditing && (
+                      <div className="flex gap-2 pt-1">
+                        <Button size="sm" onClick={saveEdit}>Save</Button>
+                        <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {/* Add new engine config */}
+            {addOpen && (
+              <Card className="border-dashed">
+                <CardHeader className="gap-0 pb-2">
+                  <CardTitle className="text-sm font-bold">New Engine Config</CardTitle>
+                  <CardDescription className="text-xs">Select the P&L engine this agent can participate in</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-4">
+                  <div>
+                    <p className="text-[11px] text-muted-foreground mb-1.5">P&L Engine</p>
+                    <select
+                      value={newDraft.pnlEngine ?? ""}
+                      onChange={(e) => {
+                        const eng = e.target.value as PnlEngine;
+                        const defaultStrategy: AgentStrategy =
+                          eng === "mbu-ma-broker" ? { kind: "broker-rate-slab" }
+                          : eng === "mbu-direct"  ? { kind: "mbu-direct-rate-slab" }
+                          : { kind: "flat", pct: 40 };
+                        setNewDraft((d) => ({ ...d, pnlEngine: eng, strategy: defaultStrategy }));
+                      }}
+                      className="w-full border border-border rounded px-2 py-1.5 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="">— select engine —</option>
+                      {CONFIGURABLE_ENGINES.filter((e) => !fins.some((f) => f.pnlEngine === e)).map((e) => (
+                        <option key={e} value={e}>{ENGINE_LABELS[e]}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {newDraft.pnlEngine && newDraft.strategy && (
+                    <>
+                      {newDraft.pnlEngine === "rebu" ? (
+                        <StrategyEditor
+                          strategy={newDraft.strategy}
+                          editing={true}
+                          onChange={(s) => setNewDraft((d) => ({ ...d, strategy: s }))}
+                        />
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-4 text-sm">
+                          <div className="flex flex-1 flex-col gap-2">
+                            <div className="h-3.5 text-sm font-medium leading-snug">Commission Strategy</div>
+                            <p className="px-3 py-[6.5px] text-muted-foreground text-sm">{newDraft.strategy && describeStrategy(newDraft.strategy)}</p>
+                          </div>
+                        </div>
+                      )}
+                      {newDraft.strategy.kind === "broker-rate-slab" && (
+                        <div className="flex items-center gap-2">
+                          <p className="text-[13px] font-medium w-32">BYOB Penalty Rate</p>
+                          <input type="number" min={0} max={100} step={0.01}
+                            value={newDraft.byobPenaltyRate ?? 0}
+                            onChange={(e) => setNewDraft((d) => ({ ...d, byobPenaltyRate: Number(e.target.value) || undefined }))}
+                            className="w-[72px] border border-border rounded px-2 py-1 text-[13px] bg-background"
+                          />
+                          <span className="text-[13px] text-muted-foreground">%</span>
+                          <span className="text-[11px] text-muted-foreground">0 = MA channel</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" disabled={!newDraft.pnlEngine || !newDraft.strategy} onClick={saveNew}>
+                      Add
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setAddOpen(false); setNewDraft({}); }}>
+                      Cancel
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 

@@ -87,8 +87,6 @@ export function fireCommissionAccrualOnTransition(deal: Deal, toStatus: string):
 }
 
 function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calculateProjectedPnL>[0] | null {
-  if (deal.grossRevenue == null || !deal.blueprintId) return null;
-
   const country = deal.country ?? "ae";
   const currency = deal.currency ?? "AED";
   const businessUnit = deal.businessUnit ?? "rebu";
@@ -101,6 +99,17 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
   // All fixture stakeholders for this deal (agents, payers, cost parties).
   const allFixtureStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id);
 
+  // Derive grossRevenue from explicit REVENUE_SOURCE payers when not set on the deal.
+  // The waterfall already prefers payer financialAmounts over grossRevenue when both are present,
+  // so this only matters for the fallback path (single implicit payer).
+  const derivedGrossRevenue = deal.grossRevenue ??
+    (allFixtureStakes.some((s) => s.role === "REVENUE_SOURCE" && (s.financialAmount ?? 0) > 0)
+      ? allFixtureStakes.filter((s) => s.role === "REVENUE_SOURCE").reduce((sum, s) => sum + Math.abs(s.financialAmount ?? 0), 0)
+      : null);
+  if (derivedGrossRevenue == null) return null;
+
+  const engine = getDealEngine(deal);
+
   // Resolve agent financials and party display names.
   for (const stake of allFixtureStakes) {
     const party = sharedParties.find((p) => p.id === stake.partyId);
@@ -109,8 +118,10 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
     if (stake.role === "AGENT_PAYOUT") {
       const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
       if (!agent) continue;
-      let af = sharedAgentFinancials.find((f) => f.agentId === agent.id);
-      const engine = getDealEngine(deal);
+      // Stored AF carries agent-specific config: strategy (rebu), BYOB penalty (mbu-ma-broker),
+      // and connectedAgents (all engines). For rate-resolved engines the strategy is replaced
+      // at runtime but connectedAgents must be preserved from the stored record.
+      let af = sharedAgentFinancials.find((f) => f.agentId === agent.id && f.pnlEngine === engine);
       if (engine === "mbu-ma-broker") {
         // Rate depends on: reporting month, lending bank, broker's total monthly GMV (MA + BYOB combined).
         const reportingMonth = deal.reportDate?.slice(0, 7);
@@ -127,14 +138,21 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
         let resolvedPct = reportingMonth && bankId
           ? resolveBrokerRate(reportingMonth, bankId, brokerMonthlyGmv)
           : undefined;
-        // BYOB: subtract per-broker penalty rate (set on AgentFinancials) from the slab rate.
-        const origAf = sharedAgentFinancials.find((f) => f.agentId === agent.id);
-        const penalty = origAf?.byobPenaltyRate ?? 0;
+        // BYOB: af already holds the stored record; penalty is agent-specific.
+        const penalty = af?.byobPenaltyRate ?? 0;
         if (resolvedPct != null && penalty > 0) {
           resolvedPct = resolvedPct - penalty;
         }
         if (resolvedPct != null) {
-          af = { id: `af-syn-${agent.id}`, agentId: agent.id, strategy: { kind: "flat", pct: resolvedPct } };
+          // Merge: keep connectedAgents from stored AF; override strategy with resolved rate.
+          af = {
+            id: af?.id ?? `af-syn-${agent.id}`,
+            agentId: agent.id,
+            pnlEngine: engine,
+            connectedAgents: af?.connectedAgents,
+            byobPenaltyRate: af?.byobPenaltyRate,
+            strategy: { kind: "flat", pct: resolvedPct },
+          };
         }
       } else if (engine === "mbu-direct") {
         // Rate resolved from MBUDirectMonthlyRate by channel + month + sourcing type.
@@ -143,7 +161,14 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
         const isSelfSourced = !allFixtureStakes.some((s) => s.role === "OPERATIONAL_DEDUCTION");
         const resolvedPct = reportingMonth ? getMBUDirectRate(reportingMonth, channel, isSelfSourced) : undefined;
         if (resolvedPct != null) {
-          af = { id: `af-syn-${agent.id}`, agentId: agent.id, strategy: { kind: "flat", pct: resolvedPct } };
+          // Merge: keep connectedAgents from stored AF; override strategy with resolved rate.
+          af = {
+            id: af?.id ?? `af-syn-${agent.id}`,
+            agentId: agent.id,
+            pnlEngine: engine,
+            connectedAgents: af?.connectedAgents,
+            strategy: { kind: "flat", pct: resolvedPct },
+          };
         }
       }
       // Always map party → agent so fixed-amount payouts (e.g. BBG) resolve display names properly.
@@ -173,10 +198,11 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
         role: "AGENT_PAYOUT",
         splitPercentage: a.agentShare,
       });
-      const fromFixture = sharedAgentFinancials.find((af) => af.agentId === agentId);
+      const fromFixture = sharedAgentFinancials.find((af) => af.agentId === agentId && af.pnlEngine === engine);
       const af: AgentFinancials = fromFixture ?? {
         id: `af-syn-${agentId}`,
         agentId,
+        pnlEngine: engine,
         strategy: { kind: "flat", pct: a.agentCommissionRate || 40 },
       };
       agentFinancialsByAgentId[agentId] = af;
@@ -215,7 +241,7 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
     country,
     businessUnit,
     currency,
-    grossRevenue: deal.grossRevenue,
+    grossRevenue: derivedGrossRevenue,
     // MA/Broker: payout base is the mortgage principal, not Huspy's gross revenue.
     agentPayoutBase: getDealEngine(deal) === "mbu-ma-broker" ? deal.dealAmount : undefined,
     stakeholders,
@@ -625,6 +651,30 @@ export function createCommissionAccrualPosting(deal: Deal): void {
   }
 }
 
+// ── AF validation ─────────────────────────────────────────────────────────────
+// Returns the list of agents on non-manual deals that are missing an AF config
+// for the deal's engine. Used to block deal creation / bulk upload.
+// Agents with a fixed financialAmount on their stake are exempt (manual-priced).
+export function getMissingAgentFinancials(
+  engine: DealEngineKey,
+  stakeholders: DealStakeholder[]
+): Array<{ agentId: string; displayName: string }> {
+  if (engine === "manual") return [];
+  const missing: Array<{ agentId: string; displayName: string }> = [];
+  for (const stake of stakeholders) {
+    if (stake.role !== "AGENT_PAYOUT") continue;
+    if (stake.financialAmount != null) continue; // declared fixed amount — exempt
+    const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
+    if (!agent) continue;
+    const af = sharedAgentFinancials.find((f) => f.agentId === agent.id && f.pnlEngine === engine);
+    if (!af) {
+      const party = sharedParties.find((p) => p.id === stake.partyId);
+      missing.push({ agentId: agent.id, displayName: party?.displayName ?? agent.id });
+    }
+  }
+  return missing;
+}
+
 export function createEmptyAgent(_index: number): AgentEntry {
   return {
     agentName: "",
@@ -644,3 +694,4 @@ export function createEmptyAgent(_index: number): AgentEntry {
     clientKickback: 0,
   };
 }
+

@@ -16,7 +16,7 @@ export { sharedDocumentRequirementTemplates } from "./documentRequirementTemplat
 export { sharedDealDocumentRequirements } from "./dealDocumentRequirements";
 export { sharedAgentDocuments } from "./agentDocuments";
 export { sharedDealComments } from "./dealComments";
-export { sharedAgentFinancials, getAgentFinancialsByAgentId } from "./agentFinancials";
+export { sharedAgentFinancials, getAgentFinancials } from "./agentFinancials";
 export { sharedBrokerRateSlabs, getBrokerRateSlabForMonth, resolveBrokerRate } from "./brokerRateSlabs";
 export { sharedMBUDirectRates, getMBUDirectRate, DEFAULT_EXTERNAL_REFERRAL_RATE } from "./mbuDirectRates";
 export {
