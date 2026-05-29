@@ -109,7 +109,62 @@ Product and design are assumed available throughout. QA embedded with engineers 
 | Agent app adoption | Medium - agents may continue relying on Ops if UX is poor | Ship agent app with Spain REBU in Phase 1, gather feedback before Phase 2 expansion |
 | Accounting engine correctness | Low - errors in double-entry are silent and compounding | Accounting source of truth will still be what's uploaded to Xero. Ledger entries in shadow mode. |
 
-# 4. Prototypes
+# 4. Architectural & Product Decisions
+
+Four questions a director of engineering or product would push on before greenlighting the build.
+
+## 4.1 Build vs buy: what we own, and what we rent
+
+Two adjacent products exist on the market. We rent one and build the other.
+
+**Statutory accounting → Xero (bought).** Books of record, tax filings, audit trail. No reason to rebuild. Xero stays the source of truth while our postings run in shadow mode; flipping that is a Phase 2+ decision gated on a measured zero-divergence window (§3.3 risk row 4).
+
+**Incentive Compensation Management → CaptivateIQ / Salesforce Spiff / Everstage (declined).** These ICM tools target SaaS sales orgs: one rep owns one deal, a *plan* is the unit of configuration, attainment-vs-quota drives payout. Our deals carry multi-stakeholder splits per deal (Closer + Lister + Team Lead + Manager + internal referrer), Spain IRPF withholding, and connected-agent overlays funded by Huspy. Modelling that as a "plan" fights the tool, and the data they'd need (deals, stakeholders, blueprints, agent financials) lives in our system anyway — integration cost roughly equals build cost.
+
+**What we therefore own:** deal model, stakeholder waterfall, P&L engine, transactional subledger. The subledger is the expensive piece; §4.3 explains why it's not optional.
+
+## 4.2 Domain shape: four choices, each tied to a concrete case
+
+| Choice | Why this shape | Alternative we rejected |
+| --- | --- | --- |
+| `Party` is its own entity, dedup by `taxId` | The same legal entity shows up as client, referral source, and later as agent. One join hop, single KYC update point | Duplicate person rows across `Client` and `Agent` |
+| `DealStakeholder` polymorphic with signed `financialAmount` | Six roles share one shape because the waterfall switches on role anyway; "list every party on this deal" stays a single query | Six role-typed tables, six joins to render a deal |
+| `Invoice` is a billing doc; `PostingLine.invoiceId` is a back-pointer | Lets one inbound factura claim N deals' commission lines (Spain monthly batch) and answers settlement state without a sync flag | 1:1 invoice-to-deal, manual settlement flag |
+| Tax rates live in `Blueprint` data, not code | VAT and IRPF change by government decree — Spain has moved IRPF three times in five years. Phase 1 seeds rows; Phase 2 adds editor if ops self-serve becomes the bottleneck | `if (country === 'ES' && bu === 'REBU')` branches in the posting engine |
+
+## 4.3 Why a subledger isn't optional (and how MBU forces it)
+
+"Even Revolut didn't build a ledger" is misleading. Revolut runs a transactional ledger engine internally — what they don't run is statutory bookkeeping. Same split here: bookkeeping → Xero, transactional sub-ledger → us.
+
+Phase 1 (Spain REBU) could *just about* be served by Xero AP plus a simple commission calculator. Phase 2 (MBU) cannot. Three MBU requirements have no shape in Xero:
+
+1. **Multi-party running balances.** Banks, mortgage consultants, MA/BYOB/BBG brokers all carry ongoing balances with Huspy across many deals — see [pnl-engines.md §2](pnl-engines.md). Xero gives one number per vendor, post-invoice.
+2. **Cadence settlement.** Brokers and MCs are paid weekly or monthly, with one factura claiming N deals' commissions. Modelled as `commission_accrual` postings per deal, claimed later by one invoice with `dealId = null` (see [domain-model.md §2.4](domain-model.md)).
+3. **Non-deal events.** Training fees, bonuses, manual adjustments land on the party's balance without belonging to a deal.
+
+**The trade-off worth naming.** A "subledger without double-entry" — single `SubledgerEntry` rows instead of balanced `Posting` + `PostingLine` pairs — would deliver all three at ~60-70% of current cost. What it sacrifices: balanced-postings invariant (reversals become ad-hoc), automated journal sync to Xero, and ledger-level auditability. Finance acceptance is the gate. The double-entry layer is the marginal call, and the one to defend on audit grounds.
+
+## 4.4 Scope discipline: how this stays a 3-month MVP, not a 3-year platform
+
+Finance projects bloat when the team builds the **generalisation layer** — CoA editor, tax-rule builder, plan-template designer, doc-checklist editor — before the specific case ships. Each is a mini-product.
+
+Phase 1 ships none of them. Authoring UIs are replaced by seed data:
+
+| Concept | Phase 1 | Phase 2+ |
+| --- | --- | --- |
+| Chart of accounts | Seeded ledgers | Ledger creation UI |
+| Tax rates per `(country, BU, dealType)` | Seeded `Blueprint` rows | Blueprint editor |
+| Document checklists | Seeded `DocumentRequirementTemplate` rows | Template editor |
+| Agent commission terms | Seeded `AgentFinancials` | Agent configuration tab |
+| P&L engines | `rebu` only | `mbu-ma-broker`, `mbu-direct`, `manual` |
+| Bank statement ingestion | Manual mark-as-paid | CSV / API ingestion |
+| Payout execution | Out of scope | Bank rail integration |
+
+Confirmed against the [Spain REBU MVP scope](spain-rebu-mvp.md): rebu-engine only, ledgers hardcoded, agent financials hardcoded, document templates hardcoded.
+
+**Principle.** We are building a deal system that happens to keep clean books — not an accounting platform that happens to know about deals. Every scope conversation is rooted there.
+
+# 5. Prototypes
 
 **Github** repo [here](https://github.com/fulviogargiulo/deals-prototype)
 
