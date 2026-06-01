@@ -61,9 +61,9 @@ describe("calculateProjectedPnL — no costs, no agents", () => {
 describe("calculateProjectedPnL — deduction costs", () => {
   it("routes ACQUISITION_DEDUCTION to acquisition cost and OPERATIONAL_DEDUCTION to operational cost", () => {
     const stakeholders: DealStakeholder[] = [
-      { id: "s-c1", dealId: "d", partyId: "p-ref-a", role: "ACQUISITION_DEDUCTION", financialAmount: -800 },
-      { id: "s-c2", dealId: "d", partyId: "p-ref-b", role: "ACQUISITION_DEDUCTION", financialAmount: -500 },
-      { id: "s-d1", dealId: "d", partyId: "p-notary", role: "OPERATIONAL_DEDUCTION", financialAmount: -1_200 },
+      { id: "s-c1", dealId: "d", partyId: "p-ref-a", role: "ACQUISITION_DEDUCTION", amount: -800 },
+      { id: "s-c2", dealId: "d", partyId: "p-ref-b", role: "ACQUISITION_DEDUCTION", amount: -500 },
+      { id: "s-d1", dealId: "d", partyId: "p-notary", role: "OPERATIONAL_DEDUCTION", amount: -1_200 },
     ];
     const r = calculateProjectedPnL(baseInput({ blueprint: minimalBlueprint, stakeholders }));
     expect(r.totalAcquisitionCost).toBe(800 + 500);
@@ -240,8 +240,8 @@ describe("calculateProjectedPnL — ledger integrity", () => {
   it("ledger debits sum to cost totals; gross − acquisitionCost = commissionBase; commissionBase − operationalCost − agentPayout = huspyMargin", () => {
     const stakeholders: DealStakeholder[] = [
       { id: "ds-1",  dealId: "d", partyId: "party-x",   role: "AGENT_PAYOUT",        splitPercentage: 100 },
-      { id: "s-c1",  dealId: "d", partyId: "p-ref",     role: "ACQUISITION_DEDUCTION",   financialAmount: -500 },
-      { id: "s-d1",  dealId: "d", partyId: "p-notary",  role: "OPERATIONAL_DEDUCTION",   financialAmount: -800 },
+      { id: "s-c1",  dealId: "d", partyId: "p-ref",     role: "ACQUISITION_DEDUCTION",   amount: -500 },
+      { id: "s-d1",  dealId: "d", partyId: "p-notary",  role: "OPERATIONAL_DEDUCTION",   amount: -800 },
     ];
     const af: AgentFinancials = {
       id: "af-x",

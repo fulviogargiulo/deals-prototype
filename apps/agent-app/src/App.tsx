@@ -9,7 +9,6 @@ import { LanguageProvider } from "./contexts/language-context";
 import { DevToolsProvider, useDevTools } from "./contexts/dev-tools-context";
 import { PageTitleProvider } from "./contexts/page-title-context";
 import { MainLayout } from "./components/layout/main-layout";
-import { PasswordGate } from "./components/auth/password-gate";
 import { SplashScreen } from "./components/ui/splash-screen";
 import Home from "./pages/Home";
 import { Dashboard } from "./pages/dashboard/Dashboard";

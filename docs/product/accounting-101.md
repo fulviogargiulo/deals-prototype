@@ -50,7 +50,7 @@ A GL with no subledger is just a flat account (e.g. `Bank_X_Account` — there's
 
 ## 2.5 Ledger natures
 
-Every ledger has a **nature** that defines what it represents and how its balance behaves. There are five natures we use:
+Every ledger has a **nature** that defines what it represents and how its balance behaves. There are 4 natures we use:
 
 | Nature | What it represents | Example | When debited | When credited |
 | --- | --- | --- | --- | --- |

@@ -54,14 +54,14 @@ export function buildWaterfallInput(deal: WaterfallDeal): ProjectedPnLInput | nu
 
   let stakeholders: DealStakeholder[] = allFixtureStakes;
 
-  // Infer financialAmount for REVENUE_SOURCE stakes that don't have one set explicitly.
-  const hasExplicitPayer = stakeholders.some((s) => (s.financialAmount ?? 0) > 0);
+  // Infer amount for REVENUE_SOURCE stakes that don't have one set explicitly.
+  const hasExplicitPayer = stakeholders.some((s) => (s.amount ?? 0) > 0);
   if (!hasExplicitPayer && deal.grossRevenue) {
-    const implicit = stakeholders.filter((s) => s.role === "REVENUE_SOURCE" && !s.financialAmount);
+    const implicit = stakeholders.filter((s) => s.role === "REVENUE_SOURCE" && !s.amount);
     if (implicit.length > 0) {
       const perPayer = deal.grossRevenue / implicit.length;
       stakeholders = stakeholders.map((s) =>
-        s.role === "REVENUE_SOURCE" && !s.financialAmount ? { ...s, financialAmount: perPayer } : s
+        s.role === "REVENUE_SOURCE" && !s.amount ? { ...s, amount: perPayer } : s
       );
     }
   }

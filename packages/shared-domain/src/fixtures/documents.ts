@@ -73,4 +73,16 @@ export const sharedDocuments: Document[] = [
     createdAt: TS,
     updatedAt: TS,
   },
+
+  // Outbound invoice documents — seeded for all non-draft outbound invoices.
+  // invoiceId links to sharedInvoices for live status display in agent-app.
+  { id: "doc-inv-inv-001", name: "INV-2026-001.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-001", invoiceId: "inv-001", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
+  { id: "doc-inv-inv-003", name: "INV-2026-003.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-008", invoiceId: "inv-003", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
+  { id: "doc-inv-inv-006", name: "INV-2026-006.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-016", invoiceId: "inv-006", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
+  { id: "doc-inv-inv-007", name: "INV-2026-007.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-016", invoiceId: "inv-007", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
+  { id: "doc-inv-inv-008", name: "INV-2026-008.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-018", invoiceId: "inv-008", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
+  { id: "doc-inv-inv-011", name: "INV-2026-011.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-011", invoiceId: "inv-011", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
+  { id: "doc-inv-inv-020", name: "INV-2026-020.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-020", invoiceId: "inv-020", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
+  { id: "doc-inv-inv-021", name: "INV-2026-021.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-021", invoiceId: "inv-021", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
+  { id: "doc-inv-inv-024", name: "INV-2026-024.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-022", invoiceId: "inv-024", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
 ];

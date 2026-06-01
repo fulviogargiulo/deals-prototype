@@ -31,7 +31,7 @@ Ops has reviewed the deal and flagged that something is missing. The agent is no
 
 **Confirm Commission** (`pending-agent-approval`)
 
-Ops has finalized the commission terms. The agent needs to confirm. 
+Ops has finalized the commission terms. The agent needs to confirm.
 
 Inside the deal, the commission breakdown is expanded and non-collapsible at this stage:
 
@@ -77,7 +77,7 @@ The user can:
     * Operational costs
     * His commission
     * His connected agents commission
-    
+
 * Confirm commission (Deal moves from Pending Agent Approval → Invoicing)
 * Add a note and request review (Deal moves from Pending Agent Approval → Under Review)
 * See and create comments on the deal
@@ -106,7 +106,7 @@ The user can:
 
 The user can:
 
-* Download atatched documents
+* Download attached documents
 * See the commission calculation breakdown
 * See comments on the deal
 

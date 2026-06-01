@@ -73,7 +73,7 @@ export type BusinessProcess =
  * StakeholderType — semantic financial role of a party on a deal.
  *
  * Waterfall flow (tax-exclusive):
- *   Σ REVENUE_SOURCE.financialAmount          → Gross Revenue
+ *   Σ REVENUE_SOURCE.amount          → Gross Revenue
  *     − Σ ACQUISITION_DEDUCTION               → Commission Base  (agent splits apply here)
  *       − Σ AGENT_PAYOUT (per strategy)         → Huspy Gross Share
  *         − Σ OPERATIONAL_DEDUCTION           → Huspy Net Margin
@@ -108,13 +108,13 @@ export type BusinessProcess =
  *     Non-financial role: the supply-side party on the transaction.
  *     REBU buy/sell: the seller or developer. Leasing: the landlord. MBU: the bank/lender.
  *     Multiple SUPPLY parties are allowed (e.g. co-sellers, multiple lenders).
- *     No financialAmount — this role is purely relational (replaces Deal.sellerName text field).
+ *     No amount — this role is purely relational (replaces Deal.sellerName text field).
  *
  *   DEMAND
  *     Non-financial role: the demand-side party on the transaction.
  *     REBU: the buyer. Leasing: the tenant. MBU: the borrower.
  *     Multiple DEMAND parties are allowed.
- *     No financialAmount — purely relational (replaces Deal.buyerName text field).
+ *     No amount — purely relational (replaces Deal.buyerName text field).
  *     Primary DEMAND party is the canonical source for Deal.clientName display cache.
  *
  * [TO BE DETERMINED] Agent split percentages will migrate to an Offer entity

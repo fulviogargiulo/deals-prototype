@@ -17,7 +17,7 @@ interface Props {
 // One row per stakeholder. Deal metadata only needed on the first row of each offerId group.
 const CSV_HEADERS = [
   "offerId", "propertyName", "market", "businessUnit", "channel", "country", "currency", "dealPrice", "reportDate",
-  "stakeRole", "partyId", "amount", "description", "chargedTo", "splitPct", "financialAmount",
+  "stakeRole", "partyId", "amount", "description", "chargedTo", "splitPct", "amount",
 ];
 
 // Template: 2 deals showing REBU and MBU MA/Broker patterns.
@@ -153,15 +153,18 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
     if (row.stakeRole !== "AGENT_PAYOUT") continue;
     const stakeId = `ds-${offerId}-agent-${agentIdx++}`;
     agentStakeIdByPartyId[row.partyId] = stakeId;
-    const fa = parseFloat(row.financialAmount);
+    const fa = parseFloat(row.amount);
+    const fixedAmount = !isNaN(fa) && fa > 0 ? fa : undefined;
     stakeholders.push({
       id: stakeId,
       dealId: offerId,
       partyId: row.partyId,
       role: "AGENT_PAYOUT",
       isPrimary: agentIdx === 1,
-      splitPercentage: parseFloat(row.splitPct) || (agentIdx === 1 ? 100 : 0),
-      financialAmount: !isNaN(fa) && fa > 0 ? fa : undefined,
+      splitPercentage: fixedAmount == null ? (parseFloat(row.splitPct) || (agentIdx === 1 ? 100 : 0)) : undefined,
+      amount: fixedAmount,
+      source: fixedAmount != null ? "manual" : "engine",
+      status: "draft",
     });
   }
 
@@ -192,9 +195,11 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
       partyId: row.partyId,
       role,
       // REVENUE_SOURCE: preserve sign (negative = rebate). Cost roles: engine expects negative.
-      financialAmount: role === "REVENUE_SOURCE" ? rawAmount : -Math.abs(rawAmount),
+      amount: role === "REVENUE_SOURCE" ? rawAmount : -Math.abs(rawAmount),
       description: row.description || undefined,
       parentStakeholderId,
+      source: "manual",
+      status: "draft",
     });
   }
 
@@ -237,8 +242,8 @@ function validateRows(rows: Record<string, string>[]): string[] {
     const engine = derivePnlEngine({ businessUnit: header.businessUnit as any, channel: header.channel }) as DealEngineKey;
     if (engine !== "manual") {
       const agentStakes = dealRows
-        .filter(r => r.stakeRole === "AGENT_PAYOUT" && r.partyId && !r.financialAmount)
-        .map(r => ({ role: "AGENT_PAYOUT" as const, partyId: r.partyId, financialAmount: undefined, id: "", dealId: id }));
+        .filter(r => r.stakeRole === "AGENT_PAYOUT" && r.partyId && !r.amount)
+        .map(r => ({ role: "AGENT_PAYOUT" as const, partyId: r.partyId, amount: undefined, id: "", dealId: id }));
       const missing = getMissingAgentFinancials(engine, agentStakes);
       for (const m of missing)
         errs.push(`Deal ${id}: agent "${m.displayName}" has no "${engine}" engine config — set it up in their Agent profile first`);
@@ -349,7 +354,7 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
 
             <div className="bg-accent/50 rounded-md p-4 space-y-2 text-[11px]">
               <p className="font-medium text-foreground text-[12px]">Format — one row per stakeholder</p>
-              <p className="font-mono text-muted-foreground">offerId, propertyName, market, businessUnit, <span className="text-foreground font-semibold">channel</span>, country, currency, dealPrice, reportDate, <span className="text-foreground font-semibold">stakeRole</span>, partyId, amount, description, chargedTo, splitPct, financialAmount</p>
+              <p className="font-mono text-muted-foreground">offerId, propertyName, market, businessUnit, <span className="text-foreground font-semibold">channel</span>, country, currency, dealPrice, reportDate, <span className="text-foreground font-semibold">stakeRole</span>, partyId, amount, description, chargedTo, splitPct, amount</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-2 text-muted-foreground">
                 <p><span className="text-foreground">AGENT_PAYOUT</span> — agent (use splitPct)</p>
                 <p><span className="text-foreground">REVENUE_SOURCE</span> — commission/fee/rebate (negative = rebate)</p>

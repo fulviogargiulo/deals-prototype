@@ -1,4 +1,4 @@
-import { sharedInvoices, sharedDeals, sharedPostings, sharedPostingLines } from "@huspy/shared-domain";
+import { sharedInvoices, sharedDeals, sharedPostings, sharedPostingLines, sharedDocuments } from "@huspy/shared-domain";
 import type { Invoice } from "@huspy/shared-domain";
 import { findDeal, updateDeal } from "@/data/dealStore";
 import { fireCommissionAccrualOnTransition } from "@/lib/dealCalculations";
@@ -36,6 +36,29 @@ export function createPaidPosting(inv: Invoice): void {
     sharedPostingLines.push({ id: `${pid}-1`, postingId: pid, ledgerId: l.AP,   side: "DEBIT",  amount: gross, invoiceId: inv.id });
     sharedPostingLines.push({ id: `${pid}-2`, postingId: pid, ledgerId: l.BANK, side: "CREDIT", amount: gross });
   }
+}
+
+/**
+ * Attach an outbound invoice to its deal as a Document so the agent can
+ * download it from agent-app and chase the client for payment. Idempotent.
+ * Inbound invoices are not surfaced to the agent.
+ */
+export function attachInvoiceDocumentToDeal(invoice: Invoice): void {
+  if (invoice.direction !== "outbound" || !invoice.dealId) return;
+  if (sharedDocuments.some((d) => d.invoiceId === invoice.id)) return;
+  const now = new Date().toISOString();
+  sharedDocuments.push({
+    id: `doc-inv-${invoice.id}`,
+    name: `${invoice.invoiceNumber}.pdf`,
+    type: "invoice",
+    size: 0,
+    mimeType: "application/pdf",
+    dealId: invoice.dealId,
+    invoiceId: invoice.id,
+    uploadedBy: "ops",
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 
 export function autoFinalizeDealIfComplete(invoice: Invoice): void {

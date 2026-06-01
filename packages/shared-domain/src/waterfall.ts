@@ -139,20 +139,20 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
   // All REVENUE_SOURCE stakes are summed: positive = commission, negative = client rebate/discount.
   // Rebates reduce gross directly and appear as line items on the client's invoice.
   const payerStakes = input.stakeholders.filter((s) => s.role === "REVENUE_SOURCE");
-  const hasExplicitPayers = payerStakes.some((s) => s.financialAmount != null);
+  const hasExplicitPayers = payerStakes.some((s) => s.amount != null);
   const gross = hasExplicitPayers
-    ? Math.max(0, payerStakes.reduce((s, p) => s + (p.financialAmount ?? 0), 0))
+    ? Math.max(0, payerStakes.reduce((s, p) => s + (p.amount ?? 0), 0))
     : Math.max(0, input.grossRevenue);
 
   if (hasExplicitPayers) {
     payerStakes.forEach((stake, idx) => {
       const name = input.partyDisplayNames?.[stake.partyId] ?? "Payer";
-      const amt = stake.financialAmount ?? 0;
+      const stakeAmt = stake.amount ?? 0;
       ledger.push({
         id: `gross::${idx}`,
         label: name,
-        side: amt >= 0 ? "CREDIT" : "DEBIT",
-        amount: Math.abs(amt),
+        side: stakeAmt >= 0 ? "CREDIT" : "DEBIT",
+        amount: Math.abs(stakeAmt),
         partyId: stake.partyId,
       });
     });
@@ -167,17 +167,17 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
   for (const stake of input.stakeholders) {
     if (stake.parentStakeholderId) continue; // child of an agent stake — handled in Step 3
     if (stake.role === "ACQUISITION_DEDUCTION") {
-      const amount = Math.abs(stake.financialAmount ?? 0);
-      if (amount === 0) continue;
-      totalAcquisitionCost += amount;
+      const deductAmt = Math.abs(stake.amount ?? 0);
+      if (deductAmt === 0) continue;
+      totalAcquisitionCost += deductAmt;
       const name = input.partyDisplayNames?.[stake.partyId] ?? stake.partyId;
-      ledger.push({ id: `acq::${stake.id}`, label: name, bucket: "acquisition-cost", side: "DEBIT", amount, partyId: stake.partyId });
+      ledger.push({ id: `acq::${stake.id}`, label: name, bucket: "acquisition-cost", side: "DEBIT", amount: deductAmt, partyId: stake.partyId });
     } else if (stake.role === "OPERATIONAL_DEDUCTION") {
-      const amount = Math.abs(stake.financialAmount ?? 0);
-      if (amount === 0) continue;
-      totalOperationalCost += amount;
+      const deductAmt = Math.abs(stake.amount ?? 0);
+      if (deductAmt === 0) continue;
+      totalOperationalCost += deductAmt;
       const name = input.partyDisplayNames?.[stake.partyId] ?? stake.partyId;
-      ledger.push({ id: `ops::${stake.id}`, label: name, bucket: "operational-cost", side: "DEBIT", amount, partyId: stake.partyId });
+      ledger.push({ id: `ops::${stake.id}`, label: name, bucket: "operational-cost", side: "DEBIT", amount: deductAmt, partyId: stake.partyId });
     }
   }
 
@@ -201,9 +201,11 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
     const agentId = input.partyIdToAgentId[stake.partyId];
     const af = agentId ? input.agentFinancialsByAgentId[agentId] : undefined;
 
-    // Fixed-amount path: financialAmount on the stake is authoritative; strategy is not consulted.
-    if (stake.financialAmount != null) {
-      const agentPayout = Math.abs(stake.financialAmount);
+    // Fixed-amount path: use amount directly when it was manually set OR the stake is confirmed.
+    // Draft engine-computed amounts (source === "engine" + status === "draft") are re-derived live.
+    const useFixed = stake.amount != null && (stake.source === "manual" || stake.status === "confirmed");
+    if (useFixed) {
+      const agentPayout = Math.abs(stake.amount!);
       const effectiveId = agentId ?? stake.partyId;
       const name = input.partyDisplayNames?.[stake.partyId] ?? effectiveId;
       splits.push({ agentId: effectiveId, partyId: stake.partyId, shareOfPool: 1, allocatedNet: agentPayout, agentPayout, agentSourcedDeductions: [], connectedAgentPayouts: [], strategyKind: "flat" });
@@ -222,7 +224,7 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
     const childStakes = input.stakeholders.filter((s) => s.parentStakeholderId === stake.id);
     const agentSourcedDeductions: ProjectedAgentSplit["agentSourcedDeductions"] = [];
     for (const child of childStakes) {
-      const childAmount = Math.abs(child.financialAmount ?? 0);
+      const childAmount = Math.abs(child.amount ?? 0);
       if (childAmount <= 0) continue;
       const childName = input.partyDisplayNames?.[child.partyId] ?? child.partyId;
       const childLabel = child.description ? `${childName} — ${child.description}` : childName;

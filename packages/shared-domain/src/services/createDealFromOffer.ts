@@ -29,6 +29,8 @@ export function createDealFromOffer(
       role: "AGENT_PAYOUT",
       splitPercentage: offer.buyerAgentSplitPct ?? (offer.sellerAgentId ? 50 : 100),
       isPrimary: true,
+      source: "engine",
+      status: "draft",
     });
   }
 
@@ -39,6 +41,8 @@ export function createDealFromOffer(
       role: "AGENT_PAYOUT",
       splitPercentage: offer.sellerAgentSplitPct ?? (offer.buyerAgentId ? 50 : 100),
       isPrimary: !offer.buyerAgentId,
+      source: "engine",
+      status: "draft",
     });
   }
 

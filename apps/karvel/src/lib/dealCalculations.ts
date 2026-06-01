@@ -21,6 +21,7 @@ import {
   type ProjectedPnL,
 } from "@huspy/shared-domain";
 
+
 // ── Engine dispatch ──────────────────────────────────────────────────────────
 // Single source of truth for which P&L engine handles a given (businessUnit × channel).
 // Rules are MECE: every deal maps to exactly one key.
@@ -100,11 +101,11 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
   const allFixtureStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id);
 
   // Derive grossRevenue from explicit REVENUE_SOURCE payers when not set on the deal.
-  // The waterfall already prefers payer financialAmounts over grossRevenue when both are present,
+  // The waterfall already prefers payer amounts over grossRevenue when both are present,
   // so this only matters for the fallback path (single implicit payer).
   const derivedGrossRevenue = deal.grossRevenue ??
-    (allFixtureStakes.some((s) => s.role === "REVENUE_SOURCE" && (s.financialAmount ?? 0) > 0)
-      ? allFixtureStakes.filter((s) => s.role === "REVENUE_SOURCE").reduce((sum, s) => sum + Math.abs(s.financialAmount ?? 0), 0)
+    (allFixtureStakes.some((s) => s.role === "REVENUE_SOURCE" && (s.amount ?? 0) > 0)
+      ? allFixtureStakes.filter((s) => s.role === "REVENUE_SOURCE").reduce((sum, s) => sum + Math.abs(s.amount ?? 0), 0)
       : null);
   if (derivedGrossRevenue == null) return null;
 
@@ -180,8 +181,9 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
 
   let stakeholders: DealStakeholder[] = allFixtureStakes;
 
+  // "Fixed payouts" means source === "manual" (ops-declared) — engine-computed draft amounts don't count.
   const hasFixedPayouts = allFixtureStakes.some(
-    (s) => s.role === "AGENT_PAYOUT" && s.financialAmount != null
+    (s) => s.role === "AGENT_PAYOUT" && s.source === "manual" && s.amount != null
   );
 
   // Fallback: legacy AgentEntry[] on the deal (wizard-created deals before stakeholder migration).
@@ -213,15 +215,15 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
 
   if (Object.keys(agentFinancialsByAgentId).length === 0 && !hasFixedPayouts) return null;
 
-  // Infer financialAmount for payer stakeholders when none is set explicitly.
+  // Infer amount for payer stakeholders when none is set explicitly.
   // Single payer gets the full grossRevenue; multiple payers split it evenly.
-  const hasExplicitPayer = stakeholders.some((s) => (s.financialAmount ?? 0) > 0);
+  const hasExplicitPayer = stakeholders.some((s) => (s.amount ?? 0) > 0);
   if (!hasExplicitPayer && deal.grossRevenue) {
-    const implicit = stakeholders.filter((s) => s.role === "REVENUE_SOURCE" && !s.financialAmount);
+    const implicit = stakeholders.filter((s) => s.role === "REVENUE_SOURCE" && !s.amount);
     if (implicit.length > 0) {
       const perPayer = deal.grossRevenue / implicit.length;
       stakeholders = stakeholders.map((s) =>
-        s.role === "REVENUE_SOURCE" && !s.financialAmount ? { ...s, financialAmount: perPayer } : s
+        s.role === "REVENUE_SOURCE" && !s.amount ? { ...s, amount: perPayer } : s
       );
     }
   }
@@ -231,8 +233,8 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
   // Base is dealAmount (mortgage principal), not grossRevenue (bank commission).
   if (getDealEngine(deal) === "mbu-direct") {
     stakeholders = stakeholders.map((s) => {
-      if (s.role === "OPERATIONAL_DEDUCTION" && !s.financialAmount) {
-        return { ...s, financialAmount: -(deal.dealAmount * DEFAULT_EXTERNAL_REFERRAL_RATE / 100) };
+      if (s.role === "OPERATIONAL_DEDUCTION" && !s.amount) {
+        return { ...s, amount: -(deal.dealAmount * DEFAULT_EXTERNAL_REFERRAL_RATE / 100) };
       }
       return s;
     });
@@ -390,7 +392,7 @@ function recalculateREBU(deal: Deal): Deal {
   const opDeductionStakes = sharedDealStakeholders.filter(
     (s) => s.dealId === deal.id && s.role === "OPERATIONAL_DEDUCTION"
   );
-  const conveyanceFeeTotal = opDeductionStakes.reduce((sum, s) => sum + Math.abs(s.financialAmount ?? 0), 0);
+  const conveyanceFeeTotal = opDeductionStakes.reduce((sum, s) => sum + Math.abs(s.amount ?? 0), 0);
   const conveyanceAgentPayout = conveyanceFeeTotal;
   const huspyConveyanceShare = 0;
 
@@ -432,7 +434,7 @@ function recalculateREBU(deal: Deal): Deal {
   // Operating costs — one payable entry per OPERATIONAL_DEDUCTION stakeholder.
   opDeductionStakes.forEach((s) => {
     const party = sharedParties.find((p) => p.id === s.partyId);
-    payableEntries.push({ entityType: "conveyance", entityLabel: `Operating Cost — ${party?.displayName ?? s.partyId}`, expectedAmount: Math.abs(s.financialAmount ?? 0) });
+    payableEntries.push({ entityType: "conveyance", entityLabel: `Operating Cost — ${party?.displayName ?? s.partyId}`, expectedAmount: Math.abs(s.amount ?? 0) });
   });
 
   const payables = buildPayables(deal, payableEntries);
@@ -490,6 +492,58 @@ export function computeDealPnL(deal: Deal) {
   const input = buildEngineInput(deal, getDeals());
   if (!input) return null;
   return calculateProjectedPnL(input);
+}
+
+/**
+ * syncEngineAmounts — keeps source:"engine" draft stakes in sync after any manual stake edit.
+ *
+ * Called after every stake write on a draft deal. Re-runs the engine and updates the amount on
+ * every source:"engine" + status:"draft" AGENT_PAYOUT stake so the P&L remains self-consistent.
+ * Confirmed stakes are never touched.
+ */
+/**
+ * syncEngineAmounts — keeps source:"engine" draft stakes in sync after any stake edit.
+ *
+ * - Updates amount on existing source:"engine" AGENT_PAYOUT stakes.
+ * - Creates missing connected agent draft stakes (needed when a deal is first opened
+ *   after creation via AddDealDialog or BulkUploadDialog).
+ * Confirmed stakes are never touched.
+ */
+export function syncEngineAmounts(deal: Deal): void {
+  const pnl = computeDealPnL(deal);
+  if (!pnl) return;
+
+  const draftStakes = sharedDealStakeholders.filter(
+    (s) => s.dealId === deal.id && s.status !== "confirmed" && s.source === "engine" && s.role === "AGENT_PAYOUT"
+  );
+
+  for (const split of pnl.splits) {
+    // Primary / co-agent stake
+    const agentStake = draftStakes.find((s) => s.partyId === split.partyId);
+    if (agentStake) agentStake.amount = split.agentPayout;
+
+    // Connected agent stakes — update existing or create missing draft stakes
+    for (const cp of split.connectedAgentPayouts) {
+      const caAgent = sharedAgents.find((a) => a.id === cp.agentId);
+      if (!caAgent) continue;
+      const rounded = Math.round(cp.amount * 100) / 100;
+      const caStake = draftStakes.find((s) => s.partyId === caAgent.partyId);
+      if (caStake) {
+        caStake.amount = rounded;
+      } else {
+        sharedDealStakeholders.push({
+          id: `ds-${deal.id}-ca-${cp.agentId}-for-${split.partyId}`,
+          dealId: deal.id,
+          partyId: caAgent.partyId,
+          role: "AGENT_PAYOUT",
+          description: cp.label,
+          amount: rounded,
+          source: "engine",
+          status: "draft",
+        });
+      }
+    }
+  }
 }
 
 // Maps currency to chart-of-accounts ledger IDs (matches sharedLedgers fixture).
@@ -644,7 +698,7 @@ export function createCommissionAccrualPosting(deal: Deal): void {
 // ── AF validation ─────────────────────────────────────────────────────────────
 // Returns the list of agents on non-manual deals that are missing an AF config
 // for the deal's engine. Used to block deal creation / bulk upload.
-// Agents with a fixed financialAmount on their stake are exempt (manual-priced).
+// Agents with a fixed amount on their stake are exempt (manual-priced).
 export function getMissingAgentFinancials(
   engine: DealEngineKey,
   stakeholders: DealStakeholder[]
@@ -653,7 +707,7 @@ export function getMissingAgentFinancials(
   const missing: Array<{ agentId: string; displayName: string }> = [];
   for (const stake of stakeholders) {
     if (stake.role !== "AGENT_PAYOUT") continue;
-    if (stake.financialAmount != null) continue; // declared fixed amount — exempt
+    if (stake.source === "manual" && stake.amount != null) continue; // manually declared fixed amount — exempt
     const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
     if (!agent) continue;
     const af = sharedAgentFinancials.find((f) => f.agentId === agent.id && f.pnlEngine === engine);
@@ -683,5 +737,65 @@ export function createEmptyAgent(_index: number): AgentEntry {
     referralAmount: 0,
     clientKickback: 0,
   };
+}
+
+/**
+ * confirmDealStakeholders — called when a deal transitions to "invoicing".
+ *
+ * 1. Runs the P&L engine one final time.
+ * 2. Writes amount on all rate-based AGENT_PAYOUT stakes (those using splitPercentage).
+ * 3. Updates connected-agent AGENT_PAYOUT stakes (TL, manager) with their final computed amounts;
+ *    creates them if not already present (deals created before this pattern was adopted).
+ * 4. Sets status: "confirmed" on all stakes for the deal.
+ *    Who confirmed and when is recorded on deal.statusHistory (to === "invoicing").
+ */
+export function confirmDealStakeholders(deal: Deal): void {
+  const pnl = computeDealPnL(deal);
+  if (!pnl) return;
+
+  // Lock all financial stakes: write confirmed amounts and set status.
+  const splitByPartyId = new Map(pnl.splits.map((s) => [s.partyId, s]));
+  const dealStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id);
+
+  for (const stake of dealStakes) {
+    if (stake.role === "AGENT_PAYOUT" && stake.source !== "manual") {
+      const split = splitByPartyId.get(stake.partyId);
+      if (split) {
+        stake.amount = split.agentPayout;
+        stake.source = "engine";
+      }
+    }
+    stake.status = "confirmed";
+  }
+
+  // Confirm connected-agent AGENT_PAYOUT stakes (TL, manager, etc.).
+  // Update draft stakes created at deal creation; create if missing.
+  for (const split of pnl.splits) {
+    for (const cp of split.connectedAgentPayouts) {
+      if (cp.amount <= 0) continue;
+      const caAgent = sharedAgents.find((a) => a.id === cp.agentId);
+      const caPartyId = caAgent?.partyId ?? `party-${cp.agentId}`;
+      const stakeId = `ds-${deal.id}-ca-${cp.agentId}-for-${split.partyId}`;
+      const rounded = Math.round(cp.amount * 100) / 100;
+
+      const existing = sharedDealStakeholders.find((s) => s.id === stakeId);
+      if (existing) {
+        existing.amount = rounded;
+        existing.source = "engine";
+        existing.status = "confirmed";
+      } else {
+        sharedDealStakeholders.push({
+          id: stakeId,
+          dealId: deal.id,
+          partyId: caPartyId,
+          role: "AGENT_PAYOUT",
+          description: cp.label,
+          amount: rounded,
+          source: "engine",
+          status: "confirmed",
+        });
+      }
+    }
+  }
 }
 

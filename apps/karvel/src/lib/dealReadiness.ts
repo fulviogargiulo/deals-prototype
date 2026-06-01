@@ -46,14 +46,15 @@ interface Args {
   status: DealStatus;
   docs: DealDocumentRequirement[];
   pnlPendingApproval: boolean;
+  pnlHasChanges: boolean;
 }
 
 export function computeDealReadiness(args: Args): DealReadiness {
-  const { deal, status, docs, pnlPendingApproval } = args;
+  const { deal, status, docs, pnlPendingApproval, pnlHasChanges } = args;
 
   switch (status) {
     case "under-review":
-      return underReviewReadiness(docs, pnlPendingApproval);
+      return underReviewReadiness(docs, pnlPendingApproval, pnlHasChanges);
     case "pending-details":
       return pendingDetailsReadiness(docs);
     case "pending-agent-approval":
@@ -69,7 +70,7 @@ export function computeDealReadiness(args: Args): DealReadiness {
   }
 }
 
-function underReviewReadiness(docs: DealDocumentRequirement[], pnlPendingApproval: boolean): DealReadiness {
+function underReviewReadiness(docs: DealDocumentRequirement[], pnlPendingApproval: boolean, pnlHasChanges: boolean): DealReadiness {
   const cleared = docs.filter((d) => d.status === "approved" || d.status === "waived").length;
   const total = docs.length;
   const docsDone = total === 0 || cleared === total;
@@ -83,9 +84,13 @@ function underReviewReadiness(docs: DealDocumentRequirement[], pnlPendingApprova
     cta: total === 0 ? undefined : { label: "Open documents", targetId: "docs" },
   });
   items.push({
-    done: !pnlPendingApproval,
-    label: pnlPendingApproval ? "P&L changes awaiting Finance Lead approval" : "P&L approved",
-    cta: pnlPendingApproval ? { label: "Open P&L", targetId: "pnl" } : undefined,
+    done: !pnlHasChanges && !pnlPendingApproval,
+    label: pnlHasChanges
+      ? "P&L has unsaved changes — submit for approval before advancing"
+      : pnlPendingApproval
+      ? "P&L changes awaiting Senior Ops approval"
+      : "P&L approved",
+    cta: (pnlHasChanges || pnlPendingApproval) ? { label: "Open P&L", targetId: "pnl" } : undefined,
   });
 
   const open = items.filter((i) => !i.done);

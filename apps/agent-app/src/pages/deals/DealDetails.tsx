@@ -3,13 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { PageContainer } from '@/components/layout/page-container';
 import { TrackedTitle } from '@/components/ui/tracked-title';
 import { Button } from '@/components/ui/button';
-import { FileText, CheckCircle2, AlertTriangle, ChevronDown, RotateCcw } from 'lucide-react';
+import { FileText, CheckCircle2, AlertTriangle, ChevronDown, RotateCcw, Download } from 'lucide-react';
 import { DocumentRow } from '@/components/deals/document-row';
 import { CommissionBreakdown } from '@/components/deals/commission-breakdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { mockDeals, getAgentStakeMap } from '@/data/mockDeals';
 import { useDevTools } from '@/contexts/dev-tools-context';
-import { getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements, sharedDealComments, buildWaterfallInput, calculateProjectedPnL, dealStatusColors } from '@huspy/shared-domain';
+import { getClientForDeal, computeAgentCommission, canTransitionDealStatus, sharedDealDocumentRequirements, sharedDealComments, sharedDocuments, sharedInvoices, buildWaterfallInput, calculateProjectedPnL, dealStatusColors } from '@huspy/shared-domain';
+import type { InvoiceStatus } from '@huspy/shared-domain';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { DealStatus } from '@/types';
 import { toast } from 'sonner';
@@ -41,6 +42,24 @@ function getDocumentsForDeal(dealId: string) {
     .filter((r) => r.dealId === dealId)
     .map((r) => ({ name: r.label, uploaded: r.status !== 'pending' }));
 }
+
+function getInvoiceDocumentsForDeal(dealId: string) {
+  return sharedDocuments
+    .filter((d) => d.type === 'invoice' && d.dealId === dealId && d.invoiceId)
+    .map((d) => {
+      const invoice = sharedInvoices.find((i) => i.id === d.invoiceId);
+      if (!invoice || invoice.direction !== 'outbound') return null;
+      return { document: d, invoice };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+}
+
+const INVOICE_BADGE: Record<InvoiceStatus, { label: string; cls: string }> = {
+  draft: { label: 'Draft', cls: 'bg-[hsl(var(--surface-raised))] text-[hsl(var(--fg-secondary))]' },
+  issued: { label: 'Issued', cls: 'bg-[hsl(var(--ds-orange)/0.1)] text-[hsl(var(--ds-orange))]' },
+  paid: { label: 'Paid', cls: 'bg-[hsl(var(--ds-green)/0.1)] text-[hsl(var(--ds-green))]' },
+  cancelled: { label: 'Cancelled', cls: 'bg-[hsl(var(--ds-red)/0.1)] text-[hsl(var(--ds-red))]' },
+};
 
 export function DealDetails() {
   const { id } = useParams<{ id: string }>();
@@ -88,6 +107,7 @@ export function DealDetails() {
 
 
   const documents = getDocumentsForDeal(viewDeal.id);
+  const invoiceDocs = getInvoiceDocumentsForDeal(viewDeal.id);
 
   return (
     <PageContainer>
@@ -433,6 +453,68 @@ export function DealDetails() {
             </Collapsible>
           );
         })()}
+        {/* Invoices — outbound invoices attached as documents for the agent to share with the client */}
+        {invoiceDocs.length > 0 && (
+          <Collapsible defaultOpen>
+            <div className="bg-card rounded-2xl overflow-hidden">
+              <CollapsibleTrigger className="w-full px-5 py-4 flex items-center justify-between hover:bg-[hsl(var(--surface-raised))] transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[hsl(var(--fg-primary)/0.05)]">
+                    <FileText className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[14px] font-semibold text-foreground leading-[120%]">Invoices</p>
+                    <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%] mt-0.5">
+                      {invoiceDocs.length} invoice{invoiceDocs.length === 1 ? '' : 's'} from Huspy — download and share with the client
+                    </p>
+                  </div>
+                </div>
+                <ChevronDown className="w-4 h-4 text-[hsl(var(--fg-secondary))] transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-5 pb-5 pt-1">
+                  {invoiceDocs.map(({ document, invoice }) => {
+                    const badge = INVOICE_BADGE[invoice.status];
+                    const gross = invoice.subtotal + (invoice.vatAmount ?? 0);
+                    return (
+                      <div
+                        key={document.id}
+                        className="flex items-center justify-between py-3 border-b border-[hsl(var(--border-ds-primary))] last:border-b-0"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <FileText className="w-5 h-5 shrink-0 text-[hsl(var(--fg-secondary))]" />
+                          <div className="min-w-0">
+                            <p className="text-[14px] leading-[140%] truncate text-foreground font-semibold">
+                              {invoice.invoiceNumber}
+                            </p>
+                            <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%]">
+                              {invoice.currency} {gross.toLocaleString()}
+                              {invoice.dueDate && invoice.status === 'issued' ? ` · due ${invoice.dueDate}` : ''}
+                              {invoice.paidDate && invoice.status === 'paid' ? ` · paid ${invoice.paidDate}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 ml-3 flex items-center gap-2">
+                          <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-semibold ${badge.cls}`}>
+                            {badge.label}
+                          </span>
+                          <button
+                            onClick={() => toast.success(`Downloading ${document.name}`)}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--surface-raised))] transition-colors text-[hsl(var(--fg-secondary))]"
+                            title="Download"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+        )}
+
         {/* Ops ↔ Agent messages */}
         <CommentsSection comments={comments} canReply={viewDeal.status !== 'finalized' && viewDeal.status !== 'canceled'} onAddComment={addComment} />
 

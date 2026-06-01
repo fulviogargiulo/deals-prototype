@@ -26,6 +26,7 @@ import {
   computeDealPnL,
   getDealEngine,
   fireCommissionAccrualOnTransition,
+  confirmDealStakeholders,
 } from "@/lib/dealCalculations";
 import { toast } from "sonner";
 import { useCurrentUser } from "@/contexts/UserContext";
@@ -44,7 +45,7 @@ import {
   type DocumentRequirementStatus,
   type DealDocumentRequirement,
 } from "@huspy/shared-domain";
-import { dealStatusLabel } from "@/lib/labels";
+import { businessUnitLabel, dealStatusLabel } from "@/lib/labels";
 import { PnLWaterfall } from "@/components/PnLWaterfall";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { DealHeader } from "@/components/DealHeader";
@@ -145,7 +146,6 @@ const DealDetail = () => {
 
   const deal = useMemo(() => findDeal(dealId || ""), [dealId]);
   const [stakesVersion, setStakesVersion] = useState(0);
-  const pnl = useMemo(() => (deal ? computeDealPnL(deal) : null), [deal, stakesVersion]);
 
   const [status, setStatus] = useState<DealStatus>(deal?.status ?? "pending-details");
   const [statusHistory, setStatusHistory] = useState(deal?.statusHistory ?? []);
@@ -155,18 +155,41 @@ const DealDetail = () => {
     sharedDealDocumentRequirements.filter((r) => r.dealId === (deal?.id ?? ""))
   );
 
-  // P&L approval state
+  // P&L change tracking — ops can make multiple edits before submitting for approval.
+  // pnlHasChanges: edits exist but not yet submitted.
+  // pnlPendingApproval: submitted, awaiting Senior Ops review. Editing locked.
+  const [pnlHasChanges, setPnlHasChanges] = useState(false);
   const [pnlPendingApproval, setPnlPendingApproval] = useState(false);
   const stakesSnapshot = useRef<typeof sharedDealStakeholders[0][]>([]);
 
   const handleWaterfallChanged = () => {
-    if (!pnlPendingApproval && deal) {
+    if (!pnlHasChanges && !pnlPendingApproval && deal) {
+      // Take a snapshot of the pre-change state for potential revert on rejection.
       stakesSnapshot.current = sharedDealStakeholders
         .filter((s) => s.dealId === deal.id)
         .map((s) => ({ ...s }));
     }
-    setPnlPendingApproval(true);
+    setPnlHasChanges(true);
     setStakesVersion((v) => v + 1);
+  };
+
+  const handleSubmitPnLForApproval = () => {
+    setPnlHasChanges(false);
+    setPnlPendingApproval(true);
+  };
+
+  const handleDiscardPnLChanges = () => {
+    if (!deal) return;
+    const toRemove = sharedDealStakeholders.filter((s) => s.dealId === deal.id);
+    toRemove.forEach((s) => {
+      const idx = sharedDealStakeholders.indexOf(s);
+      if (idx !== -1) sharedDealStakeholders.splice(idx, 1);
+    });
+    stakesSnapshot.current.forEach((s) => sharedDealStakeholders.push({ ...s }));
+    stakesSnapshot.current = [];
+    setPnlHasChanges(false);
+    setStakesVersion((v) => v + 1);
+    toast.info("P&L changes discarded");
   };
 
   const handleApprovePnL = () => {
@@ -264,7 +287,7 @@ const DealDetail = () => {
     // Pre-flight checks for forward motion out of Under Review.
     if (status === "under-review" && to === "pending-agent-approval") {
       if (pnlPendingApproval) {
-        toast.error("Cannot move to Agent Approval: P&L changes must be approved by Finance Lead first.");
+        toast.error("Cannot advance: P&L changes are awaiting Senior Ops approval.");
         return;
       }
       const allClear = docs.every((r) => r.status === "approved" || r.status === "waived");
@@ -274,6 +297,11 @@ const DealDetail = () => {
       }
     }
 
+    // Confirm P&L: lock all stakes and create pre-computed connected-agent payout stakes.
+    if (to === "invoicing") {
+      confirmDealStakeholders(deal);
+    }
+
     // Auto-draft invoices when moving into Invoicing.
     if (to === "invoicing") {
       const blueprint = getBlueprint(deal.country, deal.businessUnit);
@@ -281,8 +309,8 @@ const DealDetail = () => {
         (s) =>
           s.dealId === deal.id &&
           s.role !== "AGENT_PAYOUT" &&
-          s.financialAmount != null &&
-          s.financialAmount !== 0 &&
+          s.amount != null &&
+          s.amount !== 0 &&
           // Agent/broker cost entries (referral fees, co-brokers) are settled via the
           // commission accrual posting, not via invoices. Skip them here.
           !(
@@ -310,10 +338,10 @@ const DealDetail = () => {
       const invCurrency = deal.currency ?? "EUR";
 
       revenueStakesByParty.forEach((stakes) => {
-        const subtotal = stakes.reduce((sum, s) => sum + Math.abs(s.financialAmount!), 0);
+        const subtotal = stakes.reduce((sum, s) => sum + Math.abs(s.amount!), 0);
         const vatAmount = blueprint.taxRate ? Math.round(subtotal * blueprint.taxRate) / 100 : undefined;
         const lineItems = stakes.length > 1
-          ? stakes.map((s) => ({ description: s.description ?? "Commission", amount: Math.abs(s.financialAmount!) }))
+          ? stakes.map((s) => ({ description: s.description ?? "Commission", amount: Math.abs(s.amount!) }))
           : undefined;
         sharedInvoices.push({
           id: `inv-auto-${deal.id}-rev-${invIdx}-${Date.now()}`,
@@ -335,7 +363,7 @@ const DealDetail = () => {
       });
 
       nonRevenueStakes.forEach((s) => {
-        const subtotal = Math.abs(s.financialAmount!);
+        const subtotal = Math.abs(s.amount!);
         const vatAmount = blueprint.taxRate ? Math.round(subtotal * blueprint.taxRate) / 100 : undefined;
         sharedInvoices.push({
           id: `inv-auto-${deal.id}-cost-${invIdx}-${Date.now()}`,
@@ -356,8 +384,8 @@ const DealDetail = () => {
       });
 
       // Engine-computed cost parties (e.g. mbu-direct OPERATIONAL_DEDUCTION with
-      // no explicit financialAmount — amount derived from DEFAULT_EXTERNAL_REFERRAL_RATE).
-      // These are excluded by the billableStakes filter above because financialAmount is
+      // no explicit amount — amount derived from DEFAULT_EXTERNAL_REFERRAL_RATE).
+      // These are excluded by the billableStakes filter above because amount is
       // null on the raw stakeholder, but the P&L engine fills it in. Parties with a
       // subledger are handled by createCommissionAccrualPosting; only invoice the rest.
       const pnlForCosts = computeDealPnL(deal);
@@ -421,6 +449,7 @@ const DealDetail = () => {
         deal={deal}
         status={status}
         pnlPendingApproval={pnlPendingApproval}
+        pnlHasChanges={pnlHasChanges}
         docs={docs}
         clientName={clientName}
         amountLabel={amountLabel}
@@ -441,6 +470,7 @@ const DealDetail = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
                     <div>
                       <ReadRow label="Deal ID" value={deal.id} />
+                      <ReadRow label="Business Unit" value={deal.businessUnit ? businessUnitLabel[deal.businessUnit] : "—"} />
                       <ReadRow label="Market" value={deal.market} />
                       <ReadRow label="Country" value={deal.country?.toUpperCase()} />
                       <ReadRow label="Currency" value={deal.currency} />
@@ -464,30 +494,48 @@ const DealDetail = () => {
             </SectionCard>
 
             {/* P&L */}
-            <SectionCard id="pnl" title={pnlPendingApproval ? "P&L — Pending Approval" : "P&L"} collapsible>
+            <SectionCard id="pnl" title={pnlPendingApproval ? "P&L — Pending Approval" : pnlHasChanges ? "P&L — Unsaved Changes" : "P&L"} collapsible>
+              {/* Unsaved changes banner — ops submitted but not yet sent for approval */}
+              {pnlHasChanges && !pnlPendingApproval && (
+                <div className="flex items-center justify-between mb-4 px-3 py-2.5 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <p className="text-[13px] font-semibold text-foreground">P&L has unsaved changes</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={handleDiscardPnLChanges}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-[12px] font-medium text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+                    >
+                      <Undo2 className="h-3.5 w-3.5" /> Discard
+                    </button>
+                    <button
+                      onClick={handleSubmitPnLForApproval}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-600 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"
+                    >
+                      Submit for approval
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* Approval pending banner — awaiting Senior Ops */}
               {pnlPendingApproval && (
                 <div className={`flex items-center justify-between mb-4 px-3 py-2.5 rounded-md border ${currentUser.role === "finance_lead" ? "border-amber-300 bg-amber-50 dark:bg-amber-950/20" : "border-border bg-muted/40"}`}>
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
                     <div>
-                      <p className="text-[13px] font-semibold text-foreground">P&L changes pending Finance Lead approval</p>
+                      <p className="text-[13px] font-semibold text-foreground">P&L changes pending Senior Ops approval</p>
                       {currentUser.role !== "finance_lead" && (
-                        <p className="text-[11px] text-muted-foreground">Switch to Finance Lead in the sidebar to approve or reject.</p>
+                        <p className="text-[11px] text-muted-foreground">A Senior Ops user must approve or reject before the deal can advance.</p>
                       )}
                     </div>
                   </div>
                   {currentUser.role === "finance_lead" && (
                     <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={handleRejectPnL}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-[12px] font-medium text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
-                      >
+                      <button onClick={handleRejectPnL} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-[12px] font-medium text-muted-foreground hover:text-destructive hover:border-destructive transition-colors">
                         <Undo2 className="h-3.5 w-3.5" /> Reject
                       </button>
-                      <button
-                        onClick={handleApprovePnL}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"
-                      >
+                      <button onClick={handleApprovePnL} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity">
                         <CheckCheck className="h-3.5 w-3.5" /> Approve
                       </button>
                     </div>
@@ -497,7 +545,6 @@ const DealDetail = () => {
               <PnLWaterfall
                 deal={deal}
                 currency={currency}
-                pnl={pnl}
                 canEdit={canEditOps}
                 onChanged={handleWaterfallChanged}
               />

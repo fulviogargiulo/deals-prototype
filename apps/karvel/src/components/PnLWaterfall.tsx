@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, Fragment } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   sharedDealStakeholders,
   sharedParties,
   sharedAgents,
 } from "@huspy/shared-domain";
-import type { DealStakeholder, Party, ProjectedPnL } from "@huspy/shared-domain";
+import type { DealStakeholder, Party } from "@huspy/shared-domain";
 import type { Deal } from "@/data/types";
+import { getDealEngine, syncEngineAmounts } from "@/lib/dealCalculations";
 
 type AddSection = "revenue" | "service" | "partners" | "agents" | null;
 type AgentCommissionMode = "split" | "fixed";
@@ -39,7 +40,6 @@ const FORM_RESET: FormState = {
 interface Props {
   deal: Deal;
   currency: string;
-  pnl: ProjectedPnL | null;
   canEdit: boolean;
   onChanged: () => void;
 }
@@ -90,6 +90,7 @@ function WaterfallRow({
   indent = false,
   badge,
   onRemove,
+  onEdit,
   onClick,
 }: {
   name: string;
@@ -100,6 +101,7 @@ function WaterfallRow({
   indent?: boolean;
   badge?: string;
   onRemove?: () => void;
+  onEdit?: () => void;
   onClick?: () => void;
 }) {
   return (
@@ -126,13 +128,19 @@ function WaterfallRow({
       <span className={`text-[13px] font-semibold tabular-nums shrink-0 ${amount == null ? "text-muted-foreground/30" : isCredit ? "text-emerald-600" : "text-orange-500"}`}>
         {amount == null ? "—" : `${isCredit ? "+" : "−"}${fmt(Math.abs(amount), currency)}`}
       </span>
-      {onRemove ? (
-        <button onClick={onRemove} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-destructive transition-colors shrink-0">
-          <X className="h-3.5 w-3.5" />
-        </button>
-      ) : (
-        <span className="w-6 shrink-0" />
-      )}
+      <div className="flex items-center gap-0.5 shrink-0">
+        {onEdit && (
+          <button onClick={onEdit} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {onRemove && (
+          <button onClick={onRemove} className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-destructive transition-colors">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {!onEdit && !onRemove && <span className="w-6" />}
+      </div>
     </div>
   );
 }
@@ -451,66 +459,183 @@ function AgentAddForm({
   );
 }
 
+// ─── Agent edit form (primary agent inline) ──────────────────────────────────
+
+function AgentEditForm({
+  currency,
+  initialMode,
+  initialValue,
+  poolRemainder,
+  onConfirm,
+  onCancel,
+}: {
+  currency: string;
+  initialMode: AgentCommissionMode;
+  initialValue: number;
+  poolRemainder: number;
+  onConfirm: (mode: AgentCommissionMode, value: number) => void;
+  onCancel: () => void;
+}) {
+  const [mode, setMode] = useState<AgentCommissionMode>(initialMode);
+  const [valueStr, setValueStr] = useState(String(initialValue));
+
+  const value = parseFloat(valueStr) || 0;
+  const canConfirm = value > 0 && (mode === "fixed" || value <= poolRemainder);
+
+  return (
+    <div className="mt-1 mb-1 bg-muted/30 border border-border/60 rounded-md px-3 py-3 space-y-2.5">
+      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Edit Primary Agent Cut</p>
+
+      <div className="flex items-center gap-1 bg-muted rounded-md p-0.5 w-fit">
+        <button
+          onClick={() => { setMode("split"); setValueStr(String(initialMode === "split" ? initialValue : 100)); }}
+          className={`px-3 py-1 rounded text-[12px] font-medium transition-colors ${mode === "split" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Share of pool
+        </button>
+        <button
+          onClick={() => { setMode("fixed"); setValueStr(String(initialMode === "fixed" ? initialValue : "")); }}
+          className={`px-3 py-1 rounded text-[12px] font-medium transition-colors ${mode === "fixed" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          Fixed amount
+        </button>
+      </div>
+
+      {mode === "split" ? (
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <label className="text-[12px] text-muted-foreground w-[140px] shrink-0">
+              Pool share (%)
+              <span className="block text-[10px] text-muted-foreground/60">{poolRemainder}% available</span>
+            </label>
+            <input
+              autoFocus
+              type="number"
+              min={1}
+              max={poolRemainder}
+              value={valueStr}
+              onChange={(e) => setValueStr(e.target.value)}
+              className="w-24 px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+          {value > poolRemainder && (
+            <p className="text-[11px] text-destructive pl-[148px]">Exceeds available pool ({poolRemainder}%)</p>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <label className="text-[12px] text-muted-foreground w-[140px] shrink-0">
+            Fixed commission ({currency})
+            <span className="block text-[10px] text-muted-foreground/60">Paid regardless of deal P&L</span>
+          </label>
+          <input
+            autoFocus
+            type="number"
+            min={0}
+            value={valueStr}
+            onChange={(e) => setValueStr(e.target.value)}
+            className="w-36 px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-2">
+        <button onClick={onCancel} className="px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground">Cancel</button>
+        <button
+          onClick={() => canConfirm && onConfirm(mode, value)}
+          disabled={!canConfirm}
+          className="px-4 py-1.5 bg-primary text-primary-foreground rounded text-[13px] font-semibold hover:opacity-90 disabled:opacity-40"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props) {
+export function PnLWaterfall({ deal, currency, canEdit, onChanged }: Props) {
   const navigate = useNavigate();
-  const isMBU = deal.businessUnit === "mortgage";
 
-  const [stakes, setStakes] = useState<DealStakeholder[]>(() =>
-    sharedDealStakeholders.filter((s) => s.dealId === deal.id)
-  );
+  const [stakes, setStakes] = useState<DealStakeholder[]>(() => {
+    // On first mount for draft deals, create any missing engine-derived stakes
+    // (e.g. connected agents not yet seeded for newly-created deals).
+    if (deal.status === "under-review" || deal.status === "pending-details" || deal.status === "pending-agent-approval") {
+      syncEngineAmounts(deal);
+    }
+    return sharedDealStakeholders.filter((s) => s.dealId === deal.id);
+  });
   const [adding, setAdding] = useState<AddSection>(null);
+  const [editingStakeId, setEditingStakeId] = useState<string | null>(null);
+  const engine = getDealEngine(deal);
 
+  // All AGENT_PAYOUT stakes — primary agents, co-agents, and connected agents (TL, Manager) flat.
   const agentStakes = stakes.filter((s) => s.role === "AGENT_PAYOUT");
-  const revStakes = stakes.filter((s) => s.role === "REVENUE_SOURCE");
+  const revStakes   = stakes.filter((s) => s.role === "REVENUE_SOURCE");
   const serviceStakes = stakes.filter((s) => s.role === "OPERATIONAL_DEDUCTION" && !s.parentStakeholderId);
   const partnerStakes = stakes.filter((s) => s.role === "ACQUISITION_DEDUCTION" && !s.parentStakeholderId);
   const agentSourcedStakes = stakes.filter(
     (s) => (s.role === "ACQUISITION_DEDUCTION" || s.role === "OPERATIONAL_DEDUCTION") && !!s.parentStakeholderId,
   );
 
-  const dealAgents = agentStakes.map((s) => ({ partyId: s.partyId, name: resolvePartyName(s.partyId) }));
+  // Summary values computed from stakes — no engine run needed for display.
+  const grossRevenue    = revStakes.reduce((sum, s) => sum + (s.amount ?? 0), 0);
+  const acquisitionCost = partnerStakes.reduce((sum, s) => sum + Math.abs(s.amount ?? 0), 0);
+  const commissionBase  = grossRevenue - acquisitionCost;
+  const totalAgentPayout = agentStakes.reduce((sum, s) => sum + Math.abs(s.amount ?? 0), 0);
+  const operationalCost = serviceStakes.reduce((sum, s) => sum + Math.abs(s.amount ?? 0), 0);
+  const huspyMargin     = commissionBase - totalAgentPayout - operationalCost;
+  const hasAmounts      = grossRevenue > 0 || agentStakes.some((s) => s.amount != null);
 
-  const poolAgents = agentStakes.filter((s) => s.financialAmount == null);
+  const dealAgents = agentStakes
+    .filter((s) => !s.description) // connected agents have description; exclude from "add agent" dropdown
+    .map((s) => ({ partyId: s.partyId, name: resolvePartyName(s.partyId) }));
+
+  const poolAgents = agentStakes.filter((s) => s.source !== "manual" && s.splitPercentage != null);
   const splitPoolTotal = poolAgents.reduce((sum, s) => sum + (s.splitPercentage ?? 0), 0);
 
   const stopAdding = () => setAdding(null);
 
+  // After every stake mutation: sync engine-derived amounts then re-read stakes.
+  const commitChange = () => {
+    syncEngineAmounts(deal);
+    setStakes(sharedDealStakeholders.filter((s) => s.dealId === deal.id));
+    onChanged();
+  };
+
   const removeStake = (stakeId: string) => {
     const idx = sharedDealStakeholders.findIndex((s) => s.id === stakeId);
     if (idx !== -1) sharedDealStakeholders.splice(idx, 1);
-    setStakes((prev) => prev.filter((s) => s.id !== stakeId));
-    onChanged();
+    commitChange();
   };
 
   const addStake = (stake: DealStakeholder) => {
     sharedDealStakeholders.push(stake);
-    setStakes((prev) => [...prev, stake]);
     setAdding(null);
-    onChanged();
+    commitChange();
   };
 
   const handleAddRevenue = (partyId: string, amount: number | undefined) => {
-    addStake({ id: `ds-${deal.id}-rev-${Date.now()}`, dealId: deal.id, partyId, role: "REVENUE_SOURCE", financialAmount: amount });
+    addStake({ id: `ds-${deal.id}-rev-${Date.now()}`, dealId: deal.id, partyId, role: "REVENUE_SOURCE", amount, source: "manual", status: "draft" });
   };
 
   const handleAddService = (partyId: string, amount: number | undefined, chargedToAgentPartyId?: string) => {
     const parentStakeholderId = chargedToAgentPartyId
       ? agentStakes.find((s) => s.partyId === chargedToAgentPartyId)?.id
       : undefined;
-    addStake({ id: `ds-${deal.id}-svc-${Date.now()}`, dealId: deal.id, partyId, role: "OPERATIONAL_DEDUCTION", financialAmount: amount != null ? -Math.abs(amount) : undefined, parentStakeholderId });
+    addStake({ id: `ds-${deal.id}-svc-${Date.now()}`, dealId: deal.id, partyId, role: "OPERATIONAL_DEDUCTION", amount: amount != null ? -Math.abs(amount) : undefined, source: "manual", status: "draft", parentStakeholderId });
   };
 
   const handleAddPartner = (partyId: string, amount: number | undefined, chargedToAgentPartyId?: string) => {
     const parentStakeholderId = chargedToAgentPartyId
       ? agentStakes.find((s) => s.partyId === chargedToAgentPartyId)?.id
       : undefined;
-    addStake({ id: `ds-${deal.id}-ptn-${Date.now()}`, dealId: deal.id, partyId, role: "ACQUISITION_DEDUCTION", financialAmount: amount != null ? -Math.abs(amount) : undefined, parentStakeholderId });
+    addStake({ id: `ds-${deal.id}-ptn-${Date.now()}`, dealId: deal.id, partyId, role: "ACQUISITION_DEDUCTION", amount: amount != null ? -Math.abs(amount) : undefined, source: "manual", status: "draft", parentStakeholderId });
   };
 
   const handleAddAgent = (partyId: string, mode: AgentCommissionMode, value: number) => {
-    const isFirst = agentStakes.length === 0;
+    const isFirst = agentStakes.filter((s) => !s.description).length === 0;
     addStake({
       id: `ds-${deal.id}-agt-${Date.now()}`,
       dealId: deal.id,
@@ -518,25 +643,22 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
       role: "AGENT_PAYOUT",
       isPrimary: isFirst,
       splitPercentage: mode === "split" ? value : undefined,
-      financialAmount: mode === "fixed" ? value : undefined,
+      amount: mode === "fixed" ? value : undefined,
+      source: mode === "fixed" ? "manual" : "engine",
+      status: "draft",
     });
   };
 
-  // Get display amount for a stakeholder from the pnl ledger
-  const getLedgerAmount = (partyId: string, bucket: "acquisition-cost" | "operational-cost"): number | undefined => {
-    const entry = pnl?.ledger.find((e) => e.partyId === partyId && e.bucket === bucket);
-    return entry?.amount;
+  const handleEditAgent = (stakeId: string, mode: AgentCommissionMode, value: number) => {
+    const record = sharedDealStakeholders.find((s) => s.id === stakeId);
+    if (record) {
+      record.splitPercentage = mode === "split" ? value : undefined;
+      record.amount = mode === "fixed" ? value : undefined;
+      record.source = mode === "fixed" ? "manual" : "engine";
+    }
+    setEditingStakeId(null);
+    commitChange();
   };
-
-  const getAgentTotalPayout = (partyId: string): number | undefined => {
-    const split = pnl?.splits.find((s) => s.partyId === partyId);
-    if (!split) return undefined;
-    return split.agentPayout + split.connectedAgentPayouts.reduce((s, p) => s + p.amount, 0);
-  };
-
-  if (isMBU && !pnl) {
-    return <p className="text-[13px] text-muted-foreground italic">P&L waterfall not available for mortgage deals.</p>;
-  }
 
   return (
     <div className="max-w-lg">
@@ -561,18 +683,17 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
         <>
           {revStakes.length > 0 && <SectionLabel>Revenue</SectionLabel>}
           {revStakes.map((s) => {
-            const entry = pnl?.ledger.find((e) => e.partyId === s.partyId && e.side === "CREDIT" && !e.id.includes("::net"));
             const hasMultipleForParty = revStakes.filter((r) => r.partyId === s.partyId).length > 1;
             const label = hasMultipleForParty && s.description
               ? `${resolvePartyName(s.partyId)} — ${s.description}`
               : resolvePartyName(s.partyId);
-            const isRebate = (s.financialAmount ?? 0) < 0;
+            const isRebate = (s.amount ?? 0) < 0;
             return (
               <WaterfallRow
                 key={s.id}
                 name={label}
                 identifier={hasMultipleForParty ? undefined : resolvePartyIdentifier(s.partyId)}
-                amount={s.financialAmount != null ? Math.abs(s.financialAmount) : entry?.amount}
+                amount={s.amount != null ? Math.abs(s.amount) : undefined}
                 currency={currency}
                 isCredit={!isRebate}
                 indent
@@ -599,7 +720,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
       )}
 
       {/* ── Gross Revenue ────────────────────────────────────────────────────── */}
-      {pnl && <Anchor label="Gross Revenue" amount={pnl.grossRevenue} currency={currency} />}
+      {grossRevenue > 0 && <Anchor label="Gross Revenue" amount={grossRevenue} currency={currency} />}
 
       {/* ── Acquisition Costs (C) — reduce agent commission pool ───────────── */}
       {(partnerStakes.length > 0 || canEdit) && (
@@ -610,7 +731,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
               key={s.id}
               name={resolvePartyName(s.partyId)}
               identifier={resolvePartyIdentifier(s.partyId)}
-              amount={getLedgerAmount(s.partyId, "acquisition-cost")}
+              amount={s.amount != null ? Math.abs(s.amount) : undefined}
               currency={currency}
               onRemove={canEdit ? () => removeStake(s.id) : undefined}
             />
@@ -634,10 +755,10 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
       )}
 
       {/* ── Commission Base ──────────────────────────────────────────────────── */}
-      {pnl && (
+      {grossRevenue > 0 && (
         <>
           <div className="border-t border-border mt-3 pt-2" />
-          <Anchor label="Net Revenue" amount={pnl.commissionBase} currency={currency} />
+          <Anchor label="Net Revenue" amount={commissionBase} currency={currency} />
         </>
       )}
 
@@ -647,33 +768,39 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
           <SectionLabel>Agent Commissions</SectionLabel>
           {agentStakes.map((s) => {
             const agentId = agentIdForParty(s.partyId);
-            const split = pnl?.splits.find((sp) => sp.partyId === s.partyId);
-            const agentRecord = agentId ? sharedAgents.find((a) => a.id === agentId) : undefined;
-            const isFixed = s.financialAmount != null;
-            const splitLabel = !isFixed && s.splitPercentage != null ? `${s.splitPercentage}% pool` : isFixed ? "fixed" : undefined;
-            const agentOwnPayout = split ? split.agentPayout : (s.financialAmount != null ? Math.abs(s.financialAmount) : undefined);
+            // Connected agent stakes have description (e.g. "Team Lead", "Manager")
+            const isConnected = !!s.description;
+            const isFixed = s.source === "manual";
+            const badge = s.isPrimary ? (s.splitPercentage != null ? `Primary · ${s.splitPercentage}% pool` : "Primary")
+              : isConnected ? s.description!
+              : s.splitPercentage != null ? `${s.splitPercentage}% pool`
+              : isFixed ? "fixed"
+              : undefined;
+            const displayName = resolvePartyName(s.partyId);
+            const isEditing = editingStakeId === s.id;
+            const otherPoolTotal = poolAgents.filter((p) => p.id !== s.id).reduce((sum, p) => sum + (p.splitPercentage ?? 0), 0);
             return (
               <Fragment key={s.id}>
                 <WaterfallRow
-                  name={resolvePartyName(s.partyId)}
+                  name={displayName}
                   identifier={agentId}
-                  amount={agentOwnPayout}
+                  amount={s.amount != null ? Math.abs(s.amount) : undefined}
                   currency={currency}
-                  badge={s.isPrimary ? "Primary" : splitLabel}
+                  badge={badge}
+                  indent={isConnected}
                   onClick={agentId ? () => navigate(`/agents/${agentId}`) : undefined}
                   onRemove={canEdit && !s.isPrimary ? () => removeStake(s.id) : undefined}
+                  onEdit={canEdit && s.isPrimary && !isEditing ? () => setEditingStakeId(s.id) : undefined}
                 />
-                {split && split.connectedAgentPayouts.map((cp) =>
-                  cp.amount > 0 ? (
-                    <WaterfallRow
-                      key={cp.agentId}
-                      name={cp.label}
-                      amount={cp.amount}
-                      currency={currency}
-                      badge={cp.label.slice(0, 3)}
-                      indent
-                    />
-                  ) : null
+                {isEditing && (
+                  <AgentEditForm
+                    currency={currency}
+                    initialMode={isFixed ? "fixed" : "split"}
+                    initialValue={isFixed ? Math.abs(s.amount!) : (s.splitPercentage ?? 100)}
+                    poolRemainder={100 - otherPoolTotal}
+                    onConfirm={(mode, value) => handleEditAgent(s.id, mode, value)}
+                    onCancel={() => setEditingStakeId(null)}
+                  />
                 )}
                 {agentSourcedStakes
                   .filter((d) => d.parentStakeholderId === s.id)
@@ -682,7 +809,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
                       key={d.id}
                       name={resolvePartyName(d.partyId)}
                       identifier={resolvePartyIdentifier(d.partyId)}
-                      amount={Math.abs(d.financialAmount ?? 0)}
+                      amount={Math.abs(d.amount ?? 0)}
                       currency={currency}
                       badge="Agent cost"
                       indent
@@ -724,7 +851,7 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
               key={s.id}
               name={resolvePartyName(s.partyId)}
               identifier={resolvePartyIdentifier(s.partyId)}
-              amount={getLedgerAmount(s.partyId, "operational-cost")}
+              amount={s.amount != null ? Math.abs(s.amount) : undefined}
               currency={currency}
               onRemove={canEdit ? () => removeStake(s.id) : undefined}
             />
@@ -748,27 +875,21 @@ export function PnLWaterfall({ deal, currency, pnl, canEdit, onChanged }: Props)
       )}
 
       {/* ── Huspy Margin ─────────────────────────────────────────────────────── */}
-      {pnl && (
+      {hasAmounts && (
         <>
           <div className="border-t border-border mt-3 pt-2" />
           <div className="flex items-center justify-between py-2">
             <span className="text-[13px] font-semibold text-foreground">Huspy Margin</span>
             <div className="flex items-center gap-2">
-              {pnl.grossRevenue > 0 && (
+              {grossRevenue > 0 && (
                 <span className="text-[11px] text-muted-foreground tabular-nums">
-                  ({((pnl.huspyMargin / pnl.grossRevenue) * 100).toFixed(1)}%)
+                  ({((huspyMargin / grossRevenue) * 100).toFixed(1)}%)
                 </span>
               )}
-              <span className="text-[14px] font-bold text-emerald-600 tabular-nums">{fmt(pnl.huspyMargin, currency)}</span>
+              <span className="text-[14px] font-bold text-emerald-600 tabular-nums">{fmt(huspyMargin, currency)}</span>
             </div>
           </div>
         </>
-      )}
-
-      {!pnl && (
-        <p className="text-[12px] text-muted-foreground/60 italic mt-3">
-          Add a primary agent with a commission strategy to see P&L projections.
-        </p>
       )}
     </div>
   );

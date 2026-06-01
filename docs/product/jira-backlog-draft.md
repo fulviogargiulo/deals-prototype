@@ -1,6 +1,8 @@
 # Jira Backlog — Draft (FP project)
 
-> Draft of initial Jira tickets for the Finance Product (FP) board, to be created once the spec stabilises after Monday's sync with Gio and the Spain REBU MVP scope is locked with Gabriel. **Don't bulk-create yet.**
+> Two tiers of tickets:
+> - **§2 + §3** — Phase 1 build epics and open questions. Build epics are **blocked** until engineers are hired; open questions are PO-side work feeding the Discovery epic in §4.
+> - **§4** — *Active work during the hiring gap*. Discovery, hiring, alignment, decisions. These have closeable weekly outcomes so leadership sees velocity even while the build is blocked.
 >
 > Target board: [FP board 2391](https://huspy.atlassian.net/jira/software/projects/FP/boards/2391)
 
@@ -70,6 +72,8 @@ Pure technical tasks (no user-facing change) skip the "As a..." line and use a p
 ---
 
 # 2. Phase 1 Epics — Spain REBU MVP
+
+> **Status: Blocked — Awaiting Engineering.** These epics exist so Phase 1 scope is visible on the board, but no tickets get worked until engineers are hired and §4.1 (MVP scope lock) closes.
 
 8 epics. One per major workstream, mapped to the [Spain REBU MVP scope table](spain-rebu-mvp.md#1-scope). Quarter tag is provisional (`Q3'26`) — adjust once engineering kick-off date is confirmed.
 
@@ -168,6 +172,8 @@ Pure technical tasks (no user-facing change) skip the "As a..." line and use a p
 ---
 
 # 3. Tasks — Open Questions
+
+> Parent epic: [§4.1 Pre-engineering readiness](#41-q326-pre-engineering-readiness). Labelled `[Discovery][Spain REBU]` when created.
 
 Each row of [spain-rebu-mvp.md §2](spain-rebu-mvp.md) is a real action item with an owner. Create as `Task` (not `Story` — there's no user-facing change yet). One ticket per question; close when the answer is captured in the MVP page.
 
@@ -284,9 +290,48 @@ Suggested title prefix: `[Q&A][Spain REBU]`.
 
 ---
 
-# 4. What to add later (not now)
+# 4. Active during the hiring gap
 
-- **Stories** under each epic — only once spec is locked and engineers are ~2 weeks from picking them up. Doing it sooner means rewriting them.
+One epic, with child tasks grouped by label. All children have closeable outcomes so the board reflects weekly velocity while §2 is blocked.
+
+## 4.1 `[Q3'26] Pre-engineering readiness`
+
+**Epic Goal:** Two outcomes, both prerequisites for engineering kick-off:
+
+1. **Multi-BU, multi-country architecture validated** through ops observation and stakeholder sign-off — the data model and accounting engine demonstrably survive every BU and market in scope.
+2. **Spain REBU MVP build-ready** — scope locked, key decisions made, FE contribution paths agreed — so day one of engineering is "build", not "scope".
+
+**Problem Statement:** Both outcomes are PO-side work that doesn't require engineers. Without them, engineers arrive to an unvalidated architecture and an unscoped MVP, and burn the first month re-doing discovery. The hiring window is when this work is cheapest to do.
+
+**Solution Overview:** [intro.md §4](intro.md) · [spain-rebu-mvp.md](spain-rebu-mvp.md) · [pnl-engines.md](pnl-engines.md) · [domain-model.md](domain-model.md)
+
+**Child tasks, grouped by label:**
+
+| Label | Tasks | Maps to outcome |
+| --- | --- | --- |
+| `[Discovery][Multi-BU]` | Shadow Mortgage MA broker — 1-2 days · Capture non-deal event types (training fees, bonuses, manual adjustments) · Walk full architecture against MBU edge cases | 1 |
+| `[Discovery][Spain REBU]` | Shadow Spain REBU ops — 3 days on-site · Baseline metrics from Finance (invoice mismatches/month, ops follow-ups/deal, deal-to-payment time) · The 8 Q&A tasks in [§3](#3-tasks--open-questions) | 2 |
+| `[Decision]` | Visibility scope — pre-invoice accrual vs post-invoice status (with Marc) · Finance director sign-off on shadow-mode against Xero · Karvel FE lead — PR contribution path agreed · Agent App FE lead (Opportunities team) — PR contribution path agreed | Both |
+| `[Doc]` | Decision log skeleton + first 5 entries (build-vs-buy, subledger non-optional, scope discipline, blueprint-as-data, shadow-mode) · MBU non-deal event types appended to [pnl-engines.md](pnl-engines.md) | Both |
+
+**Off-board:** Engineering hiring is tracked outside FP with HR / engineering leadership. PO contribution to hiring (tech screen briefs, interview loops) is captured there, not on this board.
+
+---
+
+# 5. WIP discipline
+
+Rules that keep the board honest, not theatrical:
+
+- **WIP cap: 5-7 open tickets** across all categories (Discovery + Hiring + Alignment + open questions). More than that and the board stops reflecting reality.
+- **Closeable outcomes only.** Every ticket has a defined "done" state — a doc appended, a decision recorded, a meeting held with output. "Ongoing X" is not a ticket; if the work is ongoing, it's an Epic, and the closeable pieces are its children.
+- **No backfill.** Don't create retroactive tickets for work already done. Start from today.
+- **Promote when ready.** When a §2 build epic unblocks (engineers hired, scope locked), update its status from Blocked to Open and decompose into stories. Until then, leave it.
+
+---
+
+# 6. What to add later (not now)
+
+- **Stories** under each build epic — only once spec is locked and engineers are ~2 weeks from picking them up. Doing it sooner means rewriting them.
 - **Platform / engineering enabler tasks** — seed data scripts, CI setup, DB schema migrations — let the tech lead break these out when they onboard.
 - **Bugs** — none yet; the prototype is not production.
 - **Sub-tasks** — engineering's tool, not yours. Skip.

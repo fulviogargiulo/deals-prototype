@@ -224,7 +224,7 @@ export interface Task {
   updatedAt: string;
 }
 
-export type DocumentType = "contract" | "id" | "financial" | "property" | "legal" | "other";
+export type DocumentType = "contract" | "id" | "financial" | "property" | "legal" | "invoice" | "other";
 
 export interface Document {
   id: string;
@@ -234,6 +234,9 @@ export interface Document {
   mimeType: string;
   clientId?: string;
   opportunityId?: string;
+  dealId?: string;
+  /** Set when type === "invoice". Live link to the Invoice for status/badge display. */
+  invoiceId?: string;
   uploadedBy: string;
   createdAt: string;
   updatedAt: string;
@@ -378,7 +381,7 @@ export interface Deal {
   netHuspyRevenue?: number;
 
   // Lean waterfall — set by the new Deal creation flow.
-  /** Gross commission Huspy charges. For multi-payer deals, equals Σ DealStakeholder.financialAmount where > 0. */
+  /** Gross commission Huspy charges. For multi-payer deals, equals Σ DealStakeholder.amount where > 0. */
   grossRevenue?: number;
   /** Blueprint id the engine used for the most recent projection. */
   blueprintId?: string;
@@ -537,7 +540,17 @@ export interface Blueprint {
 
 // ============================================================
 // DealStakeholder — links a Party to a Deal with a specific role.
-// Replaces the agentId/clientId FKs that were embedded on Deal.
+//
+// Lifecycle:
+//   status === "draft"     — working copy. For rate-based AGENT_PAYOUT stakes (source === "engine"),
+//                            the P&L re-runs the engine live; amount is the last saved engine estimate.
+//                            For declared amounts (source === "manual"), amount is used as-is.
+//   status === "confirmed" — locked when the deal transitions to invoicing. amount is the
+//                            authoritative value; engine uses it directly without recomputing.
+//                            Who confirmed and when is on deal.statusHistory (to === "invoicing").
+//
+// Override detection: source === "manual" on a rate-based AGENT_PAYOUT stake means ops set a
+// fixed amount instead of using the engine. Full change history is in DealStakeholderAudit.
 // ============================================================
 export interface DealStakeholder {
   id: string;
@@ -545,22 +558,45 @@ export interface DealStakeholder {
   partyId: string;
   role: StakeholderType;
   isPrimary?: boolean;
-  /** Agent's share of the commission pool (0–100). Only meaningful on AGENT_PAYOUT roles.
-   *  Waterfall allocates commissionBase × (splitPercentage / 100) to this agent before applying AgentStrategy. */
+  /** Agent's share of the commission pool (0–100). Only meaningful on rate-based AGENT_PAYOUT roles. */
   splitPercentage?: number;
-  /** Signed financial impact on the deal P&L.
-   *  Positive → party pays Huspy (REVENUE_SOURCE) or receives a fixed payout (AGENT_PAYOUT).
-   *  Negative → rebate to client (REVENUE_SOURCE) or cost Huspy pays (ACQUISITION_DEDUCTION / OPERATIONAL_DEDUCTION).
-   *  When set on AGENT_PAYOUT, the waterfall uses this amount directly instead of applying an AgentStrategy. */
-  financialAmount?: number;
-  /** Human-readable label for this line (e.g. "Commission", "Conveyance Fee").
-   *  Used to distinguish multiple REVENUE_SOURCE entries on the same party and as invoice line item description. */
+  /** The financial amount for this stake.
+   *  Positive → party pays Huspy (REVENUE_SOURCE) or receives a payout (AGENT_PAYOUT).
+   *  Negative → cost Huspy pays (ACQUISITION_DEDUCTION / OPERATIONAL_DEDUCTION).
+   *  - source === "manual": ops-declared value; engine uses it directly.
+   *  - source === "engine" + status === "confirmed": locked engine output; engine uses it directly.
+   *  - source === "engine" + status === "draft": last saved engine estimate; engine recomputes live. */
+  amount?: number;
+  /** Who wrote the current amount value.
+   *  "engine" — written by the P&L engine (at deal creation or save-for-approval).
+   *  "manual" — explicitly entered by ops (overrides the engine for this stake). */
+  source?: "engine" | "manual";
+  /** draft = editable; confirmed = locked at the invoicing transition. */
+  status?: "draft" | "confirmed";
+  /** Human-readable label for this line (e.g. "Team Lead", "Conveyance Fee"). */
   description?: string;
-  /** Links a cost stake (ACQUISITION_DEDUCTION or OPERATIONAL_DEDUCTION) to a parent
-   *  AGENT_PAYOUT stake. When set, the cost is deducted from the parent agent's
-   *  commission pool rather than from Huspy's gross revenue. TL/Mgr rates apply to
-   *  the agent's net (after all child costs are removed). */
+  /** Links an ACQUISITION_DEDUCTION or OPERATIONAL_DEDUCTION stake to a parent AGENT_PAYOUT stake.
+   *  When set, the cost is deducted from the parent agent's pool rather than from Huspy's gross revenue. */
   parentStakeholderId?: string;
+}
+
+// ============================================================
+// DealStakeholderAudit — append-only record of every mutation
+// to a draft DealStakeholder. Written before each change.
+// No records are written after status === "confirmed".
+// ============================================================
+export interface DealStakeholderAudit {
+  id: string;
+  stakeId: string;
+  dealId: string;
+  field: string;
+  oldValue: string | number | null;
+  oldSource?: "engine" | "manual";
+  newValue: string | number | null;
+  newSource?: "engine" | "manual";
+  changedBy: string;
+  changedAt: string;
+  reason?: string;
 }
 
 // ============================================================

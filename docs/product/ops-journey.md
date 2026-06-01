@@ -21,7 +21,7 @@ Deals and Payments product aim to add to Karvel four main tabs under the Deal se
 Deals always start in **Under Review**. There are currently two creation paths, with a third planned:
 
 * **Manual** — Ops clicks "Add Deal" in the Deals tab and fills in the form.
-* **Bulk CSV upload** — Ops uploads a CSV to create multiple deals at once. A template is provided  
+* **Bulk CSV upload** — Ops uploads a CSV to create multiple deals at once. A template is provided
 * **Offer entity (planned)** — An offer submission flow is being built for REBU agents. When an agent's offer is accepted, a deal will be created automatically without Ops having to enter it manually.
 
 From Under Review, Ops has two paths:
@@ -47,11 +47,11 @@ Each row shows: Deal ID, status, BU, country, market, gross revenue, net revenue
 
 ### Status Transitions
 
-The deal status is changed via a dropdown in the deal detail header. Every status change is timestamped and recorded in the deal's history. Check the deal state machine [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911) for more details
+The deal status is changed via a dropdown in the deal detail header. Every status change is timestamped and recorded in the deal's history. Check the deal state machine [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911) for more details.
 
 ### Stakeholders Panel
 
-Stakeholders are the parties involved in the commission waterfall. This panel is **editable only when the deal is in Under Review or Pending Details**. Once the deal advances, it locks. User can add all these stakeholder types and whether they are paid from huspy's or agent's pockets. 
+Stakeholders are the parties involved in the commission waterfall. This panel is **editable only when the deal is in Under Review or Pending Details**. Once the deal advances, it locks. User can add all these stakeholder types and whether they are paid from huspy's or agent's pockets.
 
 | Stakeholder type | Role |
 | --- | --- |
@@ -101,7 +101,7 @@ A threaded comment panel connects Ops and the agent. Ops can write at any status
 
 # 5. The Invoices Tab
 
-Centralized view of all invoices across deals. Filter the table by any header: invoice ID, direction, party, deal, amount, status, issue date, or due date
+Centralized view of all invoices across deals. Filter the table by any header: invoice ID, direction, party, deal, amount, status, issue date, or due date.
 
 ## 5.1. Inside an Invoice — What Ops Does
 
@@ -174,7 +174,7 @@ Once a ledger is clicked, a paginated, searchable table of every posting ever cr
 
 Clicking a row expands the full posting. All [posting and its postinglines metadata](https://huspy.atlassian.net/wiki/spaces/corp/pages/2432073741) is shown here.
 
-# 7. **Deal Configuration Tab**
+# 7. Deal Configuration Tab
 
 Global configuration that drives how deals behave across all markets and business units. Changes here affect all new deals going forward — nothing here is per-deal. The tab is split into sub-tabs; more will be added as the system expands.
 
@@ -188,9 +188,9 @@ The matrix is organized by **Business Unit** (REBU / Mortgage) × **Market** (Pr
 
 | Value | Meaning |
 | --- | --- |
-| **Required**  | Mandatory — deal cannot advance to Pending Agent Approval without this document  |
-| **Optional**  | Shown on the deal but can be waived by Ops  |
-| **Off**  | Not shown on deals for this market/country combination  |
+| **Required** | Mandatory — deal cannot advance to Pending Agent Approval without this document |
+| **Optional** | Shown on the deal but can be waived by Ops |
+| **Off** | Not shown on deals for this market/country combination |
 
 Additional actions per document:
 
@@ -209,15 +209,15 @@ Configures the monthly broker commission rates for the **MBU MA/Broker channel**
 **How it works:**
 
 * Rates are expressed as a **percentage of the disbursed mortgage amount**
-* The applicable tier is determined by the broker's **total monthly disbursed GMV across all banks** 
+* The applicable tier is determined by the broker's **total monthly disbursed GMV across all banks**
 * Each tier defines a per-bank rate; different banks pay different percentages
 * A new slab set is created each **reporting month** — historical months are read-only
 
-The User can upload a csv to edit/add new months. This will impact newly created deals.  
+The User can upload a csv to edit/add new months. This will impact newly created deals.
 
 # 8. Agent Management
 
-The Agents section has a searchable, filterable list of all agents. In relation to Deals and Payments product, 3 new tabs will be added
+The Agents section has a searchable, filterable list of all agents. In relation to Deals and Payments product, 3 new tabs will be added:
 
 | Tab | What it contains |
 | --- | --- |

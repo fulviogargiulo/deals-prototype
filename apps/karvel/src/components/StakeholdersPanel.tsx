@@ -67,7 +67,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
 
   // Phase 2: financial fields (after party selected)
   const [selectedParty, setSelectedParty] = useState<{ id: string; name: string } | null>(null);
-  const [financialAmountStr, setFinancialAmountStr] = useState("");
+  const [amountStr, setFinancialAmountStr] = useState("");
   const [splitPctStr, setSplitPctStr] = useState("100");
   const [newPartyMode, setNewPartyMode] = useState(false);
   const [newParty, setNewParty] = useState({ displayName: "", legalType: "individual", taxId: "" });
@@ -154,7 +154,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
 
   const confirmAdd = () => {
     if (!selectedParty) return;
-    const financialAmount = parseFloat(financialAmountStr) || undefined;
+    const amount = parseFloat(amountStr) || undefined;
     const splitPercentage = isAgentRole ? (parseInt(splitPctStr) || 100) : undefined;
 
     const stake: DealStakeholder = {
@@ -164,9 +164,9 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
       role,
       isPrimary: isAgentRole && stakes.filter((s) => s.role === "AGENT_PAYOUT").length === 0,
       splitPercentage,
-      financialAmount: isCostRole && financialAmount != null
-        ? -Math.abs(financialAmount)  // entered positive, stored negative
-        : isPayerRole ? financialAmount
+      amount: isCostRole && amount != null
+        ? -Math.abs(amount)  // entered positive, stored negative
+        : isPayerRole ? amount
         : undefined,
     };
     sharedDealStakeholders.push(stake);
@@ -213,10 +213,10 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
         let cut: number | undefined;
         if (agentSplit != null) {
           cut = -agentSplit.agentPayout;
-        } else if (s.financialAmount != null) {
-          cut = s.financialAmount;
+        } else if (s.amount != null) {
+          cut = s.amount;
         } else {
-          // Derive from pnl ledger (engine may have inferred financialAmount for this party)
+          // Derive from pnl ledger (engine may have inferred amount for this party)
           const ledgerCredit = pnl?.ledger.find((e) => e.partyId === s.partyId && e.side === "CREDIT" && !e.id.includes("::net"));
           const ledgerDebit = pnl?.ledger.find((e) => e.partyId === s.partyId && e.side === "DEBIT");
           if (ledgerCredit) cut = ledgerCredit.amount;
@@ -406,7 +406,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
                       type="number"
                       min={0}
                       placeholder="e.g. 18 000"
-                      value={financialAmountStr}
+                      value={amountStr}
                       onChange={(e) => setFinancialAmountStr(e.target.value)}
                       className="w-36 px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                     />
@@ -425,7 +425,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
                       type="number"
                       min={0}
                       placeholder="e.g. 1 200"
-                      value={financialAmountStr}
+                      value={amountStr}
                       onChange={(e) => setFinancialAmountStr(e.target.value)}
                       className="w-36 px-2 py-1 border border-border rounded text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                     />

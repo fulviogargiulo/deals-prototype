@@ -549,6 +549,8 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
         role: "AGENT_PAYOUT",
         isPrimary: i === 0,
         splitPercentage: p.splitPct,
+        source: "engine",
+        status: "draft",
       });
     });
 
@@ -559,8 +561,10 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
         dealId: id,
         partyId: line.partyId,
         role: "REVENUE_SOURCE",
-        financialAmount: line.amount,
+        amount: line.amount,
         description: line.description,
+        source: "manual",
+        status: "draft",
       });
     });
 
@@ -571,9 +575,11 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
         dealId: id,
         partyId: a.partyId,
         role: "ACQUISITION_DEDUCTION",
-        financialAmount: -Math.abs(a.amount),
+        amount: -Math.abs(a.amount),
         description: "Acquisition Cost",
         parentStakeholderId: a.parentPartyId ? agentStakeIdByPartyId[a.parentPartyId] : undefined,
+        source: "manual",
+        status: "draft",
       });
     });
 
@@ -584,9 +590,11 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
         dealId: id,
         partyId: o.partyId,
         role: "OPERATIONAL_DEDUCTION",
-        financialAmount: -Math.abs(o.amount),
+        amount: -Math.abs(o.amount),
         description: "Service Cost",
         parentStakeholderId: o.parentPartyId ? agentStakeIdByPartyId[o.parentPartyId] : undefined,
+        source: "manual",
+        status: "draft",
       });
     });
 

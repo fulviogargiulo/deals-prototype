@@ -41,6 +41,7 @@ interface Props {
   deal: Deal;
   status: DealStatus;
   pnlPendingApproval: boolean;
+  pnlHasChanges: boolean;
   docs: DealDocumentRequirement[];
   clientName: string;
   amountLabel: string;
@@ -54,6 +55,7 @@ export function DealHeader(props: Props) {
     deal,
     status,
     pnlPendingApproval,
+    pnlHasChanges,
     docs,
     clientName,
     amountLabel,
@@ -63,7 +65,7 @@ export function DealHeader(props: Props) {
   } = props;
 
   const navigate = useNavigate();
-  const readiness = computeDealReadiness({ deal, status, docs, pnlPendingApproval });
+  const readiness = computeDealReadiness({ deal, status, docs, pnlPendingApproval, pnlHasChanges });
   const [cancelOpen, setCancelOpen] = useState(false);
 
   const canCancel = status !== "finalized" && status !== "canceled";

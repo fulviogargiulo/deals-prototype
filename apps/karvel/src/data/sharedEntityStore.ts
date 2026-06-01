@@ -6,6 +6,7 @@ import {
   sharedPostings,
   sharedPostingLines,
   sharedInvoices,
+  sharedDocuments,
 } from "@huspy/shared-domain";
 
 // Version prefix — bump when fixture shape changes to avoid stale-cache bugs.
@@ -19,6 +20,7 @@ const KEYS = {
   postings:        `${V}-postings`,
   postingLines:    `${V}-posting-lines`,
   invoices:        `${V}-invoices`,
+  documents:       `${V}-documents`,
 };
 
 function hydrate<T>(arr: T[], key: string): void {
@@ -64,6 +66,7 @@ export function initSharedEntityStore(): void {
     [sharedPostings,                 KEYS.postings],
     [sharedPostingLines,             KEYS.postingLines],
     [sharedInvoices,                 KEYS.invoices],
+    [sharedDocuments,                KEYS.documents],
   ];
   for (const [arr, key] of entries) {
     hydrate(arr, key);

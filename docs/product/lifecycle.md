@@ -55,7 +55,7 @@ Ops has locked the commission terms. The agent must review and explicitly confir
 
 ### Stage 4 — Invoicing → `invoicing`
 
-Finance takes over. The deal is now locked — stakeholders cannot be changed. The focus is collecting the commission from the receivable parties and paying the involved external parties (not agent) if there are.
+Finance takes over. The deal is now locked, stakeholders cannot be changed. The focus is collecting the commission from the receivable parties and paying the involved external parties (not agent) if there are.
 
 * Invoices are **automatically created in Draft** when the deal reaches Invoicing. Finance validates the amounts and issues it to the relevant party (developer, bank, buyer, tenant …).
 * **Finance**: Matches the incoming/outgoing bank transfer to the invoice, optionally uploads proof of payment, and marks the invoice as **Paid**.
@@ -68,12 +68,20 @@ Finance takes over. The deal is now locked — stakeholders cannot be changed. T
 | `paid` | Payment received and confirmed with a payment reference number. |
 | `cancelled` | Voided. A written cancellation reason is always required. |
 
+Parties with subledgers (agents/brokers appearing as cost parties) skip invoice creation entirely and are settled via commission accrual posting.
+
+**Xero integration**
+
+Once an invoice is ISSUED in our system, we should create it in Xero as well. Same for PAID status in Xero, we should pull this information. Further info in [Xero integration](https://huspy.atlassian.net/wiki/spaces/corp/pages/2445574152).
+
 ### Stage 5 — Deal Closed → `finalized`
 
 Triggered automatically when the last outbound invoice is marked Paid. Terminal — no further edits are possible.
 
 * Agent's commissions accounting entries are created: the agent's commission liability is credited to their individual subledger (Huspy now owes them money).
 * **Agent**: Sees the deal appear in their earnings statement as a new ledger entry.
+
+For MBU, agents/broker liability recognition happens when deal moves to the invoicing stage.
 
 ### Stage 6 — Agent Payout (separate cycle)
 
@@ -117,7 +125,7 @@ Worked example: Spain REBU deal, property sold for **€100,000**, Huspy commiss
 | Cash collected from buyer (incl. IVA) | +€3,630 |
 | IVA remitted to tax authority | −€630 |
 | Cash paid to agent (net of IRPF) | −€1,224  |
-| IVA deduction to tax authority | +€228 |
+| IVA deduction to tax authority | +€252 |
 | IRPF remitted to tax authority | -€228 |
 | **Net cash retained by Huspy** | **+€1,800** |
 

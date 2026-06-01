@@ -3,7 +3,7 @@ import { useState, useRef, useMemo } from "react";
 import { sharedInvoices, sharedParties, sharedDeals, sharedLedgers, sharedPostings, sharedPostingLines, getPostingLinesForInvoice } from "@huspy/shared-domain";
 import type { Invoice } from "@huspy/shared-domain";
 import { saveSharedInvoices } from "@/data/sharedEntityStore";
-import { createPaidPosting, autoFinalizeDealIfComplete } from "@/lib/invoiceActions";
+import { createPaidPosting, autoFinalizeDealIfComplete, attachInvoiceDocumentToDeal } from "@/lib/invoiceActions";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { ArrowLeft, Upload, X, AlertTriangle, Check, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -266,6 +266,7 @@ export default function InvoiceDetail() {
     invoice.updatedAt = new Date().toISOString();
     saveSharedInvoices();
     createIssuedPosting(invoice);
+    attachInvoiceDocumentToDeal(invoice);
     setPostingsVersion((v) => v + 1);
     setIsSaving(false);
   };
