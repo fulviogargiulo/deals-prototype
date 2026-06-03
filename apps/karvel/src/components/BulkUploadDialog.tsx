@@ -113,9 +113,6 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
 
   const primaryAgentRow = rows.find(r => r.stakeRole === "AGENT_PAYOUT");
   const primaryDemandRow = rows.find(r => r.stakeRole === "DEMAND");
-  const agentName = primaryAgentRow ? (sharedParties.find(p => p.id === primaryAgentRow.partyId)?.displayName ?? "") : "";
-  const clientName = primaryDemandRow ? (sharedParties.find(p => p.id === primaryDemandRow.partyId)?.displayName ?? undefined) : undefined;
-
   const deal: Deal = {
     id: offerId,
     status: "under-review",
@@ -132,9 +129,6 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
     reportDate: header.reportDate || new Date().toISOString().split("T")[0],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    agentName,
-    clientName,
-    ofCaseNumber: `CASE-${String(Date.now()).slice(-6)}`,
     statusHistory: [{ from: "pending-details", to: "under-review", timestamp: new Date().toISOString() } as StatusHistoryEntry],
     agents: [],
     externalPartners: [],

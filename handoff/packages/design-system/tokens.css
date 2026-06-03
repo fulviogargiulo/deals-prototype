@@ -1,0 +1,535 @@
+/* =========================================================================
+   Huspy Design System — Tokens (Web)
+   Source of truth: tokens/*.json (Figma design tokens) — web variants only
+   This file is a faithful CSS emission of those JSON files; do not introduce
+   values that do not exist in the source tokens.
+   ========================================================================= */
+
+@font-face { font-family: "Figtree"; font-style: normal; font-weight: 300; font-display: swap; src: url("fonts/Figtree-Light.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: italic;  font-weight: 300; font-display: swap; src: url("fonts/Figtree-LightItalic.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/Figtree-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: italic;  font-weight: 400; font-display: swap; src: url("fonts/Figtree-Italic.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: normal; font-weight: 500; font-display: swap; src: url("fonts/Figtree-Medium.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: italic;  font-weight: 500; font-display: swap; src: url("fonts/Figtree-MediumItalic.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: normal; font-weight: 600; font-display: swap; src: url("fonts/Figtree-SemiBold.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: italic;  font-weight: 600; font-display: swap; src: url("fonts/Figtree-SemiBoldItalic.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/Figtree-Bold.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: italic;  font-weight: 700; font-display: swap; src: url("fonts/Figtree-BoldItalic.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: normal; font-weight: 800; font-display: swap; src: url("fonts/Figtree-ExtraBold.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: italic;  font-weight: 800; font-display: swap; src: url("fonts/Figtree-ExtraBoldItalic.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: normal; font-weight: 900; font-display: swap; src: url("fonts/Figtree-Black.ttf") format("truetype"); }
+@font-face { font-family: "Figtree"; font-style: italic;  font-weight: 900; font-display: swap; src: url("fonts/Figtree-BlackItalic.ttf") format("truetype"); }
+
+:root {
+  /* ========================================================================
+     PRIMITIVES — color.primitives.json
+     ======================================================================== */
+
+  /* grey */
+  --grey-0:    #FFFFFF;
+  --grey-20:   #FAFAFA;
+  --grey-45:   #F4F4F4;
+  --grey-50:   #F2F2F2;
+  --grey-60:   #F0F0F0;
+  --grey-100:  #E4E4E4;
+  --grey-150:  #D9D9D9;
+  --grey-200:  #CCCCCC;
+  --grey-300:  #B2B2B2;
+  --grey-350:  #A6A6A6;
+  --grey-400:  #999999;
+  --grey-500:  #808080;
+  --grey-600:  #666666;
+  --grey-700:  #4D4D4D;
+  --grey-800:  #333333;
+  --grey-900:  #1A1A1A;
+  --grey-1000: #000000;
+
+  /* green */
+  --green-100: #E7F7F3;
+  --green-160: #D9F3EC;
+  --green-200: #CFEFE7;
+  --green-300: #9FE0D0;
+  --green-400: #70D0B8;
+  --green-500: #40C1A1;
+  --green-600: #10B189;
+  --green-700: #0D8E6E;
+  --green-800: #0A6A52;
+  --green-850: #085945;
+  --green-900: #064737;
+
+  /* indigo */
+  --indigo-100: #EEEEFE;
+  --indigo-160: #E4E4FD;
+  --indigo-200: #DEDEFD;
+  --indigo-300: #BDBDFB;
+  --indigo-400: #9B9BF8;
+  --indigo-500: #7A7AF6;
+  --indigo-600: #5959F4;
+  --indigo-700: #4747C3;
+  --indigo-800: #353592;
+  --indigo-850: #2D2D7A;
+  --indigo-900: #242462;
+
+  /* olive */
+  --olive-100: #F3F6F1;
+  --olive-160: #EDF1E9;
+  --olive-200: #E8EEE3;
+  --olive-300: #D1DCC8;
+  --olive-400: #BACBAC;
+  --olive-500: #A3B991;
+  --olive-600: #8CA875;
+  --olive-700: #70865E;
+  --olive-800: #546546;
+  --olive-850: #46543B;
+  --olive-900: #38432F;
+
+  /* orange */
+  --orange-100: #FDF5E8;
+  --orange-160: #FCEFDA;
+  --orange-200: #FBEBD1;
+  --orange-300: #F8D6A2;
+  --orange-400: #F4C274;
+  --orange-500: #F1AD45;
+  --orange-600: #ED9917;
+  --orange-700: #BE7A12;
+  --orange-800: #8E5C0E;
+  --orange-850: #774D0C;
+  --orange-900: #5F3D09;
+
+  /* orchid */
+  --orchid-100: #FAEEF9;
+  --orchid-160: #F7E3F5;
+  --orchid-200: #F5DCF3;
+  --orchid-300: #EBBAE7;
+  --orchid-400: #E197DB;
+  --orchid-500: #D775CF;
+  --orchid-600: #CD52C3;
+  --orchid-700: #A4429C;
+  --orchid-800: #7B3175;
+  --orchid-850: #672962;
+  --orchid-900: #52214E;
+
+  /* red */
+  --red-100: #FEECEF;
+  --red-160: #FEE1E5;
+  --red-200: #FDDADF;
+  --red-300: #FBB4BE;
+  --red-400: #FA8F9D;
+  --red-500: #F8697D;
+  --red-600: #F6445C;
+  --red-700: #C5364A;
+  --red-800: #942937;
+  --red-850: #7B222E;
+  --red-900: #621B25;
+
+  /* teal */
+  --teal-100: #E5F3F4;
+  --teal-160: #D6ECEE;
+  --teal-200: #CCE7EA;
+  --teal-300: #99CFD4;
+  --teal-400: #66B8BF;
+  --teal-500: #33A0A9;
+  --teal-600: #008894;
+  --teal-700: #006D76;
+  --teal-800: #005259;
+  --teal-850: #00444A;
+  --teal-900: #00363B;
+
+  /* terracota */
+  --terracota-100: #FBF0EB;
+  --terracota-160: #F9E7DF;
+  --terracota-200: #F8E0D7;
+  --terracota-300: #F1C2AF;
+  --terracota-400: #E9A388;
+  --terracota-500: #E28560;
+  --terracota-600: #DB6638;
+  --terracota-700: #AF522D;
+  --terracota-800: #833D22;
+  --terracota-850: #6E331C;
+  --terracota-900: #582916;
+
+  /* blue */
+  --blue-100: #E6F0FF;
+  --blue-160: #D8E7FF;
+  --blue-200: #CEE2FF;
+  --blue-300: #9DC4FF;
+  --blue-400: #6CA7FF;
+  --blue-500: #3B89FF;
+  --blue-600: #0A6CFF;
+  --blue-700: #0856CC;
+  --blue-800: #064199;
+  --blue-850: #053680;
+  --blue-900: #042B66;
+
+  /* alpha */
+  --alpha-white-8:  rgba(255,255,255,0.08);
+  --alpha-white-16: rgba(255,255,255,0.16);
+  --alpha-white-24: rgba(255,255,255,0.24);
+  --alpha-white-32: rgba(255,255,255,0.32);
+  --alpha-white-40: rgba(255,255,255,0.40);
+  --alpha-white-64: rgba(255,255,255,0.64);
+  --alpha-teal-16:      rgba(0,136,148,0.16);
+  --alpha-terracota-16: rgba(219,102,56,0.16);
+  --alpha-indigo-16:    rgba(89,89,244,0.16);
+  --alpha-orchid-16:    rgba(205,82,195,0.16);
+  --alpha-olive-16:     rgba(140,168,117,0.16);
+  --alpha-green-16:     rgba(16,177,137,0.16);
+  --alpha-green-40:     rgba(16,177,137,0.40);
+  --alpha-red-16:       rgba(246,68,92,0.16);
+  --alpha-orange-16:    rgba(237,153,23,0.16);
+  --alpha-blue-16:      rgba(10,108,255,0.16);
+  --alpha-black-40:     rgba(0,0,0,0.40);
+  --alpha-black-64:     rgba(0,0,0,0.64);
+
+  /* ========================================================================
+     PRIMITIVES — opacity / radius / spacing / sizing / stroke / typography
+     ======================================================================== */
+
+  /* opacity */
+  --opacity-0:    0;
+  --opacity-4:    0.04;
+  --opacity-8:    0.08;
+  --opacity-12:   0.12;
+  --opacity-16:   0.16;
+  --opacity-24:   0.24;
+  --opacity-32:   0.32;
+  --opacity-40:   0.40;
+  --opacity-48:   0.48;
+  --opacity-64:   0.64;
+  --opacity-80:   0.80;
+  --opacity-100:  1;
+
+  /* radius */
+  --radius-0:    0px;
+  --radius-2:    2px;
+  --radius-4:    4px;
+  --radius-8:    8px;
+  --radius-12:   12px;
+  --radius-16:   16px;
+  --radius-20:   20px;
+  --radius-24:   24px;
+  --radius-32:   32px;
+  --radius-40:   40px;
+  --radius-48:   48px;
+  --radius-full: 9999px;
+
+  /* spacing */
+  --spacing-0:   0px;
+  --spacing-2:   2px;
+  --spacing-4:   4px;
+  --spacing-8:   8px;
+  --spacing-12:  12px;
+  --spacing-16:  16px;
+  --spacing-20:  20px;
+  --spacing-24:  24px;
+  --spacing-32:  32px;
+  --spacing-40:  40px;
+  --spacing-48:  48px;
+  --spacing-56:  56px;
+  --spacing-64:  64px;
+  --spacing-80:  80px;
+  --spacing-96:  96px;
+  --spacing-128: 128px;
+
+  /* sizing */
+  --size-0:   0px;
+  --size-4:   4px;
+  --size-8:   8px;
+  --size-12:  12px;
+  --size-16:  16px;
+  --size-20:  20px;
+  --size-24:  24px;
+  --size-28:  28px;
+  --size-32:  32px;
+  --size-36:  36px;
+  --size-40:  40px;
+  --size-44:  44px;
+  --size-48:  48px;
+  --size-56:  56px;
+  --size-64:  64px;
+  --size-72:  72px;
+  --size-80:  80px;
+  --size-96:  96px;
+  --size-120: 120px;
+  --size-160: 160px;
+
+  /* stroke (border width) */
+  --width-0: 0px;
+  --width-1: 1px;
+  --width-2: 2px;
+  --width-4: 4px;
+
+  /* typography primitives */
+  --font-base:     "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --fs-8:  8px;   --fs-10: 10px;  --fs-12: 12px;  --fs-14: 14px;
+  --fs-16: 16px;  --fs-18: 18px;  --fs-20: 20px;  --fs-24: 24px;
+  --fs-28: 28px;  --fs-32: 32px;  --fs-40: 40px;  --fs-48: 48px;
+  --fs-56: 56px;
+
+  --lh-12: 12px;  --lh-14: 14px;  --lh-16: 16px;  --lh-20: 20px;
+  --lh-24: 24px;  --lh-28: 28px;  --lh-32: 32px;  --lh-36: 36px;
+  --lh-40: 40px;  --lh-48: 48px;  --lh-56: 56px;  --lh-64: 64px;
+
+  --fw-light:     300;
+  --fw-regular:   400;
+  --fw-medium:    500;
+  --fw-semibold:  600;
+  --fw-bold:      700;
+  --fw-extrabold: 800;
+  --fw-black:     900;
+
+  --ls-none: 0em;
+
+  /* ========================================================================
+     SEMANTICS — opacity.semantics.json
+     ======================================================================== */
+
+  --opacity-null:  var(--opacity-0);
+  --opacity-3xs:   var(--opacity-4);
+  --opacity-2xs:   var(--opacity-8);
+  --opacity-xs:    var(--opacity-12);
+  --opacity-sm:    var(--opacity-16);
+  --opacity-md:    var(--opacity-24);
+  --opacity-lg:    var(--opacity-32);
+  --opacity-xl:    var(--opacity-40);
+  --opacity-2xl:   var(--opacity-48);
+  --opacity-3xl:   var(--opacity-64);
+  --opacity-4xl:   var(--opacity-80);
+  --opacity-full:  var(--opacity-100);
+
+  /* ========================================================================
+     SEMANTICS — cornerRadius.semantics.web.json
+     ======================================================================== */
+
+  --radius-null: var(--radius-0);
+  --radius-3xs:  var(--radius-2);
+  --radius-2xs:  var(--radius-4);
+  --radius-xs:   var(--radius-8);
+  --radius-sm:   var(--radius-12);
+  --radius-md:   var(--radius-16);
+  --radius-lg:   var(--radius-20);
+  --radius-xl:   var(--radius-24);
+  --radius-2xl:  var(--radius-32);
+  --radius-3xl:  var(--radius-40);
+  --radius-4xl:  var(--radius-48);
+  /* --radius-full already defined in primitives */
+
+  /* ========================================================================
+     SEMANTICS — color.semantics.json
+     ======================================================================== */
+
+  /* background */
+  --bg-primary:         var(--grey-45);
+  --bg-primaryInverse:  var(--grey-900);
+  --bg-secondary:       var(--grey-0);
+
+  /* surface */
+  --surface-primary:              var(--grey-0);
+  --surface-primaryInverse:       var(--grey-900);
+  --surface-primary-alpha-md:     var(--alpha-white-24);
+  --surface-secondary:            var(--grey-100);
+  --surface-secondaryInverse:     var(--grey-600);
+  --surface-secondary-alpha-xl:   var(--alpha-black-40);
+  --surface-placeholder:          var(--grey-45);
+  --surface-overlay:              var(--alpha-black-64);
+
+  --surface-brand-primary:         var(--grey-1000);
+  --surface-brand-primaryInverse:  var(--grey-0);
+
+  --surface-opportunity-buy-emphasis:     var(--teal-600);
+  --surface-opportunity-buy-subtle:       var(--teal-160);
+  --surface-opportunity-buy-alpha-sm:     var(--alpha-teal-16);
+  --surface-opportunity-sell-emphasis:    var(--terracota-600);
+  --surface-opportunity-sell-subtle:      var(--terracota-160);
+  --surface-opportunity-sell-alpha-sm:    var(--alpha-terracota-16);
+  --surface-opportunity-rent-emphasis:    var(--indigo-600);
+  --surface-opportunity-rent-subtle:      var(--indigo-160);
+  --surface-opportunity-rent-alpha-sm:    var(--alpha-indigo-16);
+  --surface-opportunity-lease-emphasis:   var(--orchid-600);
+  --surface-opportunity-lease-subtle:     var(--orchid-160);
+  --surface-opportunity-lease-alpha-sm:   var(--alpha-orchid-16);
+  --surface-opportunity-mortgage-emphasis:var(--olive-600);
+  --surface-opportunity-mortgage-subtle:  var(--olive-160);
+  --surface-opportunity-mortgage-alpha-sm:var(--alpha-olive-16);
+
+  --surface-status-disabled:            var(--grey-60);
+  --surface-status-success-emphasis:    var(--green-600);
+  --surface-status-success-subtle:      var(--green-160);
+  --surface-status-success-alpha-sm:    var(--alpha-green-16);
+  --surface-status-success-alpha-xl:    var(--alpha-green-40);
+  --surface-status-danger-emphasis:     var(--red-600);
+  --surface-status-danger-subtle:       var(--red-160);
+  --surface-status-danger-alpha-sm:     var(--alpha-red-16);
+  --surface-status-warning-emphasis:    var(--orange-600);
+  --surface-status-warning-subtle:      var(--orange-160);
+  --surface-status-warning-alpha-sm:    var(--alpha-orange-16);
+  --surface-status-info-emphasis:       var(--blue-700);
+  --surface-status-info-subtle:         var(--blue-160);
+  --surface-status-info-alpha-sm:       var(--alpha-blue-16);
+
+  /* foreground */
+  --fg-primary:                        var(--grey-900);
+  --fg-primaryInverse:                 var(--grey-0);
+  --fg-secondary:                      var(--grey-600);
+  --fg-secondaryInverse:               var(--grey-150);
+  --fg-primaryInverse-alpha-md:        var(--alpha-white-24);
+  --fg-primaryInverse-alpha-3xl:       var(--alpha-white-64);
+
+  --fg-brand-primary:                  var(--grey-1000);
+  --fg-brand-primaryInverse:           var(--grey-0);
+
+  --fg-opportunity-buy-emphasis:       var(--teal-600);
+  --fg-opportunity-sell-emphasis:      var(--terracota-600);
+  --fg-opportunity-rent-emphasis:      var(--indigo-600);
+  --fg-opportunity-lease-emphasis:     var(--orchid-600);
+  --fg-opportunity-mortgage-emphasis:  var(--olive-600);
+
+  --fg-status-disabled:                var(--grey-500);
+  --fg-status-success-emphasis:        var(--green-600);
+  --fg-status-danger-emphasis:         var(--red-600);
+  --fg-status-warning-emphasis:        var(--orange-600);
+  --fg-status-info-emphasis:           var(--blue-700);
+
+  /* border */
+  --border-primary:                    var(--grey-150);
+  --border-primaryInverse:             var(--grey-0);
+  --border-primaryInverse-alpha-md:    var(--alpha-white-24);
+
+  --border-brand-primary:              var(--grey-1000);
+  --border-brand-primaryInverse:       var(--grey-0);
+
+  --border-opportunity-buy-alpha-sm:       var(--alpha-teal-16);
+  --border-opportunity-sell-alpha-sm:      var(--alpha-terracota-16);
+  --border-opportunity-rent-alpha-sm:      var(--alpha-indigo-16);
+  --border-opportunity-lease-alpha-sm:     var(--alpha-orchid-16);
+  --border-opportunity-mortgage-alpha-sm:  var(--alpha-olive-16);
+
+  --border-status-disabled:                var(--grey-500);
+  --border-status-success-emphasis:        var(--green-600);
+  --border-status-success-alpha-sm:        var(--alpha-green-16);
+  --border-status-danger-emphasis:         var(--red-600);
+  --border-status-danger-alpha-sm:         var(--alpha-red-16);
+  --border-status-warning-emphasis:        var(--orange-600);
+  --border-status-warning-alpha-sm:        var(--alpha-orange-16);
+  --border-status-info-emphasis:           var(--blue-700);
+  --border-status-info-alpha-sm:           var(--alpha-blue-16);
+
+  /* action — each role has nested bg/fg/border with state keys */
+
+  /* action.primary (dark-on-light: filled black button) */
+  --action-primary-bg-default:      var(--grey-900);
+  --action-primary-bg-hover:        var(--grey-600);
+  --action-primary-bg-pressed:      var(--grey-700);
+  --action-primary-bg-disabled:     var(--grey-60);
+  --action-primary-fg-default:      var(--grey-0);
+  --action-primary-fg-disabled:     var(--grey-400);
+  --action-primary-border-disabled: var(--grey-60);
+
+  /* action.primaryInverse (light-on-dark: filled white on dark) */
+  --action-primaryInverse-bg-default:      var(--grey-0);
+  --action-primaryInverse-bg-hover:        var(--grey-150);
+  --action-primaryInverse-bg-pressed:      var(--grey-100);
+  --action-primaryInverse-bg-disabled:     var(--alpha-white-8);
+  --action-primaryInverse-bg-selected:     var(--grey-900);
+  --action-primaryInverse-fg-default:      var(--grey-900);
+  --action-primaryInverse-fg-disabled:     var(--grey-300);
+  --action-primaryInverse-fg-selected:     var(--grey-0);
+  --action-primaryInverse-border-default:  var(--grey-150);
+  --action-primaryInverse-border-disabled: var(--grey-60);
+  --action-primaryInverse-border-selected: var(--grey-900);
+
+  /* action.secondary (subtle chip / secondary button on light) */
+  --action-secondary-bg-default:      var(--grey-100);
+  --action-secondary-bg-hover:        var(--grey-60);
+  --action-secondary-bg-pressed:      var(--grey-200);
+  --action-secondary-bg-disabled:     var(--grey-45);
+  --action-secondary-fg-default:      var(--grey-900);
+  --action-secondary-fg-disabled:     var(--grey-300);
+  --action-secondary-border-disabled: var(--grey-45);
+
+  /* action.secondaryInverse (ghost chip on dark) */
+  --action-secondaryInverse-bg-default:      var(--alpha-white-16);
+  --action-secondaryInverse-bg-hover:        var(--alpha-white-24);
+  --action-secondaryInverse-bg-pressed:      var(--alpha-white-32);
+  --action-secondaryInverse-bg-disabled:     var(--alpha-white-8);
+  --action-secondaryInverse-bg-selected:     var(--grey-0);
+  --action-secondaryInverse-fg-default:      var(--grey-0);
+  --action-secondaryInverse-fg-disabled:     var(--grey-350);
+  --action-secondaryInverse-fg-selected:     var(--grey-900);
+  --action-secondaryInverse-border-default:  var(--alpha-white-16);
+  --action-secondaryInverse-border-disabled: var(--alpha-white-8);
+  --action-secondaryInverse-border-selected: var(--grey-0);
+
+  /* action.tertiary (outline button on light) */
+  --action-tertiary-bg-default:      var(--grey-0);
+  --action-tertiary-bg-hover:        var(--grey-20);
+  --action-tertiary-bg-pressed:      var(--grey-60);
+  --action-tertiary-bg-disabled:     var(--grey-0);
+  --action-tertiary-fg-default:      var(--grey-900);
+  --action-tertiary-fg-disabled:     var(--grey-300);
+  --action-tertiary-border-default:  var(--grey-150);
+  --action-tertiary-border-disabled: var(--grey-60);
+
+  /* action.tertiaryInverse (outline button on dark) */
+  --action-tertiaryInverse-bg-default:      var(--grey-0);
+  --action-tertiaryInverse-bg-hover:        var(--alpha-white-16);
+  --action-tertiaryInverse-bg-pressed:      var(--alpha-white-32);
+  --action-tertiaryInverse-bg-disabled:     var(--grey-0);
+  --action-tertiaryInverse-fg-default:      var(--grey-0);
+  --action-tertiaryInverse-fg-disabled:     var(--grey-350);
+  --action-tertiaryInverse-border-default:  var(--alpha-white-40);
+  --action-tertiaryInverse-border-disabled: var(--alpha-white-16);
+
+  /* ========================================================================
+     SEMANTICS — typography.semantics.web.json
+     ======================================================================== */
+
+  /* display.md  — 40/48 · semiBold */
+  --type-display-md-size:   var(--fs-40);
+  --type-display-md-lh:     var(--lh-48);
+  --type-display-md-weight: var(--fw-semibold);
+
+  /* heading.{xl,lg,md,sm} — semiBold */
+  --type-heading-xl-size: var(--fs-32); --type-heading-xl-lh: var(--lh-40); --type-heading-xl-weight: var(--fw-semibold);
+  --type-heading-lg-size: var(--fs-28); --type-heading-lg-lh: var(--lh-36); --type-heading-lg-weight: var(--fw-semibold);
+  --type-heading-md-size: var(--fs-24); --type-heading-md-lh: var(--lh-32); --type-heading-md-weight: var(--fw-semibold);
+  --type-heading-sm-size: var(--fs-20); --type-heading-sm-lh: var(--lh-24); --type-heading-sm-weight: var(--fw-semibold);
+
+  /* body.emphasis.{lg,md,sm} — semiBold */
+  --type-body-emphasis-lg-size: var(--fs-18); --type-body-emphasis-lg-lh: var(--lh-24); --type-body-emphasis-lg-weight: var(--fw-semibold);
+  --type-body-emphasis-md-size: var(--fs-16); --type-body-emphasis-md-lh: var(--lh-20); --type-body-emphasis-md-weight: var(--fw-semibold);
+  --type-body-emphasis-sm-size: var(--fs-14); --type-body-emphasis-sm-lh: var(--lh-20); --type-body-emphasis-sm-weight: var(--fw-semibold);
+
+  /* body.regular.{lg,md,sm} — regular */
+  --type-body-regular-lg-size:  var(--fs-18); --type-body-regular-lg-lh:  var(--lh-24); --type-body-regular-lg-weight:  var(--fw-regular);
+  --type-body-regular-md-size:  var(--fs-16); --type-body-regular-md-lh:  var(--lh-20); --type-body-regular-md-weight:  var(--fw-regular);
+  --type-body-regular-sm-size:  var(--fs-14); --type-body-regular-sm-lh:  var(--lh-20); --type-body-regular-sm-weight:  var(--fw-regular);
+
+  /* label.emphasis.{lg,md,sm} — semiBold */
+  --type-label-emphasis-lg-size: var(--fs-14); --type-label-emphasis-lg-lh: var(--lh-20); --type-label-emphasis-lg-weight: var(--fw-semibold);
+  --type-label-emphasis-md-size: var(--fs-12); --type-label-emphasis-md-lh: var(--lh-16); --type-label-emphasis-md-weight: var(--fw-semibold);
+  --type-label-emphasis-sm-size: var(--fs-10); --type-label-emphasis-sm-lh: var(--lh-14); --type-label-emphasis-sm-weight: var(--fw-semibold);
+
+  /* label.regular.{lg,md,sm} — regular */
+  --type-label-regular-lg-size:  var(--fs-14); --type-label-regular-lg-lh:  var(--lh-20); --type-label-regular-lg-weight:  var(--fw-regular);
+  --type-label-regular-md-size:  var(--fs-12); --type-label-regular-md-lh:  var(--lh-16); --type-label-regular-md-weight:  var(--fw-regular);
+  --type-label-regular-sm-size:  var(--fs-10); --type-label-regular-sm-lh:  var(--lh-14); --type-label-regular-sm-weight:  var(--fw-regular);
+}
+
+/* =========================================================================
+   Utility classes (optional sugar over the tokens)
+   ========================================================================= */
+
+body { font-family: var(--font-base); color: var(--fg-primary); background: var(--bg-primary); }
+
+.h-display  { font: var(--fw-semibold) var(--type-display-md-size)/var(--type-display-md-lh)  var(--font-base); letter-spacing: var(--ls-none); }
+.h-xl       { font: var(--fw-semibold) var(--type-heading-xl-size)/var(--type-heading-xl-lh)  var(--font-base); letter-spacing: var(--ls-none); }
+.h-lg       { font: var(--fw-semibold) var(--type-heading-lg-size)/var(--type-heading-lg-lh)  var(--font-base); letter-spacing: var(--ls-none); }
+.h-md       { font: var(--fw-semibold) var(--type-heading-md-size)/var(--type-heading-md-lh)  var(--font-base); letter-spacing: var(--ls-none); }
+.h-sm       { font: var(--fw-semibold) var(--type-heading-sm-size)/var(--type-heading-sm-lh)  var(--font-base); letter-spacing: var(--ls-none); }
+.body-lg    { font: var(--fw-regular) var(--type-body-regular-lg-size)/var(--type-body-regular-lg-lh) var(--font-base); }
+.body-md    { font: var(--fw-regular) var(--type-body-regular-md-size)/var(--type-body-regular-md-lh) var(--font-base); }
+.body-sm    { font: var(--fw-regular) var(--type-body-regular-sm-size)/var(--type-body-regular-sm-lh) var(--font-base); }
+.label-md   { font: var(--fw-regular) var(--type-label-regular-md-size)/var(--type-label-regular-md-lh) var(--font-base); }
+.label-sm   { font: var(--fw-regular) var(--type-label-regular-sm-size)/var(--type-label-regular-sm-lh) var(--font-base); }

@@ -376,15 +376,9 @@ export interface Deal {
   createdAt?: string;
   updatedAt?: string;
 
-  // Display caches (used by both apps)
-  clientName?: string;
-  agentName?: string;
   title?: string;
   /** Optional free-text label for this deal (e.g. "Arras + Escritura split"). */
   description?: string;
-
-  // Agent-app alias
-  marketType?: "primary" | "secondary" | "leasing";
 }
 
 // ============================================================
@@ -414,8 +408,6 @@ export interface Tranche {
   pnlEngine?: PnlEngine;
   /** Reporting / recognition date for this settlement. */
   reportDate: string;
-  /** Ops case reference. */
-  ofCaseNumber?: string;
   /** MBU: mortgage principal actually disbursed for this tranche. */
   disbursedAmount?: number;
 

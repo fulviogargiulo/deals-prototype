@@ -23,9 +23,8 @@ export function DealListingView({ deals }: Props) {
     if (!searchQuery) return allRows;
     const q = searchQuery.toLowerCase();
     return allRows.filter(({ deal }) =>
-      deal.agentName?.toLowerCase().includes(q) ||
+      deal.title?.toLowerCase().includes(q) ||
       deal.market?.toLowerCase().includes(q) ||
-      deal.clientName?.toLowerCase().includes(q) ||
       deal.id.toLowerCase().includes(q)
     );
   }, [allRows, searchQuery]);

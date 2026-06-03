@@ -1,6 +1,4 @@
 import type { Deal } from "../entities";
-import { sharedClients } from "./clients";
-import { sharedParties } from "./parties";
 import { sharedOffers } from "./offers";
 
 function findOffer(id: string) {
@@ -23,13 +21,6 @@ interface BaseInput {
 
 function expand(b: BaseInput): Deal {
   const offer = findOffer(b.offerId);
-
-  // Derive client display name from offer (agentName is a display cache filled by Karvel enricher).
-  const clientPartyId = offer?.clientId ? sharedClients.find((c) => c.id === offer.clientId)?.partyId : undefined;
-  const clientName = clientPartyId ? sharedParties.find((p) => p.id === clientPartyId)?.displayName ?? "Unknown" : "Unknown";
-
-  const assetTitle = offer?.assetName ?? b.id;
-
   return {
     id: b.id,
     offerId: b.offerId,
@@ -41,11 +32,8 @@ function expand(b: BaseInput): Deal {
     dealAmount: b.dealAmount,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
-    clientName,
-    agentName: "Unknown",
-    title: assetTitle,
+    title: offer?.assetName ?? b.id,
     channel: b.channel,
-    marketType: b.market,
     description: b.description,
   };
 }
@@ -64,7 +52,7 @@ export const sharedDeals: Deal[] = [
   // MBU MA/Broker — DIB — Omar Rahman
   expand({ id: "deal-011", offerId: "offer-011", businessUnit: "mortgage", channel: "MA",   market: "primary", country: "ae", currency: "AED", dealAmount: 1_500_000, createdAt: "2026-04-20T00:00:00.000Z", updatedAt: "2026-04-22T10:00:00.000Z" }),
   // MBU B2C/Digital — FAB — Priya Sharma
-  { id: "deal-012", offerId: "offer-012", businessUnit: "mortgage", channel: "B2C", market: "primary", country: "ae", currency: "AED", dealAmount: 3_200_000, title: "FAB · Sharma Purchase", clientName: "Priya Sharma", createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-04-30T09:00:00.000Z" },
+  expand({ id: "deal-012", offerId: "offer-012", businessUnit: "mortgage", channel: "B2C", market: "primary", country: "ae", currency: "AED", dealAmount: 3_200_000, createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-04-30T09:00:00.000Z" }),
   expand({ id: "deal-013", offerId: "offer-013", businessUnit: "rebu", market: "secondary", country: "es", currency: "EUR", dealAmount: 620000,    createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-15T14:00:00.000Z" }),
   expand({ id: "deal-014", offerId: "offer-014", businessUnit: "mortgage", channel: "B2C", market: "secondary", country: "es", currency: "EUR", dealAmount: 496000, createdAt: "2026-04-10T00:00:00.000Z", updatedAt: "2026-04-15T10:00:00.000Z" }),
   expand({ id: "deal-015", offerId: "offer-015", businessUnit: "mortgage", channel: "B2C", market: "primary",   country: "sa", currency: "SAR", dealAmount: 920000, createdAt: "2026-04-28T00:00:00.000Z", updatedAt: "2026-05-02T09:00:00.000Z" }),
@@ -74,14 +62,14 @@ export const sharedDeals: Deal[] = [
   expand({ id: "deal-019", offerId: "offer-019", businessUnit: "rebu", market: "secondary", country: "es", currency: "EUR", dealAmount: 260000,    createdAt: "2026-03-20T00:00:00.000Z", updatedAt: "2026-04-01T11:00:00.000Z" }),
   expand({ id: "deal-020", offerId: "offer-020", businessUnit: "rebu", market: "primary",   country: "ae", currency: "AED", dealAmount: 1200000,   createdAt: "2026-05-12T00:00:00.000Z", updatedAt: "2026-05-17T14:00:00.000Z" }),
   expand({ id: "deal-021", offerId: "offer-021", businessUnit: "rebu", market: "primary",   country: "es", currency: "EUR", dealAmount: 480000,    createdAt: "2026-03-05T00:00:00.000Z", updatedAt: "2026-03-20T15:00:00.000Z" }),
-  // MBU MA/Broker — ADIB — Omar Rahman (60%) + Khalid & Associates (40%)
+  // MBU MA/Broker — ADCB — Saleh Khalifah
   expand({ id: "deal-022", offerId: "offer-022", businessUnit: "mortgage", channel: "MA",   market: "primary", country: "ae", currency: "AED", dealAmount: 2_800_000, createdAt: "2026-05-05T00:00:00.000Z", updatedAt: "2026-05-14T15:00:00.000Z" }),
-  // MBU BYOB — DIB — Nadia Hassan
+  // MBU BYOB — Abu Dhabi Islamic Bank
   expand({ id: "deal-023", offerId: "offer-023", businessUnit: "mortgage", channel: "BYOB", market: "primary", country: "ae", currency: "AED", dealAmount: 2_000_000, createdAt: "2026-05-10T00:00:00.000Z", updatedAt: "2026-05-12T10:00:00.000Z" }),
-  // BBG — Broker sub-channel: Layla Nasser
+  // MBU BBG — Mashreq
   expand({ id: "deal-024", offerId: "offer-024", businessUnit: "mortgage", channel: "BBG", market: "primary", country: "ae", currency: "AED", dealAmount: 2_500_000, createdAt: "2026-05-15T00:00:00.000Z", updatedAt: "2026-05-16T10:00:00.000Z" }),
-  // BBG — Self-Generated: Layla Nasser
+  // MBU BBG — Emirates NBD
   expand({ id: "deal-025", offerId: "offer-025", businessUnit: "mortgage", channel: "BBG", market: "primary", country: "ae", currency: "AED", dealAmount: 1_500_000, createdAt: "2026-05-18T00:00:00.000Z", updatedAt: "2026-05-19T11:00:00.000Z" }),
-  // deal-026 — Spain REBU secondary, 2 tranches (Arras + Escritura) in tranches.ts
-  expand({ id: "deal-026", offerId: "offer-026", businessUnit: "rebu", market: "secondary", country: "es", currency: "EUR", dealAmount: 300_000, createdAt: "2026-06-01T09:00:00.000Z", updatedAt: "2026-06-01T09:00:00.000Z" }),
+  // REBU Spain — Arras + Escritura split deal
+  expand({ id: "deal-026", offerId: "offer-026", businessUnit: "rebu", market: "primary", country: "es", currency: "EUR", dealAmount: 620000, createdAt: "2026-05-20T00:00:00.000Z", updatedAt: "2026-06-01T09:00:00.000Z", description: "Arras + Escritura split" }),
 ];

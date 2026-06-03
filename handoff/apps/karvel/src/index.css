@@ -1,0 +1,38 @@
+/* =========================================================================
+   apps/karvel/src/index.css  —  MIGRATED
+   -------------------------------------------------------------------------
+   Before: hard-coded Inter import, navy --primary, and the --deal-*/--type-*/
+   --status-* rainbow all lived here.
+   After:  the theme is the design system. This file only wires it up.
+   ========================================================================= */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Figtree @font-face ships inside tokens.css — no Google Fonts import. */
+  @import "@huspy/design-system/tokens.css";
+  @import "@huspy/design-system/shadcn-bridge.css";
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Figtree", -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   DELETED in migration (now provided by the design system / shared-domain):
+     • @import Inter                  → Figtree via tokens.css
+     • --primary: 228 40% 20% (navy)  → black, via shadcn-bridge.css
+     • --type-buy/-sell/-rent/-lease  → opportunity tokens (verticals only)
+     • --status-new/-active/-closed   → --tier-* (state) + statusTier()
+     • --deal-* (8 rainbow hues)      → statusTier(status) → --tier-*
+   If you need any of these, you're reaching for the wrong layer — use the DS.
+   ------------------------------------------------------------------------- */

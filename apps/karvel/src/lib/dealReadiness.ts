@@ -146,7 +146,7 @@ function invoicingReadiness(deal: Deal): DealReadiness {
     headline: "Locked for editing · Finance owns next steps",
     sub: out.length > 0
       ? `${outPaid} of ${out.length} outbound invoice${out.length === 1 ? "" : "s"} paid · auto-finalizes when complete`
-      : "No outbound invoices yet",
+      : "Invoices pending generation",
     items: [],
   };
 }

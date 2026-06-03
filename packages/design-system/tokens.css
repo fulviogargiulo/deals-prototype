@@ -1,0 +1,271 @@
+/* =========================================================================
+   Huspy Design System — Tokens (Web)
+   Source of truth: tokens/*.json (Figma design tokens) — web variants only
+   Font: loaded via Google Fonts link in each app's index.html (Figtree).
+   ========================================================================= */
+
+:root {
+  /* ========================================================================
+     PRIMITIVES — color.primitives.json
+     ======================================================================== */
+
+  /* grey */
+  --grey-0:    #FFFFFF;
+  --grey-20:   #FAFAFA;
+  --grey-45:   #F4F4F4;
+  --grey-50:   #F2F2F2;
+  --grey-60:   #F0F0F0;
+  --grey-100:  #E4E4E4;
+  --grey-150:  #D9D9D9;
+  --grey-200:  #CCCCCC;
+  --grey-300:  #B2B2B2;
+  --grey-350:  #A6A6A6;
+  --grey-400:  #999999;
+  --grey-500:  #808080;
+  --grey-600:  #666666;
+  --grey-700:  #4D4D4D;
+  --grey-800:  #333333;
+  --grey-900:  #1A1A1A;
+  --grey-1000: #000000;
+
+  /* green */
+  --green-100: #E7F7F3;
+  --green-160: #D9F3EC;
+  --green-200: #CFEFE7;
+  --green-300: #9FE0D0;
+  --green-400: #70D0B8;
+  --green-500: #40C1A1;
+  --green-600: #10B189;
+  --green-700: #0D8E6E;
+  --green-800: #0A6A52;
+  --green-850: #085945;
+  --green-900: #064737;
+
+  /* indigo */
+  --indigo-100: #EEEEFE;
+  --indigo-160: #E4E4FD;
+  --indigo-200: #DEDEFD;
+  --indigo-300: #BDBDFB;
+  --indigo-400: #9B9BF8;
+  --indigo-500: #7A7AF6;
+  --indigo-600: #5959F4;
+  --indigo-700: #4747C3;
+  --indigo-800: #353592;
+  --indigo-850: #2D2D7A;
+  --indigo-900: #242462;
+
+  /* olive */
+  --olive-100: #F3F6F1;
+  --olive-160: #EDF1E9;
+  --olive-200: #E8EEE3;
+  --olive-300: #D1DCC8;
+  --olive-400: #BACBAC;
+  --olive-500: #A3B991;
+  --olive-600: #8CA875;
+  --olive-700: #70865E;
+  --olive-800: #546546;
+  --olive-850: #46543B;
+  --olive-900: #38432F;
+
+  /* orange */
+  --orange-100: #FDF5E8;
+  --orange-160: #FCEFDA;
+  --orange-200: #FBEBD1;
+  --orange-300: #F8D6A2;
+  --orange-400: #F4C274;
+  --orange-500: #F1AD45;
+  --orange-600: #ED9917;
+  --orange-700: #BE7A12;
+  --orange-800: #8E5C0E;
+  --orange-850: #774D0C;
+  --orange-900: #5F3D09;
+
+  /* orchid */
+  --orchid-100: #FAEEF9;
+  --orchid-160: #F7E3F5;
+  --orchid-200: #F5DCF3;
+  --orchid-300: #EBBAE7;
+  --orchid-400: #E197DB;
+  --orchid-500: #D775CF;
+  --orchid-600: #CD52C3;
+  --orchid-700: #A4429C;
+  --orchid-800: #7B3175;
+  --orchid-850: #672962;
+  --orchid-900: #52214E;
+
+  /* red */
+  --red-100: #FEECEF;
+  --red-160: #FEE1E5;
+  --red-200: #FDDADF;
+  --red-300: #FBB4BE;
+  --red-400: #FA8F9D;
+  --red-500: #F8697D;
+  --red-600: #F6445C;
+  --red-700: #C5364A;
+  --red-800: #942937;
+  --red-850: #7B222E;
+  --red-900: #621B25;
+
+  /* teal */
+  --teal-100: #E5F3F4;
+  --teal-160: #D6ECEE;
+  --teal-200: #CCE7EA;
+  --teal-300: #99CFD4;
+  --teal-400: #66B8BF;
+  --teal-500: #33A0A9;
+  --teal-600: #008894;
+  --teal-700: #006D76;
+  --teal-800: #005259;
+  --teal-850: #00444A;
+  --teal-900: #00363B;
+
+  /* terracota */
+  --terracota-100: #FBF0EB;
+  --terracota-160: #F9E7DF;
+  --terracota-200: #F8E0D7;
+  --terracota-300: #F1C2AF;
+  --terracota-400: #E9A388;
+  --terracota-500: #E28560;
+  --terracota-600: #DB6638;
+  --terracota-700: #AF522D;
+  --terracota-800: #833D22;
+  --terracota-850: #6E331C;
+  --terracota-900: #582916;
+
+  /* blue */
+  --blue-100: #E6F0FF;
+  --blue-160: #D8E7FF;
+  --blue-200: #CEE2FF;
+  --blue-300: #9DC4FF;
+  --blue-400: #6CA7FF;
+  --blue-500: #3B89FF;
+  --blue-600: #0A6CFF;
+  --blue-700: #0856CC;
+  --blue-800: #064199;
+  --blue-850: #053680;
+  --blue-900: #042B66;
+
+  /* alpha */
+  --alpha-white-8:  rgba(255,255,255,0.08);
+  --alpha-white-16: rgba(255,255,255,0.16);
+  --alpha-white-24: rgba(255,255,255,0.24);
+  --alpha-white-32: rgba(255,255,255,0.32);
+  --alpha-white-40: rgba(255,255,255,0.40);
+  --alpha-white-64: rgba(255,255,255,0.64);
+  --alpha-teal-16:      rgba(0,136,148,0.16);
+  --alpha-terracota-16: rgba(219,102,56,0.16);
+  --alpha-indigo-16:    rgba(89,89,244,0.16);
+  --alpha-orchid-16:    rgba(205,82,195,0.16);
+  --alpha-olive-16:     rgba(140,168,117,0.16);
+  --alpha-green-16:     rgba(16,177,137,0.16);
+  --alpha-green-40:     rgba(16,177,137,0.40);
+  --alpha-red-16:       rgba(246,68,92,0.16);
+  --alpha-orange-16:    rgba(237,153,23,0.16);
+  --alpha-blue-16:      rgba(10,108,255,0.16);
+  --alpha-black-40:     rgba(0,0,0,0.40);
+  --alpha-black-64:     rgba(0,0,0,0.64);
+
+  /* ========================================================================
+     PRIMITIVES — radius / spacing / sizing / stroke / typography
+     ======================================================================== */
+
+  /* radius */
+  --radius-0:    0px;
+  --radius-2:    2px;
+  --radius-4:    4px;
+  --radius-8:    8px;
+  --radius-12:   12px;
+  --radius-16:   16px;
+  --radius-20:   20px;
+  --radius-24:   24px;
+  --radius-32:   32px;
+  --radius-40:   40px;
+  --radius-48:   48px;
+  --radius-full: 9999px;
+
+  /* spacing */
+  --spacing-0:   0px;
+  --spacing-2:   2px;
+  --spacing-4:   4px;
+  --spacing-8:   8px;
+  --spacing-12:  12px;
+  --spacing-16:  16px;
+  --spacing-20:  20px;
+  --spacing-24:  24px;
+  --spacing-32:  32px;
+  --spacing-40:  40px;
+  --spacing-48:  48px;
+  --spacing-56:  56px;
+  --spacing-64:  64px;
+  --spacing-80:  80px;
+  --spacing-96:  96px;
+  --spacing-128: 128px;
+
+  /* typography primitives */
+  --font-base: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --fs-8:  8px;   --fs-10: 10px;  --fs-12: 12px;  --fs-14: 14px;
+  --fs-16: 16px;  --fs-18: 18px;  --fs-20: 20px;  --fs-24: 24px;
+  --fs-28: 28px;  --fs-32: 32px;  --fs-40: 40px;  --fs-48: 48px;
+
+  --fw-light:    300;
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  /* ========================================================================
+     SEMANTICS — cornerRadius
+     ======================================================================== */
+
+  --radius-null: var(--radius-0);
+  --radius-3xs:  var(--radius-2);
+  --radius-2xs:  var(--radius-4);
+  --radius-xs:   var(--radius-8);
+  --radius-sm:   var(--radius-12);
+  --radius-md:   var(--radius-16);
+  --radius-lg:   var(--radius-20);
+  --radius-xl:   var(--radius-24);
+  --radius-2xl:  var(--radius-32);
+  --radius-full: 9999px;
+
+  /* ========================================================================
+     SEMANTICS — color.semantics.json
+     ======================================================================== */
+
+  /* background */
+  --bg-primary:        var(--grey-45);
+  --bg-primaryInverse: var(--grey-900);
+  --bg-secondary:      var(--grey-0);
+
+  /* surface */
+  --surface-primary:   var(--grey-0);
+  --surface-secondary: var(--grey-100);
+  --surface-placeholder: var(--grey-45);
+
+  --surface-status-success-emphasis: var(--green-600);
+  --surface-status-success-subtle:   var(--green-160);
+  --surface-status-danger-emphasis:  var(--red-600);
+  --surface-status-danger-subtle:    var(--red-160);
+  --surface-status-warning-emphasis: var(--orange-600);
+  --surface-status-warning-subtle:   var(--orange-160);
+  --surface-status-info-emphasis:    var(--blue-700);
+  --surface-status-info-subtle:      var(--blue-160);
+
+  /* foreground */
+  --fg-primary:    var(--grey-900);
+  --fg-secondary:  var(--grey-600);
+
+  /* border */
+  --border-primary: var(--grey-150);
+
+  /* action.primary */
+  --action-primary-bg-default:  var(--grey-900);
+  --action-primary-bg-hover:    var(--grey-600);
+  --action-primary-bg-pressed:  var(--grey-700);
+  --action-primary-bg-disabled: var(--grey-60);
+  --action-primary-fg-default:  var(--grey-0);
+  --action-primary-fg-disabled: var(--grey-400);
+}
+
+body { font-family: var(--font-base); color: var(--fg-primary); background: var(--bg-primary); }

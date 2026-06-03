@@ -4,6 +4,7 @@ import { MessageSquare, Check, Archive, Pencil, Copy, Plus, X, Download } from "
 import {
   sharedAgents,
   sharedParties,
+  sharedPnlEntries,
   sharedPostingLines,
   sharedPostings,
   sharedLedgers,
@@ -286,8 +287,15 @@ export default function AgentDetail() {
   const nameParts = displayName.split(" ");
   const isActive = (agent.employmentStatus ?? "active") === "active";
 
-  // Deals — filter by agentName display cache (set in enrichDeal)
-  const agentDeals = getDeals().filter((d) => d.agentName === displayName);
+  // Find deals where this agent has AGENT_PAYOUT PnlEntries.
+  const agentTrancheIds = new Set(
+    sharedPnlEntries
+      .filter((s) => s.role === "AGENT_PAYOUT" && s.partyId === agent.partyId)
+      .map((s) => s.trancheId)
+  );
+  const agentDeals = getDeals().filter((d) =>
+    sharedTranches.some((t) => t.dealId === d.id && agentTrancheIds.has(t.id))
+  );
 
   // Ledger — all posting lines on this agent's subledger (shared + manual)
   const subledgerName = `AgentLiability_${agent.id}`;
@@ -653,7 +661,7 @@ export default function AgentDetail() {
                             <td className={`${tdClass} text-muted-foreground font-mono text-[12px]`}>{deal.id}</td>
                             <td className="px-4 py-3 text-center"><DealStatusBadge status={displayStatus} /></td>
                             <td className={tdClass}>{deal.market ?? "—"}</td>
-                            <td className={tdClass}>{deal.clientName ?? "—"}</td>
+                            <td className={tdClass}>{deal.title ?? "—"}</td>
                             <td className={tdClass}>{fmt(deal.dealAmount, deal.currency ?? "EUR")}</td>
                             <td className={tdClass}>{primaryTranche?.grossRevenue != null ? fmt(primaryTranche.grossRevenue, deal.currency ?? "EUR") : "—"}</td>
                             <td className={tdClass}>{primaryTranche?.reportDate ? fmtDate(primaryTranche.reportDate) : "—"}</td>

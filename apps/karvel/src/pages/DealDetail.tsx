@@ -1,22 +1,27 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { findDeal, updateDeal } from "@/data/dealStore";
-import { findTranche, getTranchesForDeal, updateTranche, addTranche } from "@/data/trancheStore";
+import { findDeal } from "@/data/dealStore";
+import { getTranchesForDeal, updateTranche, addTranche } from "@/data/trancheStore";
 import { saveDocumentRequirements } from "@/data/sharedEntityStore";
-import { Deal, Tranche, DealStatus } from "@/data/types";
+import { Tranche, DealStatus } from "@/data/types";
 import {
+  ArrowRight,
+  Ban,
+  Check,
   CheckCircle2,
   Circle,
+  Clock,
   ExternalLink,
   Download,
   AlertTriangle,
   CheckCheck,
+  Lock,
+  MessageSquare,
   Undo2,
   ChevronDown,
   Plus,
 } from "lucide-react";
 import {
-  computeTranchePnL,
   getDealEngine,
   fireCommissionAccrualOnTransition,
   confirmTrancheStakeholders,
@@ -36,31 +41,38 @@ import {
   sharedPostings,
   sharedPostingLines,
   sharedLedgers,
+  statusTier,
   type InvoiceStatus,
   type DocumentRequirementStatus,
   type DealDocumentRequirement,
 } from "@huspy/shared-domain";
-import { businessUnitLabel, dealStatusLabel } from "@/lib/labels";
+import { dealStatusLabel } from "@/lib/labels";
 import { PnLWaterfall } from "@/components/PnLWaterfall";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { DealHeader } from "@/components/DealHeader";
+import {
+  computeDealReadiness,
+  type DealReadiness,
+  type ReadinessAction,
+} from "@/lib/dealReadiness";
 
-const STAGE_ORDER: { key: DealStatus; label: string }[] = [
-  { key: "pending-details",        label: "Pending Details" },
-  { key: "under-review",           label: "Under Review" },
-  { key: "pending-agent-approval", label: "Agent Approval" },
+const ALL_STAGES: { key: DealStatus; label: string }[] = [
+  { key: "pending-details",        label: "Pending details" },
+  { key: "under-review",           label: "Under review" },
+  { key: "pending-agent-approval", label: "Agent approval" },
   { key: "invoicing",              label: "Invoicing" },
   { key: "finalized",              label: "Finalized" },
+  { key: "canceled",               label: "Canceled" },
 ];
-
-function getStageIndex(status: DealStatus): number {
-  return STAGE_ORDER.findIndex((s) => s.key === status);
-}
+const FORWARD_ORDER: DealStatus[] = [
+  "pending-details", "under-review", "pending-agent-approval", "invoicing", "finalized",
+];
 
 function getStageDates(tranche: Tranche): Record<string, string | null> {
   const dates: Record<string, string | null> = {};
-  STAGE_ORDER.forEach((stage) => { dates[stage.key] = null; });
-  dates["pending-details"] = tranche.reportDate ? new Date(tranche.reportDate).toISOString() : null;
+  ALL_STAGES.forEach((s) => { dates[s.key] = null; });
+  dates["pending-details"] = tranche.createdAt ?? null;
+  dates["under-review"] = tranche.reportDate ? new Date(tranche.reportDate).toISOString() : null;
   if (tranche.statusHistory) {
     for (const entry of tranche.statusHistory) {
       if (entry.to in dates && dates[entry.to] === null) dates[entry.to] = entry.timestamp;
@@ -90,7 +102,7 @@ function fmt(amount: number, currency: string): string {
 function ReadRow({ label, value, children }: { label: string; value?: string | React.ReactNode; children?: React.ReactNode }) {
   return (
     <div className="flex items-center py-2 min-w-0 border-b border-border/40 last:border-0">
-      <span className="w-[160px] text-[12px] text-muted-foreground shrink-0 uppercase tracking-wide font-medium">{label}</span>
+      <span className="w-[160px] text-[12px] text-muted-foreground shrink-0 font-medium">{label}</span>
       <span className="text-[13px] text-foreground font-medium truncate">{children ?? value ?? "—"}</span>
     </div>
   );
@@ -101,41 +113,219 @@ function SectionCard({ id, title, children, className = "", collapsible = false,
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div id={id} className={`bg-card border border-border rounded-lg shadow-sm scroll-mt-32 ${className}`}>
-      <div className={`px-5 py-3.5 border-b border-border flex items-center justify-between ${collapsible ? "cursor-pointer select-none" : ""}`}
-        onClick={collapsible ? () => setOpen((o) => !o) : undefined}>
-        <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wider">{title}</h3>
+    <div id={id} className={`scroll-mt-32 ${className}`}>
+      <div
+        className={`flex items-center justify-between py-2 ${collapsible ? "cursor-pointer select-none" : ""}`}
+        onClick={collapsible ? () => setOpen((o) => !o) : undefined}
+      >
+        <h3 className="text-[13px] font-semibold text-foreground">{title}</h3>
         {collapsible && <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />}
       </div>
-      {(!collapsible || open) && <div className="px-5 py-4">{children}</div>}
+      <div className="h-px bg-border mb-4" />
+      {(!collapsible || open) && <div>{children}</div>}
     </div>
   );
 }
+
+const TIER_PILL: Record<string, string> = {
+  success: "bg-tier-success-bg text-tier-success",
+  info:    "bg-tier-info-bg text-tier-info",
+  warning: "bg-tier-warning-bg text-tier-warning",
+  danger:  "bg-tier-danger-bg text-tier-danger",
+  neutral: "bg-tier-neutral-bg text-tier-neutral",
+};
 
 function TrancheTabs({ tranches, activeId, onSelect, canAdd, onAdd }: {
   tranches: Tranche[]; activeId: string; onSelect: (id: string) => void; canAdd: boolean; onAdd: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1 px-6 pt-3 pb-0 border-b border-border bg-background">
-      {tranches.map((t) => (
-        <button key={t.id} onClick={() => onSelect(t.id)}
-          className={`px-4 py-2 text-[13px] font-medium rounded-t-md border border-b-0 transition-colors ${
-            t.id === activeId ? "bg-card text-foreground border-border" : "bg-transparent text-muted-foreground border-transparent hover:text-foreground hover:border-border/50"
-          }`}>
-          {t.label ?? `Tranche ${t.index + 1}`}
-          <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${
-            t.status === "finalized" ? "bg-emerald-100 text-emerald-700" :
-            t.status === "invoicing" ? "bg-blue-100 text-blue-700" :
-            t.status === "under-review" ? "bg-amber-100 text-amber-700" :
-            t.status === "pending-agent-approval" ? "bg-purple-100 text-purple-700" :
-            t.status === "canceled" ? "bg-red-100 text-red-500" : "bg-muted text-muted-foreground"
-          }`}>{dealStatusLabel[t.status]}</span>
-        </button>
-      ))}
+    /* Tab bar sits at the top of the white card. Active tab uses -mb-px to visually
+       connect (no bottom border) to the white card body below. */
+    <div className="relative flex items-end gap-1 px-4 pt-3 pb-0 border-b border-border">
+      {tranches.map((t) => {
+        const active = t.id === activeId;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onSelect(t.id)}
+            className={`relative px-4 py-2 text-[13px] font-medium transition-colors rounded-t-xl ${
+              active
+                ? "bg-card text-foreground border border-border border-b-card -mb-px z-10"
+                : "bg-background text-muted-foreground hover:text-foreground rounded-t-md"
+            }`}
+          >
+            {t.label ?? (tranches.length === 1 ? "Single tranche" : `Tranche ${t.index + 1}`)}
+            <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${TIER_PILL[statusTier(t.status)]}`}>
+              {dealStatusLabel[t.status]}
+            </span>
+          </button>
+        );
+      })}
       {canAdd && (
         <button onClick={onAdd} className="ml-1 flex items-center gap-1 px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-foreground transition-colors">
           <Plus className="h-3.5 w-3.5" /> Add tranche
         </button>
+      )}
+    </div>
+  );
+}
+
+const MODE_PALETTE: Record<DealReadiness["mode"], { bg: string; text: string; icon: typeof Check }> = {
+  blocked:  { bg: "bg-tier-warning-bg", text: "text-tier-warning", icon: AlertTriangle },
+  ready:    { bg: "bg-tier-success-bg", text: "text-tier-success", icon: Check },
+  waiting:  { bg: "bg-tier-info-bg",    text: "text-tier-info",    icon: Clock },
+  locked:   { bg: "bg-muted",           text: "text-foreground",   icon: Lock },
+  terminal: { bg: "bg-tier-success-bg", text: "text-tier-success", icon: Check },
+  canceled: { bg: "bg-tier-danger-bg",  text: "text-tier-danger",  icon: Ban },
+};
+
+function TrancheContextBar({
+  readiness,
+  onTransition,
+  savedAt,
+}: {
+  readiness: DealReadiness;
+  onTransition: (to: DealReadiness["primary"] extends infer A ? A extends { to: infer T } ? T : never : never, opts?: { reason?: string }) => void;
+  savedAt?: string;
+}) {
+  const palette = MODE_PALETTE[readiness.mode];
+  const Icon = palette.icon;
+  const primary = readiness.primary;
+  const primaryEnabled = primary ? (readiness.mode === "ready" || readiness.mode === "waiting") : false;
+
+  const fireAction = (action: ReadinessAction) => (onTransition as (to: typeof action.to, opts?: { reason?: string }) => void)(action.to);
+
+  const scrollTo = (targetId: string) => {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
+  };
+
+  return (
+    <div className={`flex items-start justify-between gap-4 px-6 py-3 border-b border-border ${palette.bg}`}>
+      {/* Readiness info */}
+      <div className="flex items-start gap-3 flex-1 min-w-0">
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-white/60 ${palette.text}`}>
+          <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2.5 flex-wrap">
+            <span className={`text-[13px] font-semibold ${palette.text}`}>{readiness.headline}</span>
+            {readiness.sub && (
+              <span className="text-[12px] text-muted-foreground">{readiness.sub}</span>
+            )}
+          </div>
+          {readiness.items.length > 0 && (
+            <div className="mt-1.5 flex flex-col gap-1">
+              {readiness.items.map((it, i) => (
+                <div key={i} className="flex items-center gap-2 text-[12px]">
+                  <span className="w-3 flex items-center justify-center">
+                    {it.done
+                      ? <Check className="h-3 w-3 text-tier-success" strokeWidth={2.5} />
+                      : <Circle className="h-3 w-3 text-muted-foreground/40" />}
+                  </span>
+                  <span className={it.done ? "flex-1 text-muted-foreground line-through decoration-muted-foreground/40" : "flex-1 text-foreground"}>
+                    {it.label}
+                  </span>
+                  {it.cta && (
+                    <button onClick={() => scrollTo(it.cta!.targetId)} className="text-[11px] text-primary font-medium hover:underline inline-flex items-center gap-0.5">
+                      {it.cta.label} <ArrowRight className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Action buttons + saved indicator */}
+      <div className="flex items-center gap-2 shrink-0">
+        {savedAt && (
+          <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+            <Check className="h-3 w-3 text-muted-foreground/60" strokeWidth={2.5} />
+            Saved · {savedAt}
+          </span>
+        )}
+        {readiness.secondary && (
+          <button
+            onClick={() => fireAction(readiness.secondary!)}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-semibold border border-border bg-card text-foreground hover:bg-muted transition-colors"
+          >
+            {readiness.secondary.icon === "undo" && <Undo2 className="h-3.5 w-3.5" />}
+            {readiness.secondary.icon === "msg"  && <MessageSquare className="h-3.5 w-3.5" />}
+            {readiness.secondary.label}
+          </button>
+        )}
+        {primary && (
+          <button
+            onClick={() => fireAction(primary)}
+            disabled={!primaryEnabled}
+            title={primaryEnabled ? undefined : readiness.disabledReason}
+            className={`inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md text-[13px] font-semibold transition-opacity ${
+              primaryEnabled
+                ? "bg-primary text-primary-foreground hover:opacity-90"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            }`}
+          >
+            {primary.label}
+            {primaryEnabled && <ArrowRight className="h-3.5 w-3.5" />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DealDetailsCard({ deal, amountLabel, demandName, demandPartyId, supplyName, onNavigate }: {
+  deal: NonNullable<ReturnType<typeof findDeal>>;
+  amountLabel: string;
+  demandName: string;
+  demandPartyId: string | undefined;
+  supplyName: string;
+  onNavigate: ReturnType<typeof useNavigate>;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="bg-card border border-border rounded-2xl shadow-sm p-6">
+      <div
+        className="flex items-center justify-between pb-3 cursor-pointer select-none"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <h2 className="text-[13px] font-semibold text-foreground">Deal details</h2>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
+      </div>
+      <div className="h-px bg-border mb-4" />
+      {open && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10">
+          {/* Col 1: Asset, Demand, Supply, Business unit */}
+          <div>
+            <ReadRow label="Asset" value={deal.title ?? "—"} />
+            <ReadRow label="Demand">
+              {demandPartyId ? (
+                <button onClick={() => onNavigate("/clients")} className="text-primary hover:underline font-medium text-[13px]">
+                  {demandName}
+                </button>
+              ) : <span className="text-[13px] text-foreground font-medium">{demandName || "—"}</span>}
+            </ReadRow>
+            <ReadRow label="Supply" value={supplyName || "—"} />
+            <ReadRow label="Business unit" value={deal.businessUnit?.toUpperCase() ?? "—"} />
+          </div>
+          {/* Col 2: Country, Market, Channel, Amount */}
+          <div>
+            <ReadRow label="Country" value={deal.country?.toUpperCase() ?? "—"} />
+            <ReadRow label="Market" value={deal.market ?? "—"} />
+            <ReadRow label="Channel" value={deal.channel ?? "—"} />
+            <ReadRow label="Amount" value={amountLabel !== "—" ? `${deal.currency ?? ""} ${amountLabel}` : "—"} />
+          </div>
+          {/* Col 3: Deal ID, Description, Offer ID, Created */}
+          <div>
+            <ReadRow label="Deal ID" value={deal.id} />
+            <ReadRow label="Description" value={deal.description ?? "—"} />
+            <ReadRow label="Offer ID" value={deal.offerId ?? "—"} />
+            <ReadRow label="Created" value={deal.createdAt ? formatDate(deal.createdAt) : "—"} />
+          </div>
+        </div>
       )}
     </div>
   );
@@ -155,8 +345,6 @@ const DealDetail = () => {
     if (paramId) { const found = tranches.find((t) => t.id === paramId); if (found) return found; }
     return tranches[0];
   }, [tranches, searchParams]);
-
-  const isMultiTranche = tranches.length > 1;
 
   const [stakesVersion, setStakesVersion] = useState(0);
   const [status, setStatus] = useState<DealStatus>(activeTranche?.status ?? "pending-details");
@@ -281,26 +469,20 @@ const DealDetail = () => {
   };
 
   // ── Derived values ─────────────────────────────────────────────────────────
-  const { clientName, demandName, supplyName, amountLabel } = useMemo(() => {
-    if (!deal || !activeTranche) return { clientName: "—", demandName: "—", supplyName: "—", amountLabel: "—" };
+  const { demandName, demandPartyId, supplyName, amountLabel } = useMemo(() => {
+    if (!deal || !activeTranche) return { demandName: "—", demandPartyId: undefined, supplyName: "—", amountLabel: "—" };
+    const demandParticipant = sharedDealParticipants.find((p) => p.dealId === deal.id && p.role === "DEMAND");
     const resolveParticipant = (role: "DEMAND" | "SUPPLY") =>
       sharedDealParticipants.filter((p) => p.dealId === deal.id && p.role === role)
         .map((p) => sharedParties.find((party) => party.id === p.partyId)?.displayName).filter(Boolean).join(", ") || "—";
     const currency = deal.currency ?? "EUR";
     return {
-      clientName: resolveParticipant("DEMAND") !== "—" ? resolveParticipant("DEMAND") : deal.clientName || "—",
-      demandName: resolveParticipant("DEMAND"), supplyName: resolveParticipant("SUPPLY"),
-      amountLabel: deal.dealAmount > 0 ? fmt(deal.dealAmount, currency) : "—",
+      demandName:    resolveParticipant("DEMAND"),
+      demandPartyId: demandParticipant?.partyId,
+      supplyName:    resolveParticipant("SUPPLY"),
+      amountLabel:   deal.dealAmount > 0 ? fmt(deal.dealAmount, currency) : "—",
     };
   }, [deal, activeTranche, stakesVersion]);
-
-  const ageInStage = useMemo(() => {
-    const lastEntry = [...statusHistory].reverse().find((h) => h.to === status);
-    const sinceIso = lastEntry?.timestamp ?? activeTranche?.createdAt;
-    if (!sinceIso) return undefined;
-    const days = Math.floor((Date.now() - new Date(sinceIso).getTime()) / 86400000);
-    if (days <= 0) return "today"; if (days === 1) return "1 day in stage"; return `${days} days in stage`;
-  }, [status, statusHistory, activeTranche?.createdAt]);
 
   const savedAt = useMemo(() => {
     const lastEntry = statusHistory.length > 0 ? statusHistory[statusHistory.length - 1].timestamp : activeTranche?.createdAt;
@@ -321,7 +503,9 @@ const DealDetail = () => {
 
   const currency = deal.currency ?? "EUR";
   const stageDates = getStageDates({ ...activeTranche, status, statusHistory });
-  const currentIdx = getStageIndex(status);
+  const isSentBack = status === "pending-details";
+  const isCanceled = status === "canceled";
+  const currentForwardIdx = isCanceled ? FORWARD_ORDER.length : FORWARD_ORDER.indexOf(status);
   const canEditOps = (status === "pending-details" || status === "under-review") && !pnlPendingApproval;
 
   const handleStatusChange = (to: DealStatus, opts?: { reason?: string }) => {
@@ -380,83 +564,77 @@ const DealDetail = () => {
     else toast.success(`Moved to ${dealStatusLabel[to]}`);
   };
 
-  // Pass a deal-like object to DealHeader that includes status for backward compat
-  const dealWithStatus = { ...deal, status, statusHistory } as any;
+  const canCancel = status !== "finalized" && status !== "canceled";
+  const readiness = computeDealReadiness({
+    deal: { ...deal, status, statusHistory } as any,
+    status, docs, pnlPendingApproval, pnlHasChanges,
+  });
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-background">
       <DealHeader
-        deal={dealWithStatus}
-        status={status}
-        pnlPendingApproval={pnlPendingApproval}
-        pnlHasChanges={pnlHasChanges}
-        docs={docs}
-        clientName={clientName}
-        amountLabel={amountLabel}
-        ageInStage={ageInStage}
-        savedAt={savedAt}
-        onTransition={handleStatusChange}
+        deal={deal}
+        canCancel={canCancel}
+        onCancel={(reason) => handleStatusChange("canceled", { reason })}
       />
 
-      {isMultiTranche && (
-        <TrancheTabs tranches={tranches} activeId={activeTranche.id}
-          onSelect={(id) => setSearchParams({ tranche: id })}
-          canAdd={status === "under-review"}
-          onAdd={() => { setAddTrancheLabel("Escritura"); setAddTrancheAmountStr(String(Math.round(trancheGrossRevenue(activeTranche.id) / 2))); setAddTrancheOpen(true); }} />
-      )}
+      <div className="flex-1 overflow-auto px-6 py-6 space-y-4">
+        {/* ── Deal identity card — deal-scoped fields, always visible above the tabs ── */}
+        <DealDetailsCard
+          deal={deal}
+          amountLabel={amountLabel}
+          demandName={demandName}
+          demandPartyId={demandPartyId}
+          supplyName={supplyName}
+          onNavigate={navigate}
+        />
 
-      <div className="flex-1 overflow-auto px-6 py-6">
+        {/* ── White tranche workspace — tabs + context bar + per-tranche body ── */}
+        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <TrancheTabs tranches={tranches} activeId={activeTranche.id}
+            onSelect={(id) => setSearchParams({ tranche: id })}
+            canAdd={status === "under-review"}
+            onAdd={() => { setAddTrancheLabel("Escritura"); setAddTrancheAmountStr(String(Math.round(trancheGrossRevenue(activeTranche.id) / 2))); setAddTrancheOpen(true); }} />
+
+          <TrancheContextBar readiness={readiness} onTransition={handleStatusChange} savedAt={savedAt} />
+
+          <div className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
           <div className="flex flex-col gap-5">
-            <SectionCard title="Deal Overview">
+            <SectionCard title="Tranche details" collapsible defaultOpen={true}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
                 <div>
-                  <ReadRow label="Deal ID" value={deal.id} />
-                  <ReadRow label="Business Unit" value={deal.businessUnit ? businessUnitLabel[deal.businessUnit] : "—"} />
-                  <ReadRow label="Market" value={deal.market} />
-                  <ReadRow label="Country" value={deal.country?.toUpperCase()} />
-                  <ReadRow label="Currency" value={deal.currency} />
-                  {deal.dealAmount > 0 && <ReadRow label="Deal Amount" value={fmt(deal.dealAmount, currency)} />}
-                  <ReadRow label="Report Date" value={activeTranche.reportDate ? formatDate(activeTranche.reportDate) : "—"} />
-                  <ReadRow label="Created" value={deal.createdAt ? formatDate(deal.createdAt) : "—"} />
+                  <ReadRow label="Tranche ID" value={activeTranche.id} />
+                  <ReadRow label="Report date" value={activeTranche.reportDate ? formatDate(activeTranche.reportDate) : "—"} />
+                  <ReadRow label="P&L engine" value={getDealEngine(deal, activeTranche)} />
                 </div>
                 <div>
-                  <ReadRow label="Asset" value={deal.title ?? "—"} />
-                  <ReadRow label="Offer ID" value={deal.offerId ?? "—"} />
-                  <ReadRow label="Description" value={deal.description ?? "—"} />
-                  <ReadRow label="Tranche" value={activeTranche.label ? `${activeTranche.label} (${activeTranche.index + 1} of ${tranches.length})` : (tranches.length === 1 ? "Single tranche" : `${activeTranche.index + 1} of ${tranches.length}`)} />
-                  <ReadRow label="Demand" value={demandName} />
-                  <ReadRow label="Supply" value={supplyName} />
-                  <ReadRow label="Channel" value={deal.channel ?? "—"} />
-                  <ReadRow label="P&L Engine" value={getDealEngine(deal, activeTranche)} />
+                  <ReadRow label="Blueprint" value={activeTranche.blueprintId ?? "—"} />
+                  {activeTranche.disbursedAmount != null && (
+                    <ReadRow label="Disbursed" value={`${deal.currency ?? ""} ${fmt(activeTranche.disbursedAmount, deal.currency ?? "EUR")}`} />
+                  )}
+                  <ReadRow label="Created" value={activeTranche.createdAt ? formatDate(activeTranche.createdAt) : "—"} />
                 </div>
               </div>
             </SectionCard>
 
-            {!isMultiTranche && status === "under-review" && (
-              <button onClick={() => { setAddTrancheLabel("Escritura"); setAddTrancheAmountStr(String(Math.round(trancheGrossRevenue(activeTranche.id) / 2))); setAddTrancheOpen(true); }}
-                className="flex items-center gap-2 self-start px-3 py-1.5 rounded-md border border-border text-[12px] font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors">
-                <Plus className="h-3.5 w-3.5" /> Add tranche
-              </button>
-            )}
-
             <SectionCard id="pnl" title={pnlPendingApproval ? "P&L — Pending Approval" : pnlHasChanges ? "P&L — Unsaved Changes" : "P&L"} collapsible>
               {pnlHasChanges && !pnlPendingApproval && (
-                <div className="flex items-center justify-between mb-4 px-3 py-2.5 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20">
-                  <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" /><p className="text-[13px] font-semibold text-foreground">P&L has unsaved changes</p></div>
+                <div className="flex items-center justify-between mb-4 px-3 py-2.5 rounded-md bg-tier-warning-bg">
+                  <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-tier-warning shrink-0" /><p className="text-[13px] font-semibold text-foreground">P&L has unsaved changes</p></div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button onClick={handleDiscardPnLChanges} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-[12px] font-medium text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"><Undo2 className="h-3.5 w-3.5" /> Discard</button>
-                    <button onClick={handleSubmitPnLForApproval} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-600 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity">Submit for approval</button>
+                    <button onClick={handleSubmitPnLForApproval} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-semibold hover:opacity-90 transition-opacity">Submit for approval</button>
                   </div>
                 </div>
               )}
               {pnlPendingApproval && (
-                <div className={`flex items-center justify-between mb-4 px-3 py-2.5 rounded-md border ${currentUser.role === "finance_lead" ? "border-amber-300 bg-amber-50 dark:bg-amber-950/20" : "border-border bg-muted/40"}`}>
-                  <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" /><div><p className="text-[13px] font-semibold text-foreground">P&L changes pending Senior Ops approval</p>{currentUser.role !== "finance_lead" && <p className="text-[11px] text-muted-foreground">A Senior Ops user must approve or reject before the deal can advance.</p>}</div></div>
+                <div className={`flex items-center justify-between mb-4 px-3 py-2.5 rounded-md ${currentUser.role === "finance_lead" ? "bg-tier-warning-bg" : "bg-muted/40 border border-border"}`}>
+                  <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-tier-warning shrink-0" /><div><p className="text-[13px] font-semibold text-foreground">P&L changes pending Senior Ops approval</p>{currentUser.role !== "finance_lead" && <p className="text-[11px] text-muted-foreground">A Senior Ops user must approve or reject before the deal can advance.</p>}</div></div>
                   {currentUser.role === "finance_lead" && (
                     <div className="flex items-center gap-2 shrink-0">
                       <button onClick={handleRejectPnL} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-[12px] font-medium text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"><Undo2 className="h-3.5 w-3.5" /> Reject</button>
-                      <button onClick={handleApprovePnL} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"><CheckCheck className="h-3.5 w-3.5" /> Approve</button>
+                      <button onClick={handleApprovePnL} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-semibold hover:opacity-90 transition-opacity"><CheckCheck className="h-3.5 w-3.5" /> Approve</button>
                     </div>
                   )}
                 </div>
@@ -487,19 +665,54 @@ const DealDetail = () => {
           </div>
 
           <div className="flex flex-col gap-5">
-            <SectionCard title="Deal Progress" collapsible>
+            <SectionCard title="Progress" collapsible>
               <div className="relative pl-4">
-                {STAGE_ORDER.map((stage, i) => {
-                  const completed = i <= currentIdx; const isCurrent = i === currentIdx; const dateStr = stageDates[stage.key];
+                {ALL_STAGES.map((stage, i) => {
+                  const isLast = i === ALL_STAGES.length - 1;
+                  const isCancelStage = stage.key === "canceled";
+                  const isCurrent = stage.key === status;
+                  const stageForwardIdx = FORWARD_ORDER.indexOf(stage.key);
+                  const completed = stageForwardIdx >= 0 && stageForwardIdx < currentForwardIdx;
+                  const dimmed = isCancelStage && !isCanceled;
+                  const dateStr = stageDates[stage.key];
                   return (
                     <div key={stage.key} className="relative flex items-start gap-3 pb-5 last:pb-0">
-                      {i < STAGE_ORDER.length - 1 && <div className={`absolute left-[9px] top-[24px] w-[2px] h-[calc(100%-14px)] ${i < currentIdx ? "bg-[hsl(var(--deal-paid))]" : "bg-border"}`} />}
+                      {!isLast && (
+                        <div className={`absolute left-[9px] top-[24px] w-[2px] h-[calc(100%-14px)] ${completed ? "bg-tier-success" : "bg-border"}`} />
+                      )}
                       <div className="relative z-10 shrink-0 bg-card rounded-full">
-                        {completed ? <CheckCircle2 className="h-5 w-5 text-[hsl(var(--deal-paid))]" /> : <Circle className="h-5 w-5 text-muted-foreground/30" />}
+                        {completed ? (
+                          <CheckCircle2 className="h-5 w-5 text-tier-success" />
+                        ) : isCurrent && isCancelStage ? (
+                          <div className="h-5 w-5 rounded-full bg-tier-danger-bg flex items-center justify-center"><Ban className="h-3 w-3 text-tier-danger" /></div>
+                        ) : isCurrent ? (
+                          <div className="h-5 w-5 rounded-full border-[2px] border-foreground flex items-center justify-center">
+                            <div className="h-2 w-2 rounded-full bg-foreground" />
+                          </div>
+                        ) : (
+                          <Circle className={`h-5 w-5 ${dimmed ? "text-muted-foreground/20" : "text-muted-foreground/30"}`} />
+                        )}
                       </div>
                       <div className="flex-1 -mt-0.5">
-                        <p className={`text-[13px] font-medium ${isCurrent ? "text-foreground" : completed ? "text-[hsl(var(--deal-paid))]" : "text-muted-foreground/50"}`}>{stage.label}</p>
-                        {dateStr ? <p className="text-[11px] text-muted-foreground mt-0.5">{formatDateTime(dateStr)}</p> : !completed && <p className="text-[11px] text-muted-foreground/40 mt-0.5">Pending</p>}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className={`text-[13px] font-medium ${
+                            isCurrent && isCancelStage ? "text-tier-danger" :
+                            isCurrent ? "text-foreground" :
+                            completed ? "text-tier-success" :
+                            dimmed ? "text-muted-foreground/20" :
+                            "text-muted-foreground/50"
+                          }`}>{stage.label}</p>
+                          {stage.key === "under-review" && isSentBack && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-tier-info-bg text-tier-info">
+                              <Undo2 className="h-2.5 w-2.5" /> Sent to agent
+                            </span>
+                          )}
+                        </div>
+                        {dateStr
+                          ? <p className="text-[11px] text-muted-foreground mt-0.5">{formatDateTime(dateStr)}</p>
+                          : (!completed && !dimmed && !isCurrent)
+                            ? <p className="text-[11px] text-muted-foreground/40 mt-0.5">Pending</p>
+                            : null}
                       </div>
                     </div>
                   );
@@ -508,7 +721,9 @@ const DealDetail = () => {
             </SectionCard>
           </div>
         </div>
-      </div>
+          </div>{/* /p-6 */}
+        </div>{/* /bg-card tranche panel */}
+      </div>{/* /overflow-auto page body */}
 
       {addTrancheOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setAddTrancheOpen(false)}>
@@ -573,13 +788,13 @@ function PostingsSection({ trancheId, version }: { trancheId: string; version: n
 
   return (
     <>
-      <SectionCard title="Accounting Events" collapsible>
+      <SectionCard title="Accounting events" collapsible defaultOpen={false}>
         <div className="rounded-lg border border-border overflow-hidden">
           <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-border bg-muted/30">
-              <th className="text-left px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Ledger</th>
-              <th className="text-right px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Debit</th>
-              <th className="text-right px-4 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wide w-[30%]">Credit</th>
+            <thead><tr className="border-b border-border bg-muted/20">
+              <th className="text-left px-4 py-2 text-[12px] font-medium text-muted-foreground w-[30%]">Ledger</th>
+              <th className="text-right px-4 py-2 text-[12px] font-medium text-muted-foreground w-[30%]">Debit</th>
+              <th className="text-right px-4 py-2 text-[12px] font-medium text-muted-foreground w-[30%]">Credit</th>
             </tr></thead>
             <tbody>
               {postings.length === 0 && <tr><td colSpan={3} className="px-4 py-6 text-center text-[12px] text-muted-foreground">No accounting entries yet</td></tr>}
@@ -616,29 +831,30 @@ function PostingsSection({ trancheId, version }: { trancheId: string; version: n
 
 const STATUS_LABEL: Record<InvoiceStatus, string> = { draft: "Draft", issued: "Issued", paid: "Paid", cancelled: "Cancelled" };
 const STATUS_CLASSES: Record<InvoiceStatus, string> = {
-  draft: "bg-muted text-muted-foreground", issued: "bg-amber-50 text-amber-700 border border-amber-200",
-  paid: "bg-emerald-50 text-emerald-700 border border-emerald-200", cancelled: "bg-red-50 text-red-500 border border-red-200",
+  draft:     "bg-tier-neutral-bg text-tier-neutral",
+  issued:    "bg-tier-info-bg text-tier-info",
+  paid:      "bg-tier-success-bg text-tier-success",
+  cancelled: "bg-tier-danger-bg text-tier-danger",
 };
 const DIRECTION_LABEL: Record<"inbound" | "outbound", string> = { inbound: "Payable", outbound: "Receivable" };
 const DIRECTION_CLASSES: Record<"inbound" | "outbound", string> = {
-  inbound: "bg-amber-50 text-amber-700 border border-amber-200",
-  outbound: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  inbound:  "bg-tier-warning-bg text-tier-warning",
+  outbound: "bg-tier-success-bg text-tier-success",
 };
 
 function InvoicesSection({ trancheId, navigate, invoicesVersion }: { trancheId: string; navigate: ReturnType<typeof useNavigate>; invoicesVersion: number }) {
   const invoices = useMemo(() => sharedInvoices.filter((inv) => inv.trancheId === trancheId).sort((a, b) => a.issueDate.localeCompare(b.issueDate)), [trancheId, invoicesVersion]);
-  if (invoices.length === 0) return <SectionCard title="Invoices" collapsible><p className="text-[13px] text-muted-foreground italic">No invoices for this tranche.</p></SectionCard>;
   return (
-    <SectionCard title="Invoices" collapsible>
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <SectionCard title="Invoices" collapsible defaultOpen={false}>
+      {invoices.length === 0 ? <p className="text-[13px] text-muted-foreground italic">No invoices for this tranche.</p> : <div className="rounded-lg border border-border overflow-hidden">
         <table className="w-full text-[13px]">
-          <thead><tr className="border-b border-border bg-muted/30">
-            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Invoice #</th>
-            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Counterparty</th>
-            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Type</th>
-            <th className="text-right px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Amount</th>
-            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Status</th>
-            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[11px] uppercase tracking-wide">Issue Date</th>
+          <thead><tr className="border-b border-border bg-muted/20">
+            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[12px]">Invoice #</th>
+            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[12px]">Counterparty</th>
+            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[12px]">Type</th>
+            <th className="text-right px-4 py-2.5 font-medium text-muted-foreground text-[12px]">Amount</th>
+            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[12px]">Status</th>
+            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground text-[12px]">Issue date</th>
           </tr></thead>
           <tbody>
             {invoices.map((inv) => {
@@ -657,7 +873,7 @@ function InvoicesSection({ trancheId, navigate, invoicesVersion }: { trancheId: 
             })}
           </tbody>
         </table>
-      </div>
+      </div>}
     </SectionCard>
   );
 }
@@ -676,15 +892,15 @@ function CommentsSection({ trancheId, canAdd }: { trancheId: string; canAdd: boo
     setNewText("");
   };
   return (
-    <SectionCard title="Comments" collapsible>
+    <SectionCard title="Comments" collapsible defaultOpen={false}>
       <div className="space-y-3">
         {comments.length === 0 ? <p className="text-[13px] text-muted-foreground italic">No comments on this tranche.</p> : comments.map((c) => {
           const isOps = c.author === "ops";
           return (
             <div key={c.id} className={`flex gap-3 ${isOps ? "" : "flex-row-reverse"}`}>
-              <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold ${isOps ? "bg-primary/10 text-primary" : "bg-emerald-500/10 text-emerald-700"}`}>{isOps ? "O" : "A"}</div>
+              <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold ${isOps ? "bg-primary/10 text-primary" : "bg-tier-info-bg text-tier-info"}`}>{isOps ? "O" : "A"}</div>
               <div className={`flex-1 max-w-[85%] ${isOps ? "" : "items-end flex flex-col"}`}>
-                <div className={`px-3 py-2 rounded-lg text-[13px] ${isOps ? "bg-muted text-foreground" : "bg-emerald-50 dark:bg-emerald-950/20 text-foreground"}`}>{c.text}</div>
+                <div className={`px-3 py-2 rounded-lg text-[13px] ${isOps ? "bg-muted text-foreground" : "bg-tier-info-bg text-foreground"}`}>{c.text}</div>
                 <p className="text-[10px] text-muted-foreground mt-1">{c.authorName} · {formatDateTime(c.createdAt)}</p>
               </div>
             </div>
@@ -705,8 +921,10 @@ function CommentsSection({ trancheId, canAdd }: { trancheId: string; canAdd: boo
 
 const DOC_STATUS_LABEL: Record<DocumentRequirementStatus, string> = { pending: "Pending", uploaded: "Uploaded", approved: "Approved", waived: "Waived" };
 const DOC_STATUS_CLASSES: Record<DocumentRequirementStatus, string> = {
-  pending: "bg-muted text-muted-foreground", uploaded: "bg-amber-50 text-amber-700 border border-amber-200",
-  approved: "bg-emerald-50 text-emerald-700 border border-emerald-200", waived: "bg-slate-50 text-slate-500 border border-slate-200",
+  pending:  "bg-tier-neutral-bg text-tier-neutral",
+  uploaded: "bg-tier-info-bg text-tier-info",
+  approved: "bg-tier-success-bg text-tier-success",
+  waived:   "bg-tier-neutral-bg text-tier-neutral",
 };
 
 function DocumentsSection({ docs, canEdit, onUpdateStatus, onAddDoc, onUploadDoc }: {
@@ -716,7 +934,7 @@ function DocumentsSection({ docs, canEdit, onUpdateStatus, onAddDoc, onUploadDoc
 }) {
   const [isAdding, setIsAdding] = useState(false); const [addingLabel, setAddingLabel] = useState("");
   return (
-    <SectionCard id="docs" title="Documents" collapsible>
+    <SectionCard id="docs" title="Documents" collapsible defaultOpen={false}>
       {docs.length === 0 && !canEdit ? <p className="text-[13px] text-muted-foreground italic">No document requirements for this tranche.</p> : (
         <div className="divide-y divide-border/40">
           {docs.map((r) => (
@@ -727,8 +945,8 @@ function DocumentsSection({ docs, canEdit, onUpdateStatus, onAddDoc, onUploadDoc
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {(r.status === "uploaded" || r.status === "approved") && <button onClick={() => { const blob = new Blob([`Document: ${r.label}\n[Placeholder]`], { type: "text/plain" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${r.label.replace(/[^a-z0-9]/gi, "_")}.txt`; a.click(); URL.revokeObjectURL(url); }} title="Download" className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Download className="h-3.5 w-3.5" /></button>}
-                {canEdit && r.status === "pending" && <label className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer">Upload<input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadDoc(r.id, f.name); e.target.value = ""; }} /></label>}
-                {canEdit && r.status === "uploaded" && <button onClick={() => onUpdateStatus(r.id, "approved")} className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors">Approve</button>}
+                {canEdit && r.status === "pending" && <label className="px-2 py-0.5 rounded text-[11px] font-medium bg-tier-info-bg text-tier-info hover:opacity-80 transition-opacity cursor-pointer">Upload<input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadDoc(r.id, f.name); e.target.value = ""; }} /></label>}
+                {canEdit && r.status === "uploaded" && <button onClick={() => onUpdateStatus(r.id, "approved")} className="px-2 py-0.5 rounded text-[11px] font-medium bg-tier-success-bg text-tier-success hover:opacity-80 transition-opacity">Approve</button>}
                 {canEdit && (r.status === "pending" || r.status === "uploaded") && <button onClick={() => onUpdateStatus(r.id, "waived")} className="px-2 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground border border-border hover:bg-muted/80 transition-colors">Waive</button>}
                 {canEdit && r.status === "waived" && <button onClick={() => onUpdateStatus(r.id, "pending")} className="px-2 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground border border-border hover:bg-muted/80 transition-colors">Un-waive</button>}
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${DOC_STATUS_CLASSES[r.status]}`}>{DOC_STATUS_LABEL[r.status]}</span>

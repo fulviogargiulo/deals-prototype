@@ -125,7 +125,7 @@ function WaterfallRow({
           )}
         </div>
       </div>
-      <span className={`text-[13px] font-semibold tabular-nums shrink-0 ${amount == null ? "text-muted-foreground/30" : isCredit ? "text-emerald-600" : "text-orange-500"}`}>
+      <span className={`text-[13px] font-semibold tabular-nums shrink-0 ${amount == null ? "text-muted-foreground/30" : isCredit ? "text-tier-success" : "text-tier-danger"}`}>
         {amount == null ? "—" : `${isCredit ? "+" : "−"}${fmt(Math.abs(amount), currency)}`}
       </span>
       <div className="flex items-center gap-0.5 shrink-0">
@@ -821,7 +821,7 @@ export function PnLWaterfall({ deal, currency, canEdit, onChanged }: Props) {
 
           {/* Pool allocation indicator */}
           {poolAgents.length > 0 && (
-            <div className={`pl-3 mt-1 text-[11px] ${splitPoolTotal < 100 ? "text-amber-600" : "text-muted-foreground/50"}`}>
+            <div className={`pl-3 mt-1 text-[11px] ${splitPoolTotal < 100 ? "text-tier-warning" : "text-muted-foreground/50"}`}>
               Pool allocated: {splitPoolTotal}%
               {splitPoolTotal < 100 && <span className="ml-1">— {100 - splitPoolTotal}% unallocated</span>}
             </div>
@@ -885,7 +885,7 @@ export function PnLWaterfall({ deal, currency, canEdit, onChanged }: Props) {
                   ({((huspyMargin / grossRevenue) * 100).toFixed(1)}%)
                 </span>
               )}
-              <span className="text-[14px] font-bold text-emerald-600 tabular-nums">{fmt(huspyMargin, currency)}</span>
+              <span className={`text-[14px] font-bold tabular-nums ${huspyMargin >= 0 ? "text-tier-success" : "text-tier-danger"}`}>{fmt(huspyMargin, currency)}</span>
             </div>
           </div>
         </>

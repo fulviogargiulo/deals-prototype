@@ -27,10 +27,7 @@ const ALL_CHANNELS = ["MA/Broker", "BBG/Commercial", "B2C/Digital", "REA", "REA 
 const tdClass = "px-4 py-3 text-[13px] text-foreground font-medium whitespace-nowrap";
 
 function BUBadge({ bu }: { bu: string }) {
-  const cls = bu === "rebu"
-    ? "bg-blue-500/15 text-blue-700 dark:text-blue-400"
-    : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${cls}`}>{bu}</span>;
+  return <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider bg-muted text-muted-foreground">{bu}</span>;
 }
 
 export function DealListingTable({ rows, currency = "AED" }: Props) {
@@ -275,7 +272,7 @@ export function DealListingTable({ rows, currency = "AED" }: Props) {
                     <td className={`${tdClass} text-right tabular-nums`}>
                       {pnl ? formatAmount(pnl.commissionBase, deal.currency ?? currency) : dash}
                     </td>
-                    <td className={`${tdClass} text-right tabular-nums font-bold ${pnl && pnl.huspyMargin >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"}`}>
+                    <td className={`${tdClass} text-right tabular-nums font-bold ${pnl && pnl.huspyMargin >= 0 ? "text-tier-success" : "text-tier-danger"}`}>
                       {pnl ? formatAmount(pnl.huspyMargin, deal.currency ?? currency) : dash}
                     </td>
                     <td className={`${tdClass} text-[12px] text-muted-foreground`}>

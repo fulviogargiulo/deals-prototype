@@ -253,7 +253,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
                     {fmt(0, currency)}
                   </span>
                 ) : (
-                  <span className={`text-[12px] font-mono tabular-nums font-semibold ${cut > 0 ? "text-emerald-600" : "text-orange-500"}`}>
+                  <span className={`text-[12px] font-mono tabular-nums font-semibold ${cut > 0 ? "text-tier-success" : "text-tier-danger"}`}>
                     {cut > 0 ? "+" : "−"}{fmt(Math.abs(cut), currency)}
                   </span>
                 )

@@ -176,7 +176,9 @@ const Deals = () => {
                   <span className="flex items-center gap-2"><BookOpen className="h-3.5 w-3.5" />MBU Direct Rates</span>
                 </button>
               </div>
-              {dealConfigTab === "doc-requirements" ? <DocRequirementsView /> : dealConfigTab === "broker-rate-slabs" ? <BrokerRateSlabsView /> : <MBUDirectRatesView />}
+              <div className="bg-card border border-border rounded-2xl shadow-sm p-6">
+                {dealConfigTab === "doc-requirements" ? <DocRequirementsView /> : dealConfigTab === "broker-rate-slabs" ? <BrokerRateSlabsView /> : <MBUDirectRatesView />}
+              </div>
             </div>
           )}
       </div>

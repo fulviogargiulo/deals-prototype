@@ -520,8 +520,6 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       dealAmount,
       createdAt: now,
       updatedAt: now,
-      agentName: primaryParty?.displayName ?? "Unknown Agent",
-      clientName: demandParty?.displayName,
       title: dealTitle,
     };
 
@@ -535,7 +533,6 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
       pnlEngine: derivePnlEngine({ businessUnit, channel }),
       blueprintId: getBlueprint(country, businessUnit).id,
       reportDate: now.split("T")[0],
-      ofCaseNumber: `CASE-${String(Date.now()).slice(-6)}`,
       statusHistory: [{ from: "pending-details", to: "under-review", timestamp: now }],
       createdAt: now,
       updatedAt: now,

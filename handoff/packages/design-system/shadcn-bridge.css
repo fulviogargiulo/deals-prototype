@@ -1,0 +1,92 @@
+/* =========================================================================
+   @huspy/design-system · shadcn-bridge.css
+   -------------------------------------------------------------------------
+   Karvel's shadcn/ui components read HSL triplet vars (--primary, --border…).
+   This file re-points every one of them at the Huspy DS tokens, so the
+   existing components reskin WITHOUT editing component code.
+
+   Import AFTER tokens.css, inside @layer base:
+
+     @import "@huspy/design-system/tokens.css";
+     @import "@huspy/design-system/shadcn-bridge.css";
+
+   HSL values are the Huspy hexes converted to `H S% L%` (shadcn wraps them
+   in hsl() itself). Keep them in sync with tokens.css — these are the only
+   place a raw triplet is allowed to live.
+   ========================================================================= */
+
+@layer base {
+  :root {
+    /* ---- surfaces ---------------------------------------------------- */
+    --background: 0 0% 96%;        /* grey-45  #F4F4F4 */
+    --foreground: 0 0% 10%;        /* grey-900 #1A1A1A */
+    --card: 0 0% 100%;             /* grey-0   #FFFFFF */
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    /* ---- brand = black (was navy 228 40% 20%) ------------------------ */
+    --primary: 0 0% 10%;           /* grey-900 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 94%;         /* grey-60  #F0F0F0 */
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 40%;  /* grey-600 #666666 */
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 10%;
+
+    /* ---- status (destructive only; full tiers below) ----------------- */
+    --destructive: 352 91% 62%;    /* red-600  #F6445C */
+    --destructive-foreground: 0 0% 100%;
+
+    /* ---- lines & focus ----------------------------------------------- */
+    --border: 0 0% 85%;            /* grey-150 #D9D9D9 */
+    --input: 0 0% 85%;
+    --ring: 0 0% 10%;              /* grey-900 — 2px black focus ring */
+
+    /* ---- radius: Huspy buttons 12px → shadcn lg base ----------------- */
+    --radius: 0.75rem;             /* lg=12px, md=10px, sm=8px */
+
+    /* opaque row highlight (replaces navy primary/5) */
+    --row-highlight: 0 0% 96%;     /* grey-45 */
+
+    /* ---- sidebar ----------------------------------------------------- */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 40%;
+    --sidebar-primary: 0 0% 10%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 85%;
+    --sidebar-ring: 0 0% 10%;
+
+    /* =====================================================================
+       STATUS TIER PALETTE — the ONLY colours a deal/tranche state may use.
+       This REPLACES the rainbow --deal-* / --type-* / --status-* vars that
+       used to live in Karvel's index.css. Consume via statusTier() in
+       @huspy/shared-domain; never hard-code a hue on a status.
+       ===================================================================== */
+    --tier-success-fg: 165 84% 30%;   /* green-700 #0D8E6E */
+    --tier-success-bg: 162 53% 90%;   /* green-160 #D9F3EC */
+    --tier-info-fg:    216 92% 32%;   /* blue-800  #064199 */
+    --tier-info-bg:    219 100% 92%;  /* blue-160  #D8E7FF */
+    --tier-warning-fg: 36 82% 31%;    /* orange-800 #8E5C0E */
+    --tier-warning-bg: 36 83% 92%;    /* orange-160 #FCEFDA */
+    --tier-danger-fg:  349 56% 37%;   /* red-800   #942937 */
+    --tier-danger-bg:  351 90% 94%;   /* red-160   #FEE1E5 */
+    --tier-neutral-fg: 0 0% 30%;      /* grey-700  #4D4D4D */
+    --tier-neutral-bg: 0 0% 89%;      /* grey-100  #E4E4E4 */
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   REMOVED — do not reintroduce. These rainbow status hues are replaced by the
+   five tiers above. Left here as a deny-list comment for future reference:
+     --type-buy/-sell/-rent/-lease        → use opportunity tokens (verticals)
+     --status-new/-active/-closed          → use --tier-* (state)
+     --deal-reported / -pending-details /
+       -under-review / -ready-invoicing /
+       -invoicing / -pending-payment /
+       -paid / -mortgage                   → use statusTier(status) → --tier-*
+   --------------------------------------------------------------------------- */
