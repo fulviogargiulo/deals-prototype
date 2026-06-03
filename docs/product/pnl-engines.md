@@ -2,15 +2,15 @@
 
 # 1. The core idea
 
-Every time a deal is saved or its status changes, the system runs a **P&L engine** in the background. The engine reads the deal's details: what Huspy earned, who the agents are, whether an external partner was involved, and produces a set of numbers: agent payouts, acquisition and operational costs, and Huspy's net margin.
+Every time a Tranche is saved or its status changes, the system runs a **P&L engine** in the background. The engine reads the Tranche's details: what Huspy earned (derived from `REVENUE_SOURCE` PnlEntry amounts), who the agents are, whether an external partner was involved, and produces a set of numbers: agent payouts, acquisition and operational costs, and Huspy's net margin.
 
-The engine chosen depends on the `pnlEngine` **field** on the deal — set explicitly at deal creation and visible on the deal detail page. `channel` is a separate reporting field; it does not drive engine selection. This separation means new markets and channels can be onboarded without changing engine logic: ops picks the right engine at creation time, and the system knows exactly which calculation to run.
+The engine chosen depends on the `pnlEngine` **field** on the Tranche — set at Tranche creation (inherited from the Deal's business unit and channel) and visible on the deal/tranche detail page. `channel` is a separate reporting field on the Deal; it does not drive engine selection. This separation means new markets and channels can be onboarded without changing engine logic: ops picks the right engine at creation time, and the system knows exactly which calculation to run.
 
 Each engine has its own rules for where the money comes from and how it is distributed.
 
 # 2. Party ledger treatment
 
-Every party on a deal is linked via a `DealStakeholder` record with a specific `role`.
+Every party on a Tranche is linked via a `PnlEntry` record with a specific `role`.
 
 | Actor | Business Unit | Stakeholder role | GL account | Subledger per party |
 | --- | --- | --- | --- | --- |
@@ -32,8 +32,8 @@ Every party on a deal is linked via a `DealStakeholder` record with a specific `
 | Referral party - external firm | Mortgage REA / DS / B2C | `OPERATIONAL_DEDUCTION` | `EXT_PAYABLE_{CUR}` | N |
 | Referral party - REBU agent or broker | Mortgage REA / DS / B2C | `OPERATIONAL_DEDUCTION` | `LIAB_AGENT_{CUR}` | Y |
 | Notary / conveyance firm | REBU | `OPERATIONAL_DEDUCTION` | `EXT_PAYABLE_{CUR}` | N |
-| Buyer / borrower | All | `DEMAND` | — | N Informational only — no posting |
-| Seller / developer / bank (supply side) | All | `SUPPLY` | — | N Informational only — no posting |
+| Buyer / borrower | All | `DealParticipant` (DEMAND) | — | N — identity only, no P&L effect |
+| Seller / developer / bank | All | `DealParticipant` (SUPPLY) | — | N — identity only, no P&L effect |
 
 **The settlement rule**
 
@@ -90,13 +90,15 @@ Gross Revenue              (client/bank commission)
 
 Not every bucket is filled in every engine — see the per-engine sections below.
 
-**Tranche disbursements**
+**Multi-Tranche deals**
 
-Off-plan mortgages are often disbursed in stages. Each disbursement is recorded as a **separate deal** and processed independently by the engine. Tranches belonging to the same underlying sale are linked by setting the same `offerId` on every tranche deal.
+Some deals involve multiple financial settlement events. These are modelled as `Tranche` records on the same `Deal` — not as separate deals.
 
-* The engine runs per tranche — each one generates its own commission posting at Invoicing.
-* Broker GMV (MA channel) automatically includes all tranches for a broker in the same reporting month, so tier qualification works correctly across tranches.
-* **Referral fee (REA / DS / B2C only):** the 0.3% fee is a one-time origination cost. Only include the OPERATIONAL_DEDUCTION row on the **first** tranche. Set its `amount=0` on subsequent tranches to signal self-sourced rate for those deals.
+* **Spain REBU:** deposit commission (Arras) + completion commission (Escritura). Each is a Tranche with its own `REVENUE_SOURCE` stakeholder amount, P&L confirmation, document checklist, and outbound invoice. The total `dealAmount` on the Deal is the sum of both payment events.
+* **MBU off-plan mortgage disbursements:** a mortgage disbursed in stages generates one Tranche per disbursement. `disbursedAmount` is set on each MBU Tranche to record the actual amount disbursed. Broker GMV (MA channel) aggregates `disbursedAmount` across all Tranches for the broker in the same reporting month, so tier qualification works correctly across Tranches.
+* **Referral fee (REA / DS / B2C only):** the 0.3% fee is a one-time origination cost. Only include the `OPERATIONAL_DEDUCTION` stakeholder on the **first** Tranche. Subsequent Tranches on the same deal are treated as self-sourced.
+
+The engine runs independently per Tranche. Each Tranche generates its own commission posting at the Invoicing transition.
 
 ## 3.1 REBU
 
@@ -455,26 +457,26 @@ An agent can hold AF records for multiple engines (e.g. a REBU agent who also cl
 
 ## 5.1 Lifecycle states
 
-Every `DealStakeholder` has a `status` field:
+Every `PnlEntry` has a `status` field:
 
 | Status | Meaning | Who can edit |
 | --- | --- | --- |
-| `draft` | Working copy. `amount` on `source: "engine"` stakes is the last engine estimate kept in sync after each ops edit. `source: "manual"` amounts are used by the engine directly. | Ops (when deal is in `under-review` or `pending-details` and no P&L approval is pending) |
+| `draft` | Working copy. `amount` on `source: "engine"` stakes is the last engine estimate kept in sync after each ops edit. `source: "manual"` amounts are used by the engine directly. | Ops (when Tranche is in `under-review` or `pending-details` and no P&L approval is pending) |
 | `confirmed` | Locked at the invoicing transition. `amount` is the authoritative payout for finance, invoicing, and accounting. | Nobody, immutable |
 
-Stakes are confirmed when the deal transitions to **Invoicing**. This is the same moment the deal is locked for edits.
+Stakes are confirmed when the Tranche transitions to **Invoicing**. This is the same moment the Tranche is locked for edits. Stakes on other Tranches of the same Deal are unaffected.
 
-**P&L editing and approval (draft deals):**
+**P&L editing and approval (draft Tranches):**
 
-The P&L display always reads from stake `amount` values directly. Each time Ops saves an edit, the engine re-runs to keep all `source: "engine"` stake amounts in sync (`syncEngineAmounts`). Ops can make multiple edits and preview the cumulative P&L impact before committing. When ready, Ops submits for Senior Ops approval.
+The P&L display always reads from stake `amount` values directly. `grossRevenue` is always derived at runtime as the sum of `REVENUE_SOURCE` stake amounts — it is not stored on the Tranche. Each time Ops saves an edit, the engine re-runs to keep all `source: "engine"` stake amounts in sync (`syncEngineAmounts`). Ops can make multiple edits and preview the cumulative P&L impact before committing. When ready, Ops submits for Senior Ops approval.
 
 ## 5.2 What happens at confirmation (invoicing transition)
 
 The system runs the P&L engine one final time and:
 
 1. **Writes** `amount` on every `AGENT_PAYOUT` stake that was using `splitPercentage` (rate-based). From this point, the waterfall uses the fixed amount directly — no rate re-computation.
-2. **Locks connected agent** `AGENT_PAYOUT` stakes (team lead, manager, etc.) by writing their final `amount` and setting `status: "confirmed"`. These stakes already exist as draft from deal creation; confirmation locks their amounts in place.
-3. **Sets** `status: "confirmed"` on all stakes for the deal. Who confirmed and when is on `deal.statusHistory` (entry where `to === "invoicing"`).
+2. **Locks connected agent** `AGENT_PAYOUT` stakes (team lead, manager, etc.) by writing their final `amount` and setting `status: "confirmed"`. These stakes already exist as draft from Tranche creation; confirmation locks their amounts in place.
+3. **Sets** `status: "confirmed"` on all stakes for the Tranche. Who confirmed and when is on `tranche.statusHistory` (entry where `to === "invoicing"`).
 
 ## 5.3 amount + source - override detection
 
@@ -482,10 +484,10 @@ Every `DealStakeholder` has a single `amount` field and a `source` field that re
 
 | `source` | Meaning |
 | --- | --- |
-| `"engine"` | Amount was computed by the P&L engine (at deal creation or after any stake edit). For draft stakes, the engine re-derives live and keeps `amount` in sync; `amount` is the last saved engine estimate. |
+| `"engine"` | Amount was computed by the P&L engine (at Tranche creation or after any stake edit). For draft stakes, the engine re-derives live and keeps `amount` in sync; `amount` is the last saved engine estimate. |
 | `"manual"` | Amount was explicitly entered by ops. The engine uses this value directly — no recomputation. |
 
-**Override detection:** `source === "manual"` on a rate-based AGENT_PAYOUT stake means ops overrode the engine. The full change history (old value, new value, who, when) lives in `DealStakeholderAudit`. Comparing the first and last audit records for a confirmed stake shows the full delta from initial estimate to confirmed value.
+**Override detection:** `source === "manual"` on a rate-based AGENT_PAYOUT stake means ops overrode the engine. The full change history (old value, new value, who, when) lives in `PnlEntryAudit`. Comparing the first and last audit records for a confirmed stake shows the full delta from initial estimate to confirmed value.
 
 # 6. Glossary
 

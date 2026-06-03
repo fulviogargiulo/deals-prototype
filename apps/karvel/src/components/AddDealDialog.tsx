@@ -12,7 +12,8 @@ import {
   sharedAgents,
   sharedAgentFinancials,
   sharedParties,
-  sharedDealStakeholders,
+  sharedPnlEntries,
+  sharedDealParticipants,
   sharedDealDocumentRequirements,
   sharedDocumentRequirementTemplates,
   getBlueprint,
@@ -22,7 +23,9 @@ import {
   type StatusHistoryEntry,
 } from "@huspy/shared-domain";
 import { PartyPicker } from "@/components/PartyPicker";
-import { recalculateDeal, derivePnlEngine, getMissingAgentFinancials, type DealEngineKey } from "@/lib/dealCalculations";
+import { derivePnlEngine, getMissingAgentFinancials, type DealEngineKey } from "@/lib/dealCalculations";
+import { addTranche } from "@/data/trancheStore";
+import type { Tranche } from "@/data/types";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -503,38 +506,39 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     }
     const id = `DEAL-${String(Date.now()).slice(-6)}`;
     const dealAmount = parseFloat(dealAmountStr) || 0;
-    const takeRate = parseFloat(rateStr) || 0;
     const primaryPayout = payouts[0];
     const primaryParty = primaryPayout ? sharedParties.find((p) => p.id === primaryPayout.partyId) : undefined;
 
+    const now = new Date().toISOString();
     const deal: Deal = {
       id,
-      status: "under-review",
       market: businessUnit === "mortgage" ? "primary" : market,
       businessUnit,
       channel: businessUnit === "mortgage" ? channel : undefined,
-      pnlEngine: derivePnlEngine({ businessUnit, channel }),
       country,
       currency,
-      blueprintId: getBlueprint(country, businessUnit).id,
       dealAmount,
-      grossRevenue,
-      dealPrice: dealAmount,
-      takeRate,
-      commissionPercentage: takeRate,
-      reportDate: new Date().toISOString().split("T")[0],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       agentName: primaryParty?.displayName ?? "Unknown Agent",
       clientName: demandParty?.displayName,
       title: dealTitle,
-      buildingName: dealTitle,
+    };
+
+    // Tranche carries the state machine and financial config.
+    // Tranche ID = deal ID for simplicity (single-tranche deals).
+    const tranche: Tranche = {
+      id,
+      dealId: id,
+      index: 0,
+      status: "under-review",
+      pnlEngine: derivePnlEngine({ businessUnit, channel }),
+      blueprintId: getBlueprint(country, businessUnit).id,
+      reportDate: now.split("T")[0],
       ofCaseNumber: `CASE-${String(Date.now()).slice(-6)}`,
-      statusHistory: [{ from: "pending-details", to: "under-review", timestamp: new Date().toISOString() } as StatusHistoryEntry],
-      agents: [],
-      externalPartners: [],
-      receivables: [],
-      payables: [],
+      statusHistory: [{ from: "pending-details", to: "under-review", timestamp: now }],
+      createdAt: now,
+      updatedAt: now,
     };
 
     // AGENT_PAYOUT
@@ -542,9 +546,9 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
     payouts.forEach((p, i) => {
       const stakeId = `ds-${id}-agent-${i}`;
       agentStakeIdByPartyId[p.partyId] = stakeId;
-      sharedDealStakeholders.push({
+      sharedPnlEntries.push({
         id: stakeId,
-        dealId: id,
+        trancheId: id,
         partyId: p.partyId,
         role: "AGENT_PAYOUT",
         isPrimary: i === 0,
@@ -556,9 +560,9 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
 
     // REVENUE_SOURCE
     revenueLines.forEach((line, i) => {
-      sharedDealStakeholders.push({
+      sharedPnlEntries.push({
         id: `ds-${id}-rev-${i}`,
-        dealId: id,
+        trancheId: id,
         partyId: line.partyId,
         role: "REVENUE_SOURCE",
         amount: line.amount,
@@ -570,14 +574,14 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
 
     // ACQUISITION_DEDUCTION
     acquisitions.forEach((a, i) => {
-      sharedDealStakeholders.push({
+      sharedPnlEntries.push({
         id: `ds-${id}-acq-${i}`,
-        dealId: id,
+        trancheId: id,
         partyId: a.partyId,
         role: "ACQUISITION_DEDUCTION",
         amount: -Math.abs(a.amount),
         description: "Acquisition Cost",
-        parentStakeholderId: a.parentPartyId ? agentStakeIdByPartyId[a.parentPartyId] : undefined,
+        parentEntryId: a.parentPartyId ? agentStakeIdByPartyId[a.parentPartyId] : undefined,
         source: "manual",
         status: "draft",
       });
@@ -585,38 +589,36 @@ export function AddDealDialog({ open, onClose, onDealCreated }: Props) {
 
     // OPERATIONAL_DEDUCTION
     operations.forEach((o, i) => {
-      sharedDealStakeholders.push({
+      sharedPnlEntries.push({
         id: `ds-${id}-op-${i}`,
-        dealId: id,
+        trancheId: id,
         partyId: o.partyId,
         role: "OPERATIONAL_DEDUCTION",
         amount: -Math.abs(o.amount),
         description: "Service Cost",
-        parentStakeholderId: o.parentPartyId ? agentStakeIdByPartyId[o.parentPartyId] : undefined,
+        parentEntryId: o.parentPartyId ? agentStakeIdByPartyId[o.parentPartyId] : undefined,
         source: "manual",
         status: "draft",
       });
     });
 
-    // DEMAND
+    // DEMAND / SUPPLY go on the Deal, not the Tranche
     if (demandParty) {
-      sharedDealStakeholders.push({ id: `ds-${id}-demand`, dealId: id, partyId: demandParty.partyId, role: "DEMAND", isPrimary: true });
+      sharedDealParticipants.push({ id: `dp-${id}-demand`, dealId: id, partyId: demandParty.partyId, role: "DEMAND", isPrimary: true });
     }
-
-    // SUPPLY
     if (supplyParty) {
-      sharedDealStakeholders.push({ id: `ds-${id}-supply`, dealId: id, partyId: supplyParty.partyId, role: "SUPPLY", isPrimary: true });
+      sharedDealParticipants.push({ id: `dp-${id}-supply`, dealId: id, partyId: supplyParty.partyId, role: "SUPPLY" });
     }
 
     // Document requirements
     sharedDocumentRequirementTemplates
       .filter((t) => t.market === deal.market && t.businessUnit === deal.businessUnit && t.country === deal.country)
       .forEach((t, i) => {
-        sharedDealDocumentRequirements.push({ id: `ddr-${id}-${i}`, dealId: id, label: t.label, required: t.required, status: "pending" });
+        sharedDealDocumentRequirements.push({ id: `ddr-${id}-${i}`, trancheId: id, label: t.label, required: t.required, status: "pending" });
       });
 
-    const calculated = recalculateDeal(deal);
-    onDealCreated(calculated);
+    addTranche(tranche);
+    onDealCreated(deal);
     setCreatedDealId(id);
     setStep("success");
     toast({ title: "Deal Created", description: `Deal ${id} has been created.` });

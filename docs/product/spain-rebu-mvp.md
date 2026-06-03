@@ -28,3 +28,15 @@
 | Fund flow | 10% reservation payment? How does it work? | separate bank account. Double check with Andreas. Complexity lives in Offer domain. Think about when the buyer is also who is paying the commission (netting) |
 | Receiving invoices | How are invoices (non agent, e.g. external co-agency) sent to us? Do we need to store them in Karvel? How do we reconcile them with the deal? | manual via email. Think about Xero upload connectivity. |
 | Creating invoices draft | Can you please provide templates? | Invoice created via Xero API. Template lives there |
+
+## 3. Implications for Phase 1 scope
+
+The updated §2 answers reshape several Phase 1 build epics. Material implications:
+
+- **Outbound invoicing simplifies.** *"Invoice created via Xero API; template lives there."* Our scope shrinks from "generate invoices" to "trigger Xero + track state locally + reconcile back." See [jira-backlog-draft.md §2.9](jira-backlog-draft.md).
+- **Connected agents deferred from Spain MVP.** *"TL will leave soon; KAM bonuses paid most likely outside product."* The connected-agent overlay capability stays in the foundation ([jira-backlog-draft.md §2.1](jira-backlog-draft.md)) but is **not exercised** in Spain MVP. Removes the most common P&L edge case from the first launch.
+- **Multi-tranche deals confirmed.** *"1 deal per arras + 1 per escritura when revenues collected separately."* The domain model already supports it (deals are independent entities); call it out explicitly as a tested case during §2.1 build.
+- **KAM-driven P&L flow with finance approval.** KAMs edit deal data and P&L on Karvel; Andreas's team or finance approves before deal transitions to invoicing. Andreas is the named owner of the deal-to-invoicing transition. See [jira-backlog-draft.md §2.7](jira-backlog-draft.md).
+- **Inbound non-agent invoices manual in MVP.** *"Manual via email"*; Xero upload connectivity is future. Reduces §2.2 inbound scope to "receive file, store reference, link to deal, manually reconcile."
+- **Notary 10% has a netting case.** When the buyer also pays the commission, the 10% reservation nets against the commission. Complexity primarily lives in the Offer domain (upstream); Finance product handles the held-funds posting and the netted payout. See [jira-backlog-draft.md §2.10](jira-backlog-draft.md).
+- **Several items confirmed off-product.** KAM bonuses, salaried agent payroll, the dedicated 10% bank account — all stay outside the Finance product and are tracked / handled elsewhere.

@@ -79,9 +79,12 @@ export interface Deal extends Omit<BaseDeal, "type" | "market"> {
   opportunityName: string;
   clientName: string;
   title: string;
-  commissionPercentage: number;
-  commissionAmount: number;
-  paymentDate?: string;
+  // Denormalized from primary tranche / all tranches for UI convenience
+  status?: import("@huspy/shared-domain").DealStatus;
+  agentDealStatus?: import("@/data/mockDeals").AgentDealStatus;
+  grossRevenue?: number;   // sum of REVENUE_SOURCE stakes on primary tranche
+  reportDate?: string;
+  trancheCount?: number;
 }
 
 // ----------------------------------------------------------------

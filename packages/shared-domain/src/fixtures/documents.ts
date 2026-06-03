@@ -85,4 +85,6 @@ export const sharedDocuments: Document[] = [
   { id: "doc-inv-inv-020", name: "INV-2026-020.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-020", invoiceId: "inv-020", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
   { id: "doc-inv-inv-021", name: "INV-2026-021.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-021", invoiceId: "inv-021", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
   { id: "doc-inv-inv-024", name: "INV-2026-024.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-022", invoiceId: "inv-024", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
+  // deal-026 Arras tranche — outbound invoice for arras commission (Felicia / Malasaña)
+  { id: "doc-inv-inv-026a", name: "INV-2026-027.pdf", type: "invoice", size: 0, mimeType: "application/pdf", dealId: "deal-026", invoiceId: "inv-026a", uploadedBy: "ops", createdAt: TS, updatedAt: TS },
 ];

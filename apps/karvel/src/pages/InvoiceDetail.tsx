@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useRef, useMemo } from "react";
-import { sharedInvoices, sharedParties, sharedDeals, sharedLedgers, sharedPostings, sharedPostingLines, getPostingLinesForInvoice } from "@huspy/shared-domain";
+import { sharedInvoices, sharedParties, sharedDeals, sharedTranches, sharedLedgers, sharedPostings, sharedPostingLines, getPostingLinesForInvoice } from "@huspy/shared-domain";
 import type { Invoice } from "@huspy/shared-domain";
 import { saveSharedInvoices } from "@/data/sharedEntityStore";
 import { createPaidPosting, autoFinalizeDealIfComplete, attachInvoiceDocumentToDeal } from "@/lib/invoiceActions";
@@ -34,9 +34,9 @@ function resolveParty(partyId: string): string {
   return sharedParties.find((p) => p.id === partyId)?.displayName ?? partyId;
 }
 
-function resolveDeal(dealId?: string): string | undefined {
-  if (!dealId) return undefined;
-  return sharedDeals.find((d) => d.id === dealId)?.id ?? dealId;
+function resolveDeal(trancheId?: string): string | undefined {
+  if (!trancheId) return undefined;
+  return sharedTranches.find((t) => t.id === trancheId)?.dealId;
 }
 
 function resolveLedger(ledgerId: number): string {
@@ -51,7 +51,8 @@ const LEDGERS: Record<string, { AR: number; REV: number; VAT: number; EXP: numbe
 
 function createIssuedPosting(inv: Invoice): void {
   const l = LEDGERS[inv.currency] ?? LEDGERS.EUR;
-  const deal = sharedDeals.find((d) => d.id === inv.dealId);
+  const tranche = inv.trancheId ? sharedTranches.find((t) => t.id === inv.trancheId) : undefined;
+  const deal = tranche ? sharedDeals.find((d) => d.id === tranche.dealId) : undefined;
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
   const pid = `posting-auto-${inv.id}-${Date.now()}`;
@@ -60,7 +61,7 @@ function createIssuedPosting(inv: Invoice): void {
 
   const posting = {
     id: pid,
-    dealId: inv.dealId,
+    trancheId: inv.trancheId,
     businessUnit: deal?.businessUnit ?? null,
     businessProcess: (inv.direction === "outbound" ? "invoice_issued" : "external_cost_accrual") as any,
     createdBy: "ops",
@@ -289,7 +290,7 @@ export default function InvoiceDetail() {
     setIsSaving(false);
   };
 
-  const dealId = resolveDeal(invoice.dealId);
+  const dealId = resolveDeal(invoice.trancheId);
 
   const gross = invoice.subtotal + (invoice.vatAmount ?? 0);
   const netPayout = invoice.withholdingAmount != null

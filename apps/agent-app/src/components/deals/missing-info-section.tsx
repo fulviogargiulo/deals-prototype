@@ -24,7 +24,7 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
   const [submitted, setSubmitted] = useState(false);
   const [submitNote, setSubmitNote] = useState('');
 
-  if (deal.status !== 'pending-details') return null;
+  if (deal?.status !== 'pending-details') return null;
 
   const pendingDocs = documents.map((doc, i) => ({ doc, index: i })).filter(({ doc, index }) => !doc.uploaded && !uploadedDocs.has(index));
   const uploadedDocCount = documents.length - pendingDocs.length;

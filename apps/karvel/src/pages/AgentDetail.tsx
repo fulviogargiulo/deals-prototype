@@ -9,6 +9,7 @@ import {
   sharedLedgers,
   sharedAgentFinancials,
   sharedAgentDocuments,
+  sharedTranches,
 } from "@huspy/shared-domain";
 import type {
   AgentDocument,
@@ -21,6 +22,8 @@ import type {
   PostingLine,
 } from "@huspy/shared-domain";
 import { getDeals } from "@/data/dealStore";
+import { getTranchesForDeal } from "@/data/trancheStore";
+import { deriveDisplayStatus } from "@/lib/dealCalculations";
 import { DealStatusBadge } from "@/components/DealBadges";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -283,10 +286,8 @@ export default function AgentDetail() {
   const nameParts = displayName.split(" ");
   const isActive = (agent.employmentStatus ?? "active") === "active";
 
-  // Deals
-  const agentDeals = getDeals().filter(
-    (d) => d.agentName === displayName || (d.agents ?? []).some((e) => e.agentName === displayName),
-  );
+  // Deals — filter by agentName display cache (set in enrichDeal)
+  const agentDeals = getDeals().filter((d) => d.agentName === displayName);
 
   // Ledger — all posting lines on this agent's subledger (shared + manual)
   const subledgerName = `AgentLiability_${agent.id}`;
@@ -315,7 +316,7 @@ export default function AgentDetail() {
     const now = new Date().toISOString();
     const reversalPosting: Posting = {
       id: reversalId,
-      dealId: posting.dealId,
+      trancheId: posting.trancheId,
       businessUnit: posting.businessUnit,
       externalRef: posting.externalRef,
       businessProcess: posting.businessProcess,
@@ -643,22 +644,19 @@ export default function AgentDetail() {
                     </thead>
                     <tbody>
                       {agentDeals.map((deal) => {
-                        const entry = (deal.agents ?? []).find((e) => e.agentName === displayName);
+                        const tranches = getTranchesForDeal(deal.id);
+                        const primaryTranche = tranches[0];
+                        const displayStatus = deriveDisplayStatus(tranches) as any;
                         return (
                           <tr key={deal.id} onClick={() => navigate(`/deals/${deal.id}`)}
                             className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer">
                             <td className={`${tdClass} text-muted-foreground font-mono text-[12px]`}>{deal.id}</td>
-
-                            <td className="px-4 py-3 text-center"><DealStatusBadge status={deal.status} /></td>
+                            <td className="px-4 py-3 text-center"><DealStatusBadge status={displayStatus} /></td>
                             <td className={tdClass}>{deal.market ?? "—"}</td>
                             <td className={tdClass}>{deal.clientName ?? "—"}</td>
-                            <td className={tdClass}>{fmt(deal.dealPrice ?? deal.dealAmount, deal.currency ?? "EUR")}</td>
-                            <td className={tdClass}>
-                              {entry ? fmt(entry.agentCommissionPayout, deal.currency ?? "EUR")
-                                : deal.agentCommissionPayout != null ? fmt(deal.agentCommissionPayout, deal.currency ?? "EUR")
-                                : "—"}
-                            </td>
-                            <td className={tdClass}>{fmtDate(deal.reportDate)}</td>
+                            <td className={tdClass}>{fmt(deal.dealAmount, deal.currency ?? "EUR")}</td>
+                            <td className={tdClass}>{primaryTranche?.grossRevenue != null ? fmt(primaryTranche.grossRevenue, deal.currency ?? "EUR") : "—"}</td>
+                            <td className={tdClass}>{primaryTranche?.reportDate ? fmtDate(primaryTranche.reportDate) : "—"}</td>
                           </tr>
                         );
                       })}
@@ -720,7 +718,9 @@ export default function AgentDetail() {
                     </thead>
                     <tbody>
                       {ledgerLines.map((line) => {
-                        const dealId = line.posting?.dealId;
+                        const dealId = line.posting?.trancheId
+                          ? sharedTranches.find((t) => t.id === line.posting!.trancheId)?.dealId
+                          : undefined;
                         const currency = line.posting?.currency ?? "EUR";
                         return (
                           <tr

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Deal } from '@/types';
-import { type DealStakeholder, computeAgentCommission, buildWaterfallInput, calculateProjectedPnL } from '@huspy/shared-domain';
+import { type PnlEntry, computeAgentCommission, buildWaterfallInput, calculateProjectedPnL } from '@huspy/shared-domain';
 import { Clock, CheckCircle2, MoreVertical, Timer, RotateCcw } from 'lucide-react';
 import { CountdownTimer } from '@/components/ui/countdown-timer';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 interface ActionsRequiredSectionProps {
   pendingConfirmation: Deal[];
   pendingInfo: Deal[];
-  agentStakeMap?: Map<string, DealStakeholder>;
+  agentStakeMap?: Map<string, PnlEntry>;
 }
 
 const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = {
@@ -197,7 +197,7 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, agent
 
                 {/* Property */}
                 <span className="text-sm truncate text-muted-foreground">
-                  {deal.title ?? deal.buildingName ?? "—"}
+                  {deal.title ?? "—"}
                 </span>
 
                 {/* Amount */}
@@ -212,7 +212,7 @@ export function ActionsRequiredSection({ pendingConfirmation, pendingInfo, agent
                     const waterfallInput = buildWaterfallInput(deal);
                     const projection = waterfallInput ? calculateProjectedPnL(waterfallInput) : null;
                     const agentSplit = projection?.splits.find(s => s.partyId === stake?.partyId);
-                    const commission = agentSplit?.agentPayout ?? computeAgentCommission(deal.commissionAmount, stake);
+                    const commission = agentSplit?.agentPayout ?? computeAgentCommission(deal.grossRevenue ?? 0, stake);
                     return `${deal.currency}${commission.toLocaleString()}`;
                   })()}
                 </span>

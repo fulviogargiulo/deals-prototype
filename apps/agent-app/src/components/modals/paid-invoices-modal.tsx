@@ -3,14 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Deal } from '@/types';
 import { toast } from 'sonner';
-import { type DealStakeholder, buildWaterfallInput, calculateProjectedPnL, computeAgentCommission } from '@huspy/shared-domain';
+import { type PnlEntry, buildWaterfallInput, calculateProjectedPnL, computeAgentCommission } from '@huspy/shared-domain';
 
 interface PaidInvoicesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   deals: Deal[];
   totalIncome: number;
-  agentStakeMap?: Map<string, DealStakeholder>;
+  agentStakeMap?: Map<string, PnlEntry>;
 }
 
 function formatDate(dateStr?: string) {
@@ -64,7 +64,7 @@ export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome, agen
                     const input = buildWaterfallInput(deal);
                     const projection = input ? calculateProjectedPnL(input) : null;
                     const split = projection?.splits.find(s => s.partyId === stake?.partyId);
-                    return `€${(split?.agentPayout ?? computeAgentCommission(deal.commissionAmount, stake)).toLocaleString()}`;
+                    return `€${(split?.agentPayout ?? computeAgentCommission(deal.grossRevenue ?? 0, stake)).toLocaleString()}`;
                   })()}
                 </p>
               </div>

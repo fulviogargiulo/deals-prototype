@@ -1,28 +1,23 @@
 import { useState, useMemo } from 'react';
-import { Deal, DealStatus, OpportunityType } from '@/types';
-import { type DealStakeholder, computeAgentCommission, buildWaterfallInput, calculateProjectedPnL, dealStatusColors } from '@huspy/shared-domain';
+import { Deal, DealStatus } from '@/types';
+import { type PnlEntry, computeAgentCommission } from '@huspy/shared-domain';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { OpportunityIcon } from '@/components/opportunities/opportunity-icon';
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from '@/components/opportunities/opportunity-bare-icons';
 import { useNavigate } from 'react-router-dom';
+import { type AgentDealStatus, getTranchesForDeal } from '@/data/mockDeals';
+import { sharedPnlEntries } from '@huspy/shared-domain';
 
 interface DealsTableProps {
   deals: Deal[];
-  agentStakeMap?: Map<string, DealStakeholder>;
+  agentStakeMap?: Map<string, PnlEntry>;
 }
 
-const statusLabels: Record<DealStatus, string> = {
-  'pending-details': 'Pending Details',
-  'under-review': 'Under Review',
-  'pending-agent-approval': 'Pending Approval',
-  'invoicing': 'Invoicing',
-  finalized: 'Finalized',
-  canceled: 'Canceled',
+const agentStatusConfig: Record<AgentDealStatus, { label: string; color: string; bg: string }> = {
+  "action-required": { label: "Action Required", color: "hsl(35 92% 38%)",    bg: "hsl(35 92% 38% / 0.1)" },
+  "in-progress":     { label: "In Progress",     color: "hsl(221 83% 53%)",   bg: "hsl(221 83% 53% / 0.1)" },
+  "closed":          { label: "Closed",           color: "hsl(142 71% 35%)",   bg: "hsl(142 71% 35% / 0.1)" },
 };
-
-const statusColors: Record<DealStatus, { color: string; bg: string }> = Object.fromEntries(
-  Object.entries(dealStatusColors).map(([k, { hsl }]) => [k, { color: `hsl(${hsl})`, bg: `hsl(${hsl} / 0.1)` }])
-) as Record<DealStatus, { color: string; bg: string }>;
 
 const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = {
   buy: { icon: BuyBareIcon, color: '#008A8A' },
@@ -31,9 +26,7 @@ const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = 
   lease: { icon: LeaseBareIcon, color: '#CD52C3' },
 };
 
-const COMMISSION_STATUSES = new Set<DealStatus>(['pending-agent-approval', 'invoicing', 'finalized']);
-
-type SortKey = 'title' | 'dealAmount' | 'commissionAmount' | 'reportDate';
+type SortKey = 'title' | 'dealAmount' | 'grossRevenue' | 'reportDate';
 type SortDir = 'asc' | 'desc';
 
 export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
@@ -69,7 +62,7 @@ export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
 
       <div className="bg-card rounded-2xl overflow-hidden">
         {/* Header row */}
-        <div className="grid grid-cols-[32px_1.2fr_0.8fr_100px_120px_110px_100px] px-4 py-3 border-b border-border-ds-primary gap-3 group/header">
+        <div className="grid grid-cols-[32px_1.2fr_0.8fr_100px_120px_130px_100px] px-4 py-3 border-b border-border-ds-primary gap-3 group/header">
           <span />
           <span className="text-xs font-semibold text-fg-secondary flex items-center cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('title')}>
             Deal{getSortIcon('title')}
@@ -78,8 +71,8 @@ export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
           <span className="text-xs font-semibold text-fg-secondary text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('dealAmount')}>
             Amount{getSortIcon('dealAmount')}
           </span>
-          <span className="text-xs font-semibold text-fg-secondary text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('commissionAmount')}>
-            Commission{getSortIcon('commissionAmount')}
+          <span className="text-xs font-semibold text-fg-secondary text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('grossRevenue')}>
+            Commission{getSortIcon('grossRevenue')}
           </span>
           <span className="text-xs font-semibold text-fg-secondary text-center">Status</span>
           <span className="text-xs font-semibold text-fg-secondary text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('reportDate')}>
@@ -94,20 +87,30 @@ export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
           ) : (
             sorted.map((deal) => {
               const config = typeConfig[deal.type];
-              const colors = statusColors[deal.status];
-              const showCommission = COMMISSION_STATUSES.has(deal.status);
-              const stake = agentStakeMap?.get(deal.id);
+              const agentStatus = deal.agentDealStatus ?? "closed";
+              const statusStyle = agentStatusConfig[agentStatus];
+              const tranches = getTranchesForDeal(deal.id);
+              const primaryTranche = tranches[0];
+
+              // Commission = sum of confirmed AGENT_PAYOUT from finalized tranches only.
+              const finalizedTranches = tranches.filter(t => t.status === 'finalized');
               let agentCommission: number | null = null;
-              if (showCommission) {
-                const waterfallInput = buildWaterfallInput(deal);
-                const projection = waterfallInput ? calculateProjectedPnL(waterfallInput) : null;
-                const agentSplit = projection?.splits.find(s => s.partyId === stake?.partyId);
-                agentCommission = agentSplit?.agentPayout ?? computeAgentCommission(deal.commissionAmount, stake);
+              if (finalizedTranches.length > 0) {
+                agentCommission = finalizedTranches.reduce((sum, t) => {
+                  const stake = agentStakeMap?.get(t.id);
+                  if (!stake) return sum;
+                  if (stake.amount != null) return sum + Math.abs(stake.amount);
+                  const trancheGross = sharedPnlEntries
+                    .filter(s => s.trancheId === t.id && s.role === 'REVENUE_SOURCE' && (s.amount ?? 0) > 0)
+                    .reduce((r, s) => r + Math.abs(s.amount ?? 0), 0);
+                  return sum + computeAgentCommission(trancheGross, stake);
+                }, 0);
               }
+
               return (
                 <div
                   key={deal.id}
-                  className="grid grid-cols-[32px_1.2fr_0.8fr_100px_120px_110px_100px] px-4 py-3 items-center gap-3 hover:bg-surface-ds-raised/50 transition-colors group cursor-pointer"
+                  className="grid grid-cols-[32px_1.2fr_0.8fr_100px_120px_130px_100px] px-4 py-3 items-center gap-3 hover:bg-surface-ds-raised/50 transition-colors group cursor-pointer"
                   onClick={() => navigate(`/deals/${deal.id}`)}
                 >
                   <div className="flex items-center justify-center">
@@ -115,20 +118,24 @@ export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate leading-[120%]">{deal.title}</p>
-                    <p className="text-xs text-fg-secondary leading-[140%] capitalize">{deal.id} · {deal.type}</p>
+                    <p className="text-xs text-fg-secondary leading-[140%] capitalize">
+                      {deal.id} · {deal.type}
+                      {deal.description && <span className="ml-1.5 px-1 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border not-capitalize">{deal.description}</span>}
+                    </p>
                   </div>
                   <span className="text-sm text-foreground truncate">{deal.clientName}</span>
                   <span className="text-sm text-foreground text-right tabular-nums font-semibold">{deal.currency}{deal.dealAmount.toLocaleString()}</span>
-                  <span className="text-sm text-right tabular-nums font-semibold" style={{ color: showCommission ? undefined : 'hsl(var(--fg-secondary))' }}>
-                    {showCommission && agentCommission !== null ? `${deal.currency}${agentCommission.toLocaleString()}` : '—'}
+                  <span className="text-sm text-right tabular-nums font-semibold" style={{ color: agentCommission !== null ? undefined : 'hsl(var(--fg-secondary))' }}>
+                    {agentCommission !== null ? `${deal.currency}${agentCommission.toLocaleString()}` : '—'}
                   </span>
                   <div className="flex justify-center">
-                    <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap" style={{ backgroundColor: colors.bg, color: colors.color }}>
-                      {statusLabels[deal.status]}
+                    <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap"
+                      style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}>
+                      {statusStyle.label}
                     </span>
                   </div>
                   <span className="text-xs text-fg-secondary text-right tabular-nums">
-                    {new Date(deal.reportDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {deal.reportDate ? new Date(deal.reportDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                   </span>
                 </div>
               );

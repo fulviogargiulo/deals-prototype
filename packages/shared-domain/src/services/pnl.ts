@@ -1,5 +1,6 @@
 import type { BusinessUnit, Currency } from "../enums";
 import { sharedDeals } from "../fixtures/deals";
+import { sharedTranches } from "../fixtures/tranches";
 import { sharedLedgers } from "../fixtures/ledgers";
 import { sharedPostings } from "../fixtures/postings";
 import { sharedPostingLines } from "../fixtures/postingLines";
@@ -43,11 +44,12 @@ function sumLines(postingIds: Set<string>): { revenue: number; commissionExpense
 }
 
 export const getDealPnL = (dealId: string): DealPnL => {
+  const trancheIds = new Set(sharedTranches.filter((t) => t.dealId === dealId).map((t) => t.id));
   const postingIds = new Set(
-    sharedPostings.filter((p) => p.dealId === dealId).map((p) => p.id)
+    sharedPostings.filter((p) => p.trancheId && trancheIds.has(p.trancheId)).map((p) => p.id)
   );
   const currency: Currency =
-    sharedPostings.find((p) => p.dealId === dealId)?.currency ?? "EUR";
+    sharedPostings.find((p) => p.trancheId && trancheIds.has(p.trancheId))?.currency ?? "EUR";
 
   const { revenue, commissionExpense } = sumLines(postingIds);
   return { revenue, commissionExpense, grossProfit: revenue - commissionExpense, currency };
@@ -64,9 +66,9 @@ export const getBusinessUnitPnL = (bu: BusinessUnit, currency: Currency): Busine
       .filter((p) => {
         if (p.currency !== currency) return false;
         // Explicit BU tag takes precedence for standalone postings.
-        if (!p.dealId) return p.businessUnit === bu;
-        // Deal-linked: resolve BU from the deal, but honour an explicit override.
-        return (p.businessUnit ?? dealBU(p.dealId)) === bu;
+        if (!p.trancheId) return p.businessUnit === bu;
+        const trancheDealId = sharedTranches.find((t) => t.id === p.trancheId)?.dealId;
+        return (p.businessUnit ?? (trancheDealId ? dealBU(trancheDealId) : bu)) === bu;
       })
       .map((p) => p.id)
   );

@@ -28,7 +28,7 @@ export function CancelDealDialog({ open, deal, onClose, onConfirm }: Props) {
   const effects = useMemo<string[]>(() => {
     if (!open) return [];
     const list: string[] = [];
-    const dealInvs = sharedInvoices.filter((i) => i.dealId === deal.id);
+    const dealInvs = sharedInvoices.filter((i) => i.trancheId === deal.id);
     const openInvs = dealInvs.filter((i) => i.status === "draft" || i.status === "issued");
     if (openInvs.length > 0) {
       const total = openInvs.reduce((s, i) => s + i.subtotal + (i.vatAmount ?? 0), 0);
@@ -36,7 +36,7 @@ export function CancelDealDialog({ open, deal, onClose, onConfirm }: Props) {
         `Void ${openInvs.length} open invoice${openInvs.length === 1 ? "" : "s"} (${formatMoney(total, deal.currency ?? "EUR")} total)`
       );
     }
-    const postings = sharedPostings.filter((p) => p.dealId === deal.id).length;
+    const postings = sharedPostings.filter((p) => p.trancheId === deal.id).length;
     if (postings > 0) {
       list.push(`Reverse ${postings} accounting posting${postings === 1 ? "" : "s"}`);
     }

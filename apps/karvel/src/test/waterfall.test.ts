@@ -3,7 +3,7 @@ import {
   calculateProjectedPnL,
   type AgentFinancials,
   type Blueprint,
-  type DealStakeholder,
+  type PnlEntry,
   type ProjectedPnLInput,
 } from "@huspy/shared-domain";
 
@@ -60,10 +60,10 @@ describe("calculateProjectedPnL — no costs, no agents", () => {
 
 describe("calculateProjectedPnL — deduction costs", () => {
   it("routes ACQUISITION_DEDUCTION to acquisition cost and OPERATIONAL_DEDUCTION to operational cost", () => {
-    const stakeholders: DealStakeholder[] = [
-      { id: "s-c1", dealId: "d", partyId: "p-ref-a", role: "ACQUISITION_DEDUCTION", amount: -800 },
-      { id: "s-c2", dealId: "d", partyId: "p-ref-b", role: "ACQUISITION_DEDUCTION", amount: -500 },
-      { id: "s-d1", dealId: "d", partyId: "p-notary", role: "OPERATIONAL_DEDUCTION", amount: -1_200 },
+    const stakeholders: PnlEntry[] = [
+      { id: "s-c1", trancheId: "d", partyId: "p-ref-a", role: "ACQUISITION_DEDUCTION", amount: -800 },
+      { id: "s-c2", trancheId: "d", partyId: "p-ref-b", role: "ACQUISITION_DEDUCTION", amount: -500 },
+      { id: "s-d1", trancheId: "d", partyId: "p-notary", role: "OPERATIONAL_DEDUCTION", amount: -1_200 },
     ];
     const r = calculateProjectedPnL(baseInput({ blueprint: minimalBlueprint, stakeholders }));
     expect(r.totalAcquisitionCost).toBe(800 + 500);
@@ -76,8 +76,8 @@ describe("calculateProjectedPnL — deduction costs", () => {
 
 describe("calculateProjectedPnL — agent payout, flat strategy", () => {
   it("pays the agent flat% of allocated net, plus TL and manager additive", () => {
-    const stakeholders: DealStakeholder[] = [
-      { id: "ds-1", dealId: "d", partyId: "party-felicia", role: "AGENT_PAYOUT", splitPercentage: 100 },
+    const stakeholders: PnlEntry[] = [
+      { id: "ds-1", trancheId: "d", partyId: "party-felicia", role: "AGENT_PAYOUT", splitPercentage: 100 },
     ];
     const af: AgentFinancials = {
       id: "af-001",
@@ -113,8 +113,8 @@ describe("calculateProjectedPnL — agent payout, flat strategy", () => {
     //         teamLead 10% of agent → €462
     //         manager 5% of agent → €231
     //         huspyNet = 11,550 − 4,620 − 462 − 231 = €6,237
-    const stakeholders: DealStakeholder[] = [
-      { id: "ds-1", dealId: "d", partyId: "party-felicia", role: "AGENT_PAYOUT", splitPercentage: 100 },
+    const stakeholders: PnlEntry[] = [
+      { id: "ds-1", trancheId: "d", partyId: "party-felicia", role: "AGENT_PAYOUT", splitPercentage: 100 },
     ];
     const af: AgentFinancials = {
       id: "af-001",
@@ -148,8 +148,8 @@ describe("calculateProjectedPnL — slab strategy", () => {
   it("applies progressive slabs on allocated net", () => {
     // Slabs: 0..5000 @ 35%, 5000..20000 @ 45%, 20000..∞ @ 55%
     // allocatedNet 25_000 → 5000×0.35 + 15000×0.45 + 5000×0.55 = 1_750 + 6_750 + 2_750 = 11_250
-    const stakeholders: DealStakeholder[] = [
-      { id: "ds-1", dealId: "d", partyId: "party-ravi", role: "AGENT_PAYOUT", splitPercentage: 100 },
+    const stakeholders: PnlEntry[] = [
+      { id: "ds-1", trancheId: "d", partyId: "party-ravi", role: "AGENT_PAYOUT", splitPercentage: 100 },
     ];
     const af: AgentFinancials = {
       id: "af-005",
@@ -178,7 +178,7 @@ describe("calculateProjectedPnL — slab strategy", () => {
 
 describe("calculateProjectedPnL — max strategy", () => {
   it("caps payout at capAmount", () => {
-    const stake: DealStakeholder = { id: "ds-1", dealId: "d", partyId: "party-z", role: "AGENT_PAYOUT", splitPercentage: 100 };
+    const stake: PnlEntry = { id: "ds-1", trancheId: "d", partyId: "party-z", role: "AGENT_PAYOUT", splitPercentage: 100 };
     const af: AgentFinancials = {
       id: "af-z",
       agentId: "agent-z",
@@ -209,10 +209,10 @@ describe("calculateProjectedPnL — max strategy", () => {
 });
 
 describe("calculateProjectedPnL — multi-agent split", () => {
-  it("allocates net pro-rata by DealStakeholder.splitPercentage and runs each strategy", () => {
-    const stakeholders: DealStakeholder[] = [
-      { id: "ds-a", dealId: "d", partyId: "party-a", role: "AGENT_PAYOUT", splitPercentage: 70 },
-      { id: "ds-b", dealId: "d", partyId: "party-b", role: "AGENT_PAYOUT", splitPercentage: 30 },
+  it("allocates net pro-rata by PnlEntry.splitPercentage and runs each strategy", () => {
+    const stakeholders: PnlEntry[] = [
+      { id: "ds-a", trancheId: "d", partyId: "party-a", role: "AGENT_PAYOUT", splitPercentage: 70 },
+      { id: "ds-b", trancheId: "d", partyId: "party-b", role: "AGENT_PAYOUT", splitPercentage: 30 },
     ];
     const finA: AgentFinancials = { id: "af-a", agentId: "agent-a", strategy: { kind: "flat", pct: 40 } };
     const finB: AgentFinancials = { id: "af-b", agentId: "agent-b", strategy: { kind: "flat", pct: 50 } };
@@ -238,10 +238,10 @@ describe("calculateProjectedPnL — multi-agent split", () => {
 
 describe("calculateProjectedPnL — ledger integrity", () => {
   it("ledger debits sum to cost totals; gross − acquisitionCost = commissionBase; commissionBase − operationalCost − agentPayout = huspyMargin", () => {
-    const stakeholders: DealStakeholder[] = [
-      { id: "ds-1",  dealId: "d", partyId: "party-x",   role: "AGENT_PAYOUT",        splitPercentage: 100 },
-      { id: "s-c1",  dealId: "d", partyId: "p-ref",     role: "ACQUISITION_DEDUCTION",   amount: -500 },
-      { id: "s-d1",  dealId: "d", partyId: "p-notary",  role: "OPERATIONAL_DEDUCTION",   amount: -800 },
+    const stakeholders: PnlEntry[] = [
+      { id: "ds-1",  trancheId: "d", partyId: "party-x",   role: "AGENT_PAYOUT",        splitPercentage: 100 },
+      { id: "s-c1",  trancheId: "d", partyId: "p-ref",     role: "ACQUISITION_DEDUCTION",   amount: -500 },
+      { id: "s-d1",  trancheId: "d", partyId: "p-notary",  role: "OPERATIONAL_DEDUCTION",   amount: -800 },
     ];
     const af: AgentFinancials = {
       id: "af-x",
@@ -277,8 +277,8 @@ describe("calculateProjectedPnL — BYOB penalty via agentPayoutBase", () => {
   it("applies subtracted penalty rate to agentPayoutBase", () => {
     // Mirrors deal-023: bank pays 22,000 gross; broker payout base = 2,000,000 mortgage principal.
     // DIB tier 1 slab 0.624% − 0.10% penalty = 0.524% → 2,000,000 × 0.524% = 10,480.
-    const stake: DealStakeholder = {
-      id: "ds-byob", dealId: "d", partyId: "party-byob", role: "AGENT_PAYOUT", splitPercentage: 100,
+    const stake: PnlEntry = {
+      id: "ds-byob", trancheId: "d", partyId: "party-byob", role: "AGENT_PAYOUT", splitPercentage: 100,
     };
     // dealCalculations resolves the penalty and passes a synthesized flat AF into the engine.
     const af: AgentFinancials = {

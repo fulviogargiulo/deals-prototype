@@ -21,7 +21,7 @@ export function ProvideInfoModal({ open, onOpenChange, deal, onInfoSubmitted }: 
   if (!deal) return null;
 
   const pendingRequirements = sharedDealDocumentRequirements.filter(
-    (r) => r.dealId === deal.id && r.status === 'pending'
+    (r) => r.trancheId === deal.id && r.status === 'pending'
   );
 
   const validate = (): boolean => {

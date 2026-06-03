@@ -59,7 +59,7 @@ export function InvoicesView({ globalSearch = "" }: { globalSearch?: string }) {
       if (currencyFilter.size > 0 && !currencyFilter.has(inv.currency)) return false;
       if (partySearch && !resolveParty(inv.partyId).toLowerCase().includes(partySearch.toLowerCase())) return false;
       if (invoiceSearch && !inv.invoiceNumber.toLowerCase().includes(invoiceSearch.toLowerCase())) return false;
-      if (dealSearch && !(inv.dealId ?? "").toLowerCase().includes(dealSearch.toLowerCase())) return false;
+      if (dealSearch && !(inv.trancheId ?? "").toLowerCase().includes(dealSearch.toLowerCase())) return false;
       if (issueDateRange.from && inv.issueDate < issueDateRange.from) return false;
       if (issueDateRange.to && inv.issueDate > issueDateRange.to) return false;
       if (dueDateRange.from && (inv.dueDate ?? "") < dueDateRange.from) return false;
@@ -76,7 +76,7 @@ export function InvoicesView({ globalSearch = "" }: { globalSearch?: string }) {
         case "invoiceNumber": return a.invoiceNumber.localeCompare(b.invoiceNumber) * dir;
         case "amount": return ((a.subtotal + (a.vatAmount ?? 0)) - (b.subtotal + (b.vatAmount ?? 0))) * dir;
         case "party": return resolveParty(a.partyId).localeCompare(resolveParty(b.partyId)) * dir;
-        case "dealId": return (a.dealId ?? "").localeCompare(b.dealId ?? "") * dir;
+        case "dealId": return (a.trancheId ?? "").localeCompare(b.trancheId ?? "") * dir;
         case "issueDate": return a.issueDate.localeCompare(b.issueDate) * dir;
         case "dueDate": return (a.dueDate ?? "").localeCompare(b.dueDate ?? "") * dir;
         default: return 0;
@@ -340,12 +340,12 @@ export function InvoicesView({ globalSearch = "" }: { globalSearch?: string }) {
                 </td>
                 <td className="px-4 py-3 text-foreground">{resolveParty(inv.partyId)}</td>
                 <td className="px-4 py-3 text-muted-foreground font-mono text-[11px]">
-                  {inv.dealId ? (
+                  {inv.trancheId ? (
                     <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/deals/${inv.dealId}`); }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/deals/${inv.trancheId}`); }}
                       className="text-primary hover:underline transition-colors"
                     >
-                      {inv.dealId}
+                      {inv.trancheId}
                     </button>
                   ) : (
                     "—"

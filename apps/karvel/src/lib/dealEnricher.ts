@@ -1,10 +1,10 @@
 import {
-  sharedDealStakeholders,
+  sharedPnlEntries,
   sharedAgents,
   sharedParties,
 } from "@huspy/shared-domain";
-import type { Deal as BaseDeal } from "@huspy/shared-domain";
-import type { Deal, AgentEntry } from "@/data/types";
+import type { Deal as BaseDeal, Tranche as BaseTranche } from "@huspy/shared-domain";
+import type { Deal, Tranche, AgentEntry } from "@/data/types";
 
 const agentDisplayName: Record<string, string> = {
   "agent-001": "Felicia Canovas",
@@ -16,7 +16,23 @@ const agentDisplayName: Record<string, string> = {
 };
 
 export function enrichDeal(deal: BaseDeal): Deal {
-  const agentStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id && s.role === "AGENT_PAYOUT");
+  // Deal is now a thin header — no P&L enrichment needed.
+  // agentName is the primary agent resolved from the first tranche's stakeholders.
+  const primaryStake = sharedPnlEntries.find(
+    (s) => s.trancheId.startsWith(deal.id) && s.role === "AGENT_PAYOUT" && s.isPrimary
+  );
+  const primaryAgent = primaryStake ? sharedAgents.find((a) => a.partyId === primaryStake.partyId) : undefined;
+  const agentName = primaryAgent
+    ? (agentDisplayName[primaryAgent.id] ?? primaryAgent.id)
+    : deal.agentName ?? "Unknown";
+
+  return { ...deal, agentName };
+}
+
+export function enrichTranche(tranche: BaseTranche, deal: BaseDeal): Tranche {
+  const agentStakes = sharedPnlEntries.filter(
+    (s) => s.trancheId === tranche.id && s.role === "AGENT_PAYOUT"
+  );
   const agents: AgentEntry[] = agentStakes.map((stake) => {
     const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
     const name = agent ? (agentDisplayName[agent.id] ?? agent.id) : stake.partyId;
@@ -43,11 +59,15 @@ export function enrichDeal(deal: BaseDeal): Deal {
 
   const primaryEntry = agents[0];
 
-  const conveyanceStake = sharedDealStakeholders.find((s) => s.dealId === deal.id && s.role === "OPERATIONAL_DEDUCTION");
-  const conveyanceParty = conveyanceStake ? sharedParties.find((p) => p.id === conveyanceStake.partyId) : undefined;
+  const conveyanceStake = sharedPnlEntries.find(
+    (s) => s.trancheId === tranche.id && s.role === "OPERATIONAL_DEDUCTION"
+  );
+  const conveyanceParty = conveyanceStake
+    ? sharedParties.find((p) => p.id === conveyanceStake.partyId)
+    : undefined;
 
   return {
-    ...deal,
+    ...tranche,
     agents,
     agentShare: 100,
     agentCommissionRate: 0,
@@ -69,8 +89,6 @@ export function enrichDeal(deal: BaseDeal): Deal {
     cogsExternal: 0,
     cogsReferrals: 0,
     externalPartners: [],
-    externalPartnerShare: 0,
     payables: [],
-    statusHistory: deal.statusHistory as Deal["statusHistory"] ?? [],
   };
 }

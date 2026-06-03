@@ -120,7 +120,7 @@ export function AgentEarningsView() {
               : l.posting.businessProcess === 'commission_accrual' ? 'deal-commission'
               : 'other',
       amount: l.amount,
-      dealId: l.posting.dealId,
+      dealId: l.posting.trancheId,
     })),
     totalCredit: statementEligibleLines.filter(l => l.side === 'CREDIT').reduce((s, l) => s + l.amount, 0),
     totalDebit:  statementEligibleLines.filter(l => l.side === 'DEBIT').reduce((s, l)  => s + l.amount, 0),
@@ -210,7 +210,7 @@ export function AgentEarningsView() {
           <div className="divide-y divide-border-ds-primary">
             {filteredLines.map(line => {
               const { text, color } = formatAmount(line.amount, line.side, line.posting.currency);
-              const dealId = line.posting.dealId;
+              const dealId = line.posting.trancheId;
               const invoiceNumber = line.invoiceId
                 ? (invoiceNumberMap.get(line.invoiceId) ?? line.invoiceId)
                 : null;

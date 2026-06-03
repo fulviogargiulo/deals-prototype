@@ -1,4 +1,5 @@
-import { Deal, AgentEntry, PayableEntry } from "@/data/types";
+import { Deal, Tranche, AgentEntry, PayableEntry } from "@/data/types";
+import { getTranches } from "@/data/trancheStore";
 import { getDeals } from "@/data/dealStore";
 import {
   calculateProjectedPnL,
@@ -7,7 +8,8 @@ import {
   getMBUDirectRate,
   DEFAULT_EXTERNAL_REFERRAL_RATE,
   sharedAgentFinancials,
-  sharedDealStakeholders,
+  sharedPnlEntries,
+  sharedDealParticipants,
   sharedAgents,
   sharedParties,
   sharedLedgers,
@@ -15,7 +17,7 @@ import {
   sharedPostingLines,
   type AgentFinancials,
   type Blueprint,
-  type DealStakeholder,
+  type PnlEntry,
   type Posting,
   type PostingLine,
   type ProjectedPnL,
@@ -23,34 +25,9 @@ import {
 
 
 // ── Engine dispatch ──────────────────────────────────────────────────────────
-// Single source of truth for which P&L engine handles a given (businessUnit × channel).
-// Rules are MECE: every deal maps to exactly one key.
-//
-// Engine          businessUnit   channel   Expected stakeholder roles
-// ─────────────────────────────────────────────────────────────────────────────
-// rebu            rebu           any       AGENT_PAYOUT (1+, AF strategy: flat/slab/max)
-//                                          REVENUE_SOURCE (1+, payer → client or developer)
-//                                          SUPPLY (seller/developer), DEMAND (buyer/tenant)
-//                                          ACQUISITION_DEDUCTION (opt, Huspy-borne co-brokers)
-//                                          OPERATIONAL_DEDUCTION (opt, Huspy-borne service costs)
-//
-// mbu-ma-broker   mortgage       MA        AGENT_PAYOUT (1+, AF strategy: broker-rate-slab)
-//                                          REVENUE_SOURCE (bank commission = principal × commissionPct)
-//                                          SUPPLY (lending bank), DEMAND (borrower)
-//                                          No ACQUISITION_DEDUCTION
-//
-// mbu-rea         mortgage       REA       AGENT_PAYOUT (1+, AF strategy: mbu-direct-rate-slab)
-// mbu-ds          mortgage       DS        REVENUE_SOURCE (bank commission)
-// mbu-b2c         mortgage       B2C       SUPPLY (lending bank), DEMAND (borrower)
-//                                          OPERATIONAL_DEDUCTION (opt, external referral — 0.3% of principal by default; signals external sourcing → lower agent rate)
-//
-// mbu-byob        mortgage       BYOB      Same as mbu-ma-broker + byobPenaltyRate on AgentFinancials
-//                                          reduces broker payout by that % (Huspy service fee).
-// ─────────────────────────────────────────────────────────────────────────────
-
+// businessUnit + channel live on Deal (header); pnlEngine lives on Tranche.
 export type DealEngineKey = "rebu" | "mbu-ma-broker" | "mbu-direct" | "manual";
 
-// Derives engine from businessUnit + channel — used as fallback for deals without pnlEngine set.
 export function derivePnlEngine(deal: Pick<Deal, "businessUnit" | "channel">): DealEngineKey {
   if (deal.businessUnit !== "mortgage") return "rebu";
   switch (deal.channel) {
@@ -60,34 +37,38 @@ export function derivePnlEngine(deal: Pick<Deal, "businessUnit" | "channel">): D
     case "DS":
     case "B2C":                return "mbu-direct";
     case "BBG":                return "manual";
-    default:                   return "manual"; // safe: fixed payout, no silent rate lookup
+    default:                   return "manual";
   }
 }
 
-export function getDealEngine(deal: Pick<Deal, "businessUnit" | "channel" | "pnlEngine">): DealEngineKey {
-  if (deal.pnlEngine) return deal.pnlEngine as DealEngineKey;
+export function getDealEngine(
+  deal: Pick<Deal, "businessUnit" | "channel">,
+  tranche?: Pick<Tranche, "pnlEngine">
+): DealEngineKey {
+  if (tranche?.pnlEngine) return tranche.pnlEngine as DealEngineKey;
   return derivePnlEngine(deal);
 }
 
 // ── Posting policy ───────────────────────────────────────────────────────────
-// Defines at which DealStatus the commission_accrual posting fires automatically.
-// REBU: agent is owed commission once the deal is fully finalized.
-// MBU:  broker is owed commission only when Huspy raises the invoice to the bank.
 const ENGINE_POSTING_POLICY: Record<DealEngineKey, { agentCommissionTrigger: string }> = {
   "rebu":          { agentCommissionTrigger: "finalized" },
   "mbu-ma-broker": { agentCommissionTrigger: "invoicing" },
   "mbu-direct":    { agentCommissionTrigger: "invoicing" },
-  "manual":       { agentCommissionTrigger: "invoicing" },
+  "manual":        { agentCommissionTrigger: "invoicing" },
 };
 
-export function fireCommissionAccrualOnTransition(deal: Deal, toStatus: string): void {
-  const trigger = ENGINE_POSTING_POLICY[getDealEngine(deal)].agentCommissionTrigger;
-  if (toStatus === trigger && deal.status !== trigger) {
-    createCommissionAccrualPosting(deal);
+export function fireCommissionAccrualOnTransition(tranche: Tranche, deal: Deal, toStatus: string): void {
+  const trigger = ENGINE_POSTING_POLICY[getDealEngine(deal, tranche)].agentCommissionTrigger;
+  if (toStatus === trigger && tranche.status !== trigger) {
+    createCommissionAccrualPosting(tranche, deal);
   }
 }
 
-function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calculateProjectedPnL>[0] | null {
+function buildEngineInput(
+  tranche: Tranche,
+  deal: Deal,
+  allTranches: Tranche[]
+): Parameters<typeof calculateProjectedPnL>[0] | null {
   const country = deal.country ?? "ae";
   const currency = deal.currency ?? "AED";
   const businessUnit = deal.businessUnit ?? "rebu";
@@ -97,21 +78,17 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
   const partyIdToAgentId: Record<string, string> = {};
   const partyDisplayNames: Record<string, string> = {};
 
-  // All fixture stakeholders for this deal (agents, payers, cost parties).
-  const allFixtureStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id);
+  const allFixtureStakes = sharedPnlEntries.filter((s) => s.trancheId === tranche.id);
 
-  // Derive grossRevenue from explicit REVENUE_SOURCE payers when not set on the deal.
-  // The waterfall already prefers payer amounts over grossRevenue when both are present,
-  // so this only matters for the fallback path (single implicit payer).
-  const derivedGrossRevenue = deal.grossRevenue ??
-    (allFixtureStakes.some((s) => s.role === "REVENUE_SOURCE" && (s.amount ?? 0) > 0)
-      ? allFixtureStakes.filter((s) => s.role === "REVENUE_SOURCE").reduce((sum, s) => sum + Math.abs(s.amount ?? 0), 0)
-      : null);
+  // grossRevenue is always derived from REVENUE_SOURCE stakes — not stored on Tranche.
+  const revenueStakes = allFixtureStakes.filter((s) => s.role === "REVENUE_SOURCE" && (s.amount ?? 0) > 0);
+  const derivedGrossRevenue = revenueStakes.length > 0
+    ? revenueStakes.reduce((sum, s) => sum + Math.abs(s.amount ?? 0), 0)
+    : null;
   if (derivedGrossRevenue == null) return null;
 
-  const engine = getDealEngine(deal);
+  const engine = getDealEngine(deal, tranche);
 
-  // Resolve agent financials and party display names.
   for (const stake of allFixtureStakes) {
     const party = sharedParties.find((p) => p.id === stake.partyId);
     if (party) partyDisplayNames[stake.partyId] = party.displayName;
@@ -119,33 +96,31 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
     if (stake.role === "AGENT_PAYOUT") {
       const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
       if (!agent) continue;
-      // Stored AF carries agent-specific config: strategy (rebu), BYOB penalty (mbu-ma-broker),
-      // and connectedAgents (all engines). For rate-resolved engines the strategy is replaced
-      // at runtime but connectedAgents must be preserved from the stored record.
       let af = sharedAgentFinancials.find((f) => f.agentId === agent.id && f.pnlEngine === engine);
       if (engine === "mbu-ma-broker") {
-        // Rate depends on: reporting month, lending bank, broker's total monthly GMV (MA + BYOB combined).
-        const reportingMonth = deal.reportDate?.slice(0, 7);
-        const bankStake = allFixtureStakes.find((s) => s.role === "SUPPLY");
-        const bankId = bankStake?.partyId;
-        const brokerMonthlyGmv = allDeals
-          .filter((d) => getDealEngine(d) === "mbu-ma-broker" && d.reportDate?.startsWith(reportingMonth ?? "\0"))
-          .reduce((sum, d) => {
-            const hasBroker = sharedDealStakeholders.some(
-              (s) => s.dealId === d.id && s.role === "AGENT_PAYOUT" && s.partyId === stake.partyId
+        const reportingMonth = tranche.reportDate?.slice(0, 7);
+        const bankParticipant = sharedDealParticipants.find((p) => p.dealId === deal.id && p.role === "SUPPLY");
+        const bankId = bankParticipant?.partyId;
+        // GMV scan across all tranches in the same reporting month for this broker
+        const brokerMonthlyGmv = allTranches
+          .filter((t) => {
+            const tDeal = getDeals().find((d) => d.id === t.dealId);
+            return tDeal && getDealEngine(tDeal, t) === "mbu-ma-broker" && t.reportDate?.startsWith(reportingMonth ?? "\0");
+          })
+          .reduce((sum, t) => {
+            const hasBroker = sharedPnlEntries.some(
+              (s) => s.trancheId === t.id && s.role === "AGENT_PAYOUT" && s.partyId === stake.partyId
             );
-            return hasBroker ? sum + (d.dealAmount ?? 0) : sum;
+            if (!hasBroker) return sum;
+            const tDeal = getDeals().find((d) => d.id === t.dealId);
+            return sum + (tDeal?.dealAmount ?? 0);
           }, 0);
         let resolvedPct = reportingMonth && bankId
           ? resolveBrokerRate(reportingMonth, bankId, brokerMonthlyGmv)
           : undefined;
-        // BYOB: af already holds the stored record; penalty is agent-specific.
         const penalty = af?.byobPenaltyRate ?? 0;
-        if (resolvedPct != null && penalty > 0) {
-          resolvedPct = resolvedPct - penalty;
-        }
+        if (resolvedPct != null && penalty > 0) resolvedPct = resolvedPct - penalty;
         if (resolvedPct != null) {
-          // Merge: keep connectedAgents from stored AF; override strategy with resolved rate.
           af = {
             id: af?.id ?? `af-syn-${agent.id}`,
             agentId: agent.id,
@@ -156,13 +131,11 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
           };
         }
       } else if (engine === "mbu-direct") {
-        // Rate resolved from MBUDirectMonthlyRate by channel + month + sourcing type.
-        const reportingMonth = deal.reportDate?.slice(0, 7);
+        const reportingMonth = tranche.reportDate?.slice(0, 7);
         const channel = deal.channel as "REA" | "DS" | "B2C";
         const isSelfSourced = !allFixtureStakes.some((s) => s.role === "OPERATIONAL_DEDUCTION");
         const resolvedPct = reportingMonth ? getMBUDirectRate(reportingMonth, channel, isSelfSourced) : undefined;
         if (resolvedPct != null) {
-          // Merge: keep connectedAgents from stored AF; override strategy with resolved rate.
           af = {
             id: af?.id ?? `af-syn-${agent.id}`,
             agentId: agent.id,
@@ -172,30 +145,27 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
           };
         }
       }
-      // Always map party → agent so fixed-amount payouts (e.g. BBG) resolve display names properly.
       partyIdToAgentId[stake.partyId] = agent.id;
       if (!af) continue;
       agentFinancialsByAgentId[agent.id] = af;
     }
   }
 
-  let stakeholders: DealStakeholder[] = allFixtureStakes;
+  let stakeholders: PnlEntry[] = allFixtureStakes;
 
-  // "Fixed payouts" means source === "manual" (ops-declared) — engine-computed draft amounts don't count.
   const hasFixedPayouts = allFixtureStakes.some(
     (s) => s.role === "AGENT_PAYOUT" && s.source === "manual" && s.amount != null
   );
 
-  // Fallback: legacy AgentEntry[] on the deal (wizard-created deals before stakeholder migration).
-  // Skip when fixed-amount payouts are present (e.g. BBG) — waterfall handles those directly.
-  if (Object.keys(agentFinancialsByAgentId).length === 0 && !hasFixedPayouts && deal.agents && deal.agents.length > 0) {
-    const legacyAgentStakes: DealStakeholder[] = [];
-    deal.agents.forEach((a, idx) => {
-      const agentId = a.agentId ?? `agent-${deal.id}-${idx}`;
+  // Legacy AgentEntry[] fallback (wizard-created deals before stakeholder migration).
+  if (Object.keys(agentFinancialsByAgentId).length === 0 && !hasFixedPayouts && tranche.agents && tranche.agents.length > 0) {
+    const legacyAgentStakes: PnlEntry[] = [];
+    tranche.agents.forEach((a, idx) => {
+      const agentId = a.agentId ?? `agent-${tranche.id}-${idx}`;
       const partyId = a.agentId ? `party-${a.agentId}` : `party-${agentId}`;
       legacyAgentStakes.push({
-        id: `ds-${deal.id}-agent-${idx}`,
-        dealId: deal.id,
+        id: `ds-${tranche.id}-agent-${idx}`,
+        trancheId: tranche.id,
         partyId,
         role: "AGENT_PAYOUT",
         splitPercentage: a.agentShare,
@@ -215,23 +185,9 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
 
   if (Object.keys(agentFinancialsByAgentId).length === 0 && !hasFixedPayouts) return null;
 
-  // Infer amount for payer stakeholders when none is set explicitly.
-  // Single payer gets the full grossRevenue; multiple payers split it evenly.
-  const hasExplicitPayer = stakeholders.some((s) => (s.amount ?? 0) > 0);
-  if (!hasExplicitPayer && deal.grossRevenue) {
-    const implicit = stakeholders.filter((s) => s.role === "REVENUE_SOURCE" && !s.amount);
-    if (implicit.length > 0) {
-      const perPayer = deal.grossRevenue / implicit.length;
-      stakeholders = stakeholders.map((s) =>
-        s.role === "REVENUE_SOURCE" && !s.amount ? { ...s, amount: perPayer } : s
-      );
-    }
-  }
+  // All REVENUE_SOURCE amounts come from explicit stakes — no implicit fallback needed.
 
-  // MBU direct channels: fill in default referral fee (0.3% of disbursed principal) for any
-  // OPERATIONAL_DEDUCTION (referral party) that has no explicit amount set.
-  // Base is dealAmount (mortgage principal), not grossRevenue (bank commission).
-  if (getDealEngine(deal) === "mbu-direct") {
+  if (getDealEngine(deal, tranche) === "mbu-direct") {
     stakeholders = stakeholders.map((s) => {
       if (s.role === "OPERATIONAL_DEDUCTION" && !s.amount) {
         return { ...s, amount: -(deal.dealAmount * DEFAULT_EXTERNAL_REFERRAL_RATE / 100) };
@@ -239,13 +195,13 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
       return s;
     });
   }
+
   return {
     country,
     businessUnit,
     currency,
     grossRevenue: derivedGrossRevenue,
-    // MA/Broker: payout base is the mortgage principal, not Huspy's gross revenue.
-    agentPayoutBase: getDealEngine(deal) === "mbu-ma-broker" ? deal.dealAmount : undefined,
+    agentPayoutBase: getDealEngine(deal, tranche) === "mbu-ma-broker" ? deal.dealAmount : undefined,
     stakeholders,
     agentFinancialsByAgentId,
     partyIdToAgentId,
@@ -254,15 +210,14 @@ function buildEngineInput(deal: Deal, allDeals: Deal[]): Parameters<typeof calcu
   };
 }
 
-function applyWaterfallEngine(deal: Deal, allDeals: Deal[]): Deal | null {
-  const input = buildEngineInput(deal, allDeals);
+function applyWaterfallEngine(tranche: Tranche, deal: Deal, allTranches: Tranche[]): Tranche | null {
+  const input = buildEngineInput(tranche, deal, allTranches);
   if (!input) return null;
   const projection = calculateProjectedPnL(input);
 
-  // Project results back onto legacy AgentEntry rows.
   const splitsByAgentId = new Map(projection.splits.map((s) => [s.agentId, s]));
-  const updatedAgents: AgentEntry[] = (deal.agents ?? []).map((a, idx) => {
-    const agentId = a.agentId ?? `agent-${deal.id}-${idx}`;
+  const updatedAgents: AgentEntry[] = (tranche.agents ?? []).map((a, idx) => {
+    const agentId = a.agentId ?? `agent-${tranche.id}-${idx}`;
     const s = splitsByAgentId.get(agentId);
     if (!s) return a;
     const af = sharedAgentFinancials.find((x) => x.agentId === agentId);
@@ -279,10 +234,9 @@ function applyWaterfallEngine(deal: Deal, allDeals: Deal[]): Deal | null {
     };
   });
 
-  const externals = deal.externalPartners ?? [];
+  const externals = tranche.externalPartners ?? [];
 
-  // Build payables from engine ledger entries (DEBITs with a bucket).
-  const existing = deal.payables ?? [];
+  const existing = tranche.payables ?? [];
   const payables: PayableEntry[] = [];
   projection.ledger
     .filter((e) => e.side === "DEBIT" && e.bucket)
@@ -311,14 +265,13 @@ function applyWaterfallEngine(deal: Deal, allDeals: Deal[]): Deal | null {
 
   const first = updatedAgents[0];
   return {
-    ...deal,
+    ...tranche,
     agents: updatedAgents,
     externalPartners: externals,
-    huspyRevenue: projection.grossRevenue,
-    netHuspyRevenue: projection.huspyMargin,
-    agentName: first?.agentName ?? deal.agentName,
-    agentShare: first?.agentShare ?? deal.agentShare ?? 0,
-    agentCommissionRate: first?.agentCommissionRate ?? deal.agentCommissionRate ?? 0,
+    huspyRevenue: projection.grossRevenue,   // KarvelTranche extension field
+    netHuspyRevenue: projection.huspyMargin, // KarvelTranche extension field
+    agentShare: first?.agentShare ?? (tranche as Tranche).agentShare ?? 0,
+    agentCommissionRate: first?.agentCommissionRate ?? (tranche as Tranche).agentCommissionRate ?? 0,
     agentCommissionPayout: projection.splits.reduce((s, sp) => s + sp.agentPayout, 0),
     teamLeadName: first?.teamLeadName,
     teamLeadRate: first?.teamLeadRate ?? 0,
@@ -333,196 +286,38 @@ function applyWaterfallEngine(deal: Deal, allDeals: Deal[]): Deal | null {
   };
 }
 
-/** Build payable entries from all COGS entities, preserving user-edited payment fields */
-function buildPayables(deal: Deal, entries: { entityType: PayableEntry["entityType"]; entityLabel: string; expectedAmount: number }[]): PayableEntry[] {
-  const existing = deal.payables || [];
-  return entries
-    .filter((e) => e.expectedAmount > 0 || existing.some((p) => p.entityType === e.entityType && p.entityLabel === e.entityLabel))
-    .map((e) => {
-      const prev = existing.find((p) => p.entityType === e.entityType && p.entityLabel === e.entityLabel);
-      return {
-        entityType: e.entityType,
-        entityLabel: e.entityLabel,
-        expectedAmount: e.expectedAmount,
-        refNumber: prev?.refNumber || "",
-        status: prev?.status || "pending",
-        paidAmount: prev?.paidAmount,
-        paidDate: prev?.paidDate,
-      };
-    });
+export function recalculateTranche(tranche: Tranche, deal: Deal, allTranches: Tranche[] = getTranches()): Tranche {
+  return applyWaterfallEngine(tranche, deal, allTranches) ?? tranche;
 }
 
-function recalculateAgentEntry(agent: AgentEntry, huspyRevenue: number, extPayout: number): AgentEntry {
-  const netRevenuePerAgent = (huspyRevenue - extPayout) * (agent.agentShare / 100);
-  const baseCommission = (agent.agentCommissionRate / 100) * netRevenuePerAgent;
-  const agentTotalAmount = baseCommission + agent.agentIncentive - agent.agentDeductions;
-  const teamLeadShare = (agent.teamLeadRate / 100) * Math.max(0, agentTotalAmount);
-  const managerOverride = (agent.managerOverrideRate / 100) * Math.max(0, agentTotalAmount);
-  const referralAmount = (agent.referralPercentage / 100) * (netRevenuePerAgent - (agent.clientKickback || 0));
-
-  return {
-    ...agent,
-    agentCommissionPayout: Math.max(0, baseCommission),
-    agentTotalAmount: Math.max(0, agentTotalAmount),
-    teamLeadShare: Math.max(0, teamLeadShare),
-    managerOverride: Math.max(0, managerOverride),
-    referralAmount: Math.max(0, referralAmount),
-  };
+/** @deprecated Use recalculateTranche instead. */
+export function recalculateDeal(deal: Deal, _allDeals: Deal[] = []): Deal {
+  return deal;
 }
 
-function recalculateREBU(deal: Deal): Deal {
-  const huspyRevenue = deal.dealPrice * (deal.takeRate / 100);
-
-  // Recalculate external partners
-  const partners = (deal.externalPartners || []).map((p) => ({
-    ...p,
-    partnerAmount: (p.partnerShare / 100) * huspyRevenue,
-  }));
-  const extPayout = partners.reduce((sum, p) => sum + p.partnerAmount, 0);
-
-  // Recalculate each agent
-  const agents = deal.agents.map((a) => recalculateAgentEntry(a, huspyRevenue, extPayout));
-
-  // Aggregate agent COGS
-  const totalAgentPayout = agents.reduce((sum, a) => sum + a.agentTotalAmount, 0);
-  const totalTeamLeadShare = agents.reduce((sum, a) => sum + a.teamLeadShare, 0);
-  const totalManagerOverride = agents.reduce((sum, a) => sum + a.managerOverride, 0);
-
-  // OPERATIONAL_DEDUCTION stakeholders are the canonical source for conveyance / service costs.
-  const opDeductionStakes = sharedDealStakeholders.filter(
-    (s) => s.dealId === deal.id && s.role === "OPERATIONAL_DEDUCTION"
-  );
-  const conveyanceFeeTotal = opDeductionStakes.reduce((sum, s) => sum + Math.abs(s.amount ?? 0), 0);
-  const conveyanceAgentPayout = conveyanceFeeTotal;
-  const huspyConveyanceShare = 0;
-
-  // Referrals are now per-agent
-  const totalReferralAmount = agents.reduce((sum, a) => sum + a.referralAmount, 0);
-  const totalClientKickback = agents.reduce((sum, a) => sum + (a.clientKickback || 0), 0);
-
-  const cogsInternal = totalAgentPayout + totalTeamLeadShare + totalManagerOverride + conveyanceAgentPayout;
-  const cogsExternal = extPayout;
-  const cogsReferrals = Math.max(0, totalReferralAmount) + totalClientKickback;
-  const totalCOGS = cogsInternal + cogsExternal + cogsReferrals;
-  // Conveyance fee is Huspy additional revenue only in legacy (non-stakeholder) model.
-  const conveyanceAsRevenue = opDeductionStakes.length > 0 ? 0 : conveyanceFeeTotal;
-  const netHuspyRevenue = huspyRevenue + conveyanceAsRevenue - totalCOGS;
-
-  // Build payable entries from all COGS entities
-  const payableEntries: { entityType: PayableEntry["entityType"]; entityLabel: string; expectedAmount: number }[] = [];
-
-  // External partners
-  partners.forEach((p, idx) => {
-    payableEntries.push({ entityType: "external_partner", entityLabel: `External Partner ${idx + 1}${p.partnerName ? ` — ${p.partnerName}` : ""}`, expectedAmount: p.partnerAmount });
-  });
-
-  // Per-agent entries: agent, team lead, manager, referrer
-  agents.forEach((a, idx) => {
-    const label = (suffix: string) => `Agent ${idx + 1}${a.agentName ? ` — ${a.agentName}` : ""} ${suffix}`;
-    payableEntries.push({ entityType: "agent", entityLabel: label("Commission"), expectedAmount: a.agentTotalAmount });
-    if (a.teamLeadName || a.teamLeadShare > 0) {
-      payableEntries.push({ entityType: "team_lead", entityLabel: `Team Lead ${idx + 1}${a.teamLeadName ? ` — ${a.teamLeadName}` : ""}`, expectedAmount: a.teamLeadShare });
-    }
-    if (a.managerName || a.managerOverride > 0) {
-      payableEntries.push({ entityType: "manager", entityLabel: `Manager ${idx + 1}${a.managerName ? ` — ${a.managerName}` : ""}`, expectedAmount: a.managerOverride });
-    }
-    if (a.referrerName || a.referralAmount > 0) {
-      payableEntries.push({ entityType: "referrer", entityLabel: `Referrer ${idx + 1}${a.referrerName ? ` — ${a.referrerName}` : ""}`, expectedAmount: a.referralAmount });
-    }
-  });
-
-  // Operating costs — one payable entry per OPERATIONAL_DEDUCTION stakeholder.
-  opDeductionStakes.forEach((s) => {
-    const party = sharedParties.find((p) => p.id === s.partyId);
-    payableEntries.push({ entityType: "conveyance", entityLabel: `Operating Cost — ${party?.displayName ?? s.partyId}`, expectedAmount: Math.abs(s.amount ?? 0) });
-  });
-
-  const payables = buildPayables(deal, payableEntries);
-
-  const firstPayable = payables[0];
-  const firstPartner = partners[0] || { partnerName: "", partnerShare: 0, partnerAmount: 0 };
-  const first = agents[0] || {} as Partial<AgentEntry>;
-
-  return {
-    ...deal,
-    agents,
-    externalPartners: partners,
-    huspyRevenue,
-    agentName: first.agentName || deal.agentName,
-    agentShare: first.agentShare ?? 0,
-    agentCommissionRate: first.agentCommissionRate ?? 0,
-    agentCommissionPayout: totalAgentPayout,
-    teamLeadName: first.teamLeadName,
-    teamLeadRate: first.teamLeadRate ?? 0,
-    teamLeadShare: totalTeamLeadShare,
-    managerName: first.managerName,
-    managerOverrideRate: first.managerOverrideRate ?? 0,
-    managerOverride: totalManagerOverride,
-    externalPartnerName: firstPartner.partnerName,
-    externalPartnerShare: firstPartner.partnerShare ?? 0,
-    externalPayout: extPayout,
-    conveyanceAgentPayout,
-    huspyConveyanceShare,
-    referralAmount: Math.max(0, totalReferralAmount),
-    cogsInternal: Math.max(0, cogsInternal),
-    cogsExternal: Math.max(0, cogsExternal),
-    cogsReferrals: Math.max(0, cogsReferrals),
-    netHuspyRevenue,
-    payables,
-    payableRefNumber: firstPayable?.refNumber,
-    payableStatus: firstPayable?.status,
-  };
-}
-
-
-export function recalculateDeal(deal: Deal, allDeals: Deal[] = getDeals()): Deal {
-  switch (getDealEngine(deal)) {
-    case "rebu":
-      // Try waterfall engine first; fall back to legacy field-based calc for
-      // deals that predate the stakeholder migration (no grossRevenue/blueprintId).
-      return applyWaterfallEngine(deal, allDeals) ?? recalculateREBU(deal);
-    case "mbu-ma-broker":
-    case "mbu-direct":
-    case "manual":
-      return applyWaterfallEngine(deal, allDeals) ?? deal;
-  }
-}
-
-export function computeDealPnL(deal: Deal) {
-  const input = buildEngineInput(deal, getDeals());
+export function computeTranchePnL(tranche: Tranche, deal: Deal) {
+  const input = buildEngineInput(tranche, deal, getTranches());
   if (!input) return null;
   return calculateProjectedPnL(input);
 }
 
-/**
- * syncEngineAmounts — keeps source:"engine" draft stakes in sync after any manual stake edit.
- *
- * Called after every stake write on a draft deal. Re-runs the engine and updates the amount on
- * every source:"engine" + status:"draft" AGENT_PAYOUT stake so the P&L remains self-consistent.
- * Confirmed stakes are never touched.
- */
-/**
- * syncEngineAmounts — keeps source:"engine" draft stakes in sync after any stake edit.
- *
- * - Updates amount on existing source:"engine" AGENT_PAYOUT stakes.
- * - Creates missing connected agent draft stakes (needed when a deal is first opened
- *   after creation via AddDealDialog or BulkUploadDialog).
- * Confirmed stakes are never touched.
- */
-export function syncEngineAmounts(deal: Deal): void {
-  const pnl = computeDealPnL(deal);
+/** @deprecated Use computeTranchePnL instead. */
+export function computeDealPnL(deal: Deal & { status?: string; grossRevenue?: number; pnlEngine?: string }) {
+  return null;
+}
+
+export function syncEngineAmounts(tranche: Tranche, deal: Deal): void {
+  const pnl = computeTranchePnL(tranche, deal);
   if (!pnl) return;
 
-  const draftStakes = sharedDealStakeholders.filter(
-    (s) => s.dealId === deal.id && s.status !== "confirmed" && s.source === "engine" && s.role === "AGENT_PAYOUT"
+  const draftStakes = sharedPnlEntries.filter(
+    (s) => s.trancheId === tranche.id && s.status !== "confirmed" && s.source === "engine" && s.role === "AGENT_PAYOUT"
   );
 
   for (const split of pnl.splits) {
-    // Primary / co-agent stake
     const agentStake = draftStakes.find((s) => s.partyId === split.partyId);
     if (agentStake) agentStake.amount = split.agentPayout;
 
-    // Connected agent stakes — update existing or create missing draft stakes
     for (const cp of split.connectedAgentPayouts) {
       const caAgent = sharedAgents.find((a) => a.id === cp.agentId);
       if (!caAgent) continue;
@@ -531,9 +326,9 @@ export function syncEngineAmounts(deal: Deal): void {
       if (caStake) {
         caStake.amount = rounded;
       } else {
-        sharedDealStakeholders.push({
-          id: `ds-${deal.id}-ca-${cp.agentId}-for-${split.partyId}`,
-          dealId: deal.id,
+        sharedPnlEntries.push({
+          id: `ds-${tranche.id}-ca-${cp.agentId}-for-${split.partyId}`,
+          trancheId: tranche.id,
           partyId: caAgent.partyId,
           role: "AGENT_PAYOUT",
           description: cp.label,
@@ -546,29 +341,33 @@ export function syncEngineAmounts(deal: Deal): void {
   }
 }
 
-// Maps currency to chart-of-accounts ledger IDs (matches sharedLedgers fixture).
 const LEDGER_IDS: Record<string, { ar: number; rev: number; exp: number; agentPayable: number; extPayable: number; tax: number; withholding: number }> = {
   EUR: { ar: 2,  rev: 6,  exp: 7,  agentPayable: 3,  extPayable: 4,  tax: 5,  withholding: 28 },
   AED: { ar: 9,  rev: 13, exp: 14, agentPayable: 10, extPayable: 11, tax: 12, withholding: 29 },
   SAR: { ar: 16, rev: 20, exp: 21, agentPayable: 17, extPayable: 18, tax: 19, withholding: 30 },
 };
 
-export function draftPostings(projection: ProjectedPnL, deal: { id: string; businessUnit?: string; currency?: string }, blueprint?: Blueprint): { posting: Posting; lines: PostingLine[] } {
+export function draftPostings(
+  projection: ProjectedPnL,
+  tranche: { id: string; dealId?: string },
+  deal: { businessUnit?: string; currency?: string },
+  blueprint?: Blueprint
+): { posting: Posting; lines: PostingLine[] } {
   const currency = (deal.currency ?? "EUR") as "EUR" | "AED" | "SAR";
   const ids = LEDGER_IDS[currency] ?? LEDGER_IDS.EUR;
-  const postingId = `draft-${deal.id}`;
+  const postingId = `draft-${tranche.id}`;
   const now = new Date().toISOString();
 
   const posting: Posting = {
     id: postingId,
-    dealId: deal.id,
+    trancheId: tranche.id,
     businessUnit: deal.businessUnit as any,
     businessProcess: "invoice_issued",
     createdBy: "user-ops",
     createdAt: now,
     valueDate: now.slice(0, 10),
     currency,
-    description: `Deal close — ${deal.id}`,
+    description: `Deal close — ${tranche.id}`,
   };
 
   const lines: PostingLine[] = [];
@@ -581,12 +380,9 @@ export function draftPostings(projection: ProjectedPnL, deal: { id: string; busi
     amount: Math.round(amount * 100) / 100,
   });
 
-  // Gross revenue: AR debit + Revenue credit
   lines.push(line(ids.ar, "DEBIT", projection.grossRevenue));
   lines.push(line(ids.rev, "CREDIT", projection.grossRevenue));
 
-  // Statutory tax: Revenue debit + Tax liability credit (Blueprint service — tax-exclusive model).
-  // taxAmount = grossRevenue × blueprint.taxRate. Only emitted when blueprint is provided.
   if (blueprint && blueprint.taxRate > 0) {
     const taxAmount = Math.round(projection.grossRevenue * (blueprint.taxRate / 100) * 100) / 100;
     if (taxAmount > 0) {
@@ -595,9 +391,6 @@ export function draftPostings(projection: ProjectedPnL, deal: { id: string; busi
     }
   }
 
-  // Acquisition + operational costs: one Expense debit for the total, then one Credit per party.
-  // Routes to the party's subledger when one exists (e.g. a REBU agent referring an MBU deal),
-  // otherwise falls back to the general EXT_PAYABLE control account.
   const externalEntries = projection.ledger.filter(
     (e) => e.side === "DEBIT" && (e.bucket === "acquisition-cost" || e.bucket === "operational-cost")
   );
@@ -610,9 +403,6 @@ export function draftPostings(projection: ProjectedPnL, deal: { id: string; busi
     }
   }
 
-  // Agent payouts: one Expense debit for the total, then one Credit per
-  // agent subledger (AgentLiability_agent-{id}). Falls back to the GL parent only
-  // when no subledger is found for an agent — preserving double-entry balance.
   if (projection.totalAgentPayout > 0) {
     lines.push(line(ids.exp, "DEBIT", projection.totalAgentPayout));
     for (const split of projection.splits) {
@@ -633,8 +423,8 @@ function assertNotControlAccount(ledgerId: number, context: string): void {
   }
 }
 
-export function createCommissionAccrualPosting(deal: Deal): void {
-  const pnl = computeDealPnL(deal);
+export function createCommissionAccrualPosting(tranche: Tranche, deal: Deal): void {
+  const pnl = computeTranchePnL(tranche, deal);
   if (!pnl || pnl.totalAgentPayout <= 0) return;
 
   const currency = (deal.currency ?? "EUR") as "EUR" | "AED" | "SAR";
@@ -644,7 +434,7 @@ export function createCommissionAccrualPosting(deal: Deal): void {
 
   const pushPosting = (pid: string, description: string) => {
     sharedPostings.push({
-      id: pid, dealId: deal.id, businessUnit: deal.businessUnit as any,
+      id: pid, trancheId: tranche.id, businessUnit: deal.businessUnit as any,
       businessProcess: "commission_accrual" as any, createdBy: "system",
       createdAt: now, valueDate: now.slice(0, 10), currency, description,
     });
@@ -662,8 +452,8 @@ export function createCommissionAccrualPosting(deal: Deal): void {
     if (split.agentPayout > 0) {
       const subledger = sharedLedgers.find((l) => l.partyId === split.partyId);
       if (!subledger) throw new Error(`No subledger for party ${split.partyId} (agent ${split.agentId})`);
-      const pid = `posting-finalize-${deal.id}-${split.agentId}-${ts}`;
-      pushPosting(pid, `Commission accrual — ${agentName} (${deal.id})`);
+      const pid = `posting-finalize-${tranche.id}-${split.agentId}-${ts}`;
+      pushPosting(pid, `Commission accrual — ${agentName} (${tranche.id})`);
       push2Lines(pid, subledger.id, Math.round(split.agentPayout * 100) / 100);
     }
 
@@ -672,14 +462,12 @@ export function createCommissionAccrualPosting(deal: Deal): void {
       const subledger = sharedLedgers.find((l) => l.id === cp.ledgerId);
       if (!subledger) throw new Error(`No subledger id=${cp.ledgerId} for ${cp.label} of agent ${split.agentId}`);
       const cpName = sharedParties.find((p) => p.id === subledger.partyId)?.displayName ?? cp.label;
-      const pid = `posting-finalize-${deal.id}-ca-${cp.agentId}-${split.agentId}-${ts}`;
-      pushPosting(pid, `Commission accrual — ${cpName} / ${cp.label} for ${agentName} (${deal.id})`);
+      const pid = `posting-finalize-${tranche.id}-ca-${cp.agentId}-${split.agentId}-${ts}`;
+      pushPosting(pid, `Commission accrual — ${cpName} / ${cp.label} for ${agentName} (${tranche.id})`);
       push2Lines(pid, subledger.id, Math.round(cp.amount * 100) / 100);
     }
   }
 
-  // Acquisition and operational costs: only parties that have a subledger settle here.
-  // Parties without a subledger are settled via invoice (external_cost_accrual at invoice issuance).
   for (const entry of pnl.ledger) {
     if (entry.side !== "DEBIT" || (entry.bucket !== "acquisition-cost" && entry.bucket !== "operational-cost")) continue;
     if (entry.amount <= 0) continue;
@@ -689,25 +477,68 @@ export function createCommissionAccrualPosting(deal: Deal): void {
     const name = entry.partyId
       ? (sharedParties.find((p) => p.id === entry.partyId)?.displayName ?? entry.partyId)
       : entry.label;
-    const pid = `posting-finalize-${deal.id}-cost-${entry.id}-${ts}`;
-    pushPosting(pid, `Cost accrual — ${name} (${deal.id})`);
+    const pid = `posting-finalize-${tranche.id}-cost-${entry.id}-${ts}`;
+    pushPosting(pid, `Cost accrual — ${name} (${tranche.id})`);
     push2Lines(pid, creditId, Math.round(entry.amount * 100) / 100);
   }
 }
 
-// ── AF validation ─────────────────────────────────────────────────────────────
-// Returns the list of agents on non-manual deals that are missing an AF config
-// for the deal's engine. Used to block deal creation / bulk upload.
-// Agents with a fixed amount on their stake are exempt (manual-priced).
+export function confirmTrancheStakeholders(tranche: Tranche, deal: Deal): void {
+  const pnl = computeTranchePnL(tranche, deal);
+  if (!pnl) return;
+
+  const splitByPartyId = new Map(pnl.splits.map((s) => [s.partyId, s]));
+  const trancheStakes = sharedPnlEntries.filter((s) => s.trancheId === tranche.id);
+
+  for (const stake of trancheStakes) {
+    if (stake.role === "AGENT_PAYOUT" && stake.source !== "manual") {
+      const split = splitByPartyId.get(stake.partyId);
+      if (split) {
+        stake.amount = split.agentPayout;
+        stake.source = "engine";
+      }
+    }
+    stake.status = "confirmed";
+  }
+
+  for (const split of pnl.splits) {
+    for (const cp of split.connectedAgentPayouts) {
+      if (cp.amount <= 0) continue;
+      const caAgent = sharedAgents.find((a) => a.id === cp.agentId);
+      const caPartyId = caAgent?.partyId ?? `party-${cp.agentId}`;
+      const stakeId = `ds-${tranche.id}-ca-${cp.agentId}-for-${split.partyId}`;
+      const rounded = Math.round(cp.amount * 100) / 100;
+
+      const existing = sharedPnlEntries.find((s) => s.id === stakeId);
+      if (existing) {
+        existing.amount = rounded;
+        existing.source = "engine";
+        existing.status = "confirmed";
+      } else {
+        sharedPnlEntries.push({
+          id: stakeId,
+          trancheId: tranche.id,
+          partyId: caPartyId,
+          role: "AGENT_PAYOUT",
+          description: cp.label,
+          amount: rounded,
+          source: "engine",
+          status: "confirmed",
+        });
+      }
+    }
+  }
+}
+
 export function getMissingAgentFinancials(
   engine: DealEngineKey,
-  stakeholders: DealStakeholder[]
+  stakeholders: PnlEntry[]
 ): Array<{ agentId: string; displayName: string }> {
   if (engine === "manual") return [];
   const missing: Array<{ agentId: string; displayName: string }> = [];
   for (const stake of stakeholders) {
     if (stake.role !== "AGENT_PAYOUT") continue;
-    if (stake.source === "manual" && stake.amount != null) continue; // manually declared fixed amount — exempt
+    if (stake.source === "manual" && stake.amount != null) continue;
     const agent = sharedAgents.find((a) => a.partyId === stake.partyId);
     if (!agent) continue;
     const af = sharedAgentFinancials.find((f) => f.agentId === agent.id && f.pnlEngine === engine);
@@ -739,63 +570,20 @@ export function createEmptyAgent(_index: number): AgentEntry {
   };
 }
 
-/**
- * confirmDealStakeholders — called when a deal transitions to "invoicing".
- *
- * 1. Runs the P&L engine one final time.
- * 2. Writes amount on all rate-based AGENT_PAYOUT stakes (those using splitPercentage).
- * 3. Updates connected-agent AGENT_PAYOUT stakes (TL, manager) with their final computed amounts;
- *    creates them if not already present (deals created before this pattern was adopted).
- * 4. Sets status: "confirmed" on all stakes for the deal.
- *    Who confirmed and when is recorded on deal.statusHistory (to === "invoicing").
- */
-export function confirmDealStakeholders(deal: Deal): void {
-  const pnl = computeDealPnL(deal);
-  if (!pnl) return;
+// ── deriveDisplayStatus — used by deal list / kanban ──────────────────────────
+// Picks the "most active" status from a deal's tranches for display purposes.
+const STATUS_PRIORITY: Partial<Record<string, number>> = {
+  "under-review":           6,
+  "pending-agent-approval": 5,
+  "pending-details":        4,
+  "invoicing":              3,
+  "finalized":              2,
+  "canceled":               1,
+};
 
-  // Lock all financial stakes: write confirmed amounts and set status.
-  const splitByPartyId = new Map(pnl.splits.map((s) => [s.partyId, s]));
-  const dealStakes = sharedDealStakeholders.filter((s) => s.dealId === deal.id);
-
-  for (const stake of dealStakes) {
-    if (stake.role === "AGENT_PAYOUT" && stake.source !== "manual") {
-      const split = splitByPartyId.get(stake.partyId);
-      if (split) {
-        stake.amount = split.agentPayout;
-        stake.source = "engine";
-      }
-    }
-    stake.status = "confirmed";
-  }
-
-  // Confirm connected-agent AGENT_PAYOUT stakes (TL, manager, etc.).
-  // Update draft stakes created at deal creation; create if missing.
-  for (const split of pnl.splits) {
-    for (const cp of split.connectedAgentPayouts) {
-      if (cp.amount <= 0) continue;
-      const caAgent = sharedAgents.find((a) => a.id === cp.agentId);
-      const caPartyId = caAgent?.partyId ?? `party-${cp.agentId}`;
-      const stakeId = `ds-${deal.id}-ca-${cp.agentId}-for-${split.partyId}`;
-      const rounded = Math.round(cp.amount * 100) / 100;
-
-      const existing = sharedDealStakeholders.find((s) => s.id === stakeId);
-      if (existing) {
-        existing.amount = rounded;
-        existing.source = "engine";
-        existing.status = "confirmed";
-      } else {
-        sharedDealStakeholders.push({
-          id: stakeId,
-          dealId: deal.id,
-          partyId: caPartyId,
-          role: "AGENT_PAYOUT",
-          description: cp.label,
-          amount: rounded,
-          source: "engine",
-          status: "confirmed",
-        });
-      }
-    }
-  }
+export function deriveDisplayStatus(tranches: Tranche[]): string {
+  if (tranches.length === 0) return "pending-details";
+  return tranches.reduce((best, t) =>
+    (STATUS_PRIORITY[t.status] ?? 0) > (STATUS_PRIORITY[best.status] ?? 0) ? t : best
+  ).status;
 }
-

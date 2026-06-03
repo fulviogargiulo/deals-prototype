@@ -10,7 +10,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-001",
-    dealId: "deal-001",
+    trancheId: "tranche-001",
     businessUnit: "rebu",
     externalRef: "P0001",
     businessProcess: "invoice_issued",
@@ -23,7 +23,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-002",
-    dealId: "deal-001",
+    trancheId: "tranche-001",
     businessUnit: "rebu",
     externalRef: "P0002",
     businessProcess: "bank_statement_inbound_matched",
@@ -36,7 +36,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-003",
-    dealId: "deal-001",
+    trancheId: "tranche-001",
     businessUnit: "rebu",
     externalRef: "AGINV-001",
     businessProcess: "commission_accrual",
@@ -73,7 +73,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-007",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     businessUnit: "rebu",
     externalRef: "P0007",
     businessProcess: "invoice_issued",
@@ -85,7 +85,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-007b",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     businessUnit: "rebu",
     externalRef: "P0007B",
     businessProcess: "invoice_issued",
@@ -97,7 +97,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-008",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     businessUnit: "rebu",
     externalRef: "P0008",
     businessProcess: "bank_statement_inbound_matched",
@@ -110,7 +110,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-009",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     businessUnit: "rebu",
     externalRef: "P0009",
     businessProcess: "bank_statement_inbound_matched",
@@ -151,7 +151,7 @@ export const sharedPostings: Posting[] = [
   // ── deal-001 — TL + Mgr commission accrual (REBU, EUR) ─────────────────
   {
     id: "posting-040",
-    dealId: "deal-001",
+    trancheId: "tranche-001",
     businessUnit: "rebu",
     externalRef: "AGINV-001-TL",
     businessProcess: "commission_accrual",
@@ -163,7 +163,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-041",
-    dealId: "deal-001",
+    trancheId: "tranche-001",
     businessUnit: "rebu",
     externalRef: "AGINV-001-MGR",
     businessProcess: "commission_accrual",
@@ -178,7 +178,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-011",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     businessUnit: "rebu",
     externalRef: "AGINV-016",
     businessProcess: "commission_accrual",
@@ -192,7 +192,7 @@ export const sharedPostings: Posting[] = [
   // ── deal-016 — TL + Mgr commission accrual (REBU, AED) ─────────────────
   {
     id: "posting-042",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     businessUnit: "rebu",
     externalRef: "AGINV-016-TL",
     businessProcess: "commission_accrual",
@@ -204,7 +204,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-043",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     businessUnit: "rebu",
     externalRef: "AGINV-016-MGR",
     businessProcess: "commission_accrual",
@@ -271,7 +271,7 @@ export const sharedPostings: Posting[] = [
   // ── deal-018 — TL + Mgr commission accrual (REBU, EUR) ─────────────────
   {
     id: "posting-044",
-    dealId: "deal-018",
+    trancheId: "tranche-018",
     businessUnit: "rebu",
     externalRef: "AGINV-018-TL",
     businessProcess: "commission_accrual",
@@ -283,7 +283,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-045",
-    dealId: "deal-018",
+    trancheId: "tranche-018",
     businessUnit: "rebu",
     externalRef: "AGINV-018-MGR",
     businessProcess: "commission_accrual",
@@ -298,7 +298,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-015",
-    dealId: "deal-018",
+    trancheId: "tranche-018",
     businessUnit: "rebu",
     externalRef: "AGINV-018",
     businessProcess: "commission_accrual",
@@ -328,7 +328,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-018",
-    dealId: "deal-008",
+    trancheId: "tranche-008",
     businessUnit: "rebu",
     externalRef: "P0018",
     businessProcess: "invoice_issued",
@@ -345,7 +345,7 @@ export const sharedPostings: Posting[] = [
   // deal-001 — Gestoría López accrual (EUR 800)
   {
     id: "posting-023",
-    dealId: "deal-001",
+    trancheId: "tranche-001",
     businessUnit: "rebu",
     externalRef: "CONV-2026-001",
     businessProcess: "external_cost_accrual",
@@ -357,7 +357,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-024",
-    dealId: "deal-001",
+    trancheId: "tranche-001",
     businessUnit: "rebu",
     externalRef: "PAY-CONV-2026-001",
     businessProcess: "bank_statement_outbound_matched",
@@ -371,7 +371,7 @@ export const sharedPostings: Posting[] = [
   // deal-016 — TAMM Legal accrual (AED 3 000)
   {
     id: "posting-026",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     businessUnit: "rebu",
     externalRef: "CONV-2026-016",
     businessProcess: "external_cost_accrual",
@@ -383,7 +383,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-027",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     businessUnit: "rebu",
     externalRef: "PAY-CONV-2026-016",
     businessProcess: "bank_statement_outbound_matched",
@@ -397,7 +397,7 @@ export const sharedPostings: Posting[] = [
   // deal-018 — Gestoría López accrual (EUR 1 200)
   {
     id: "posting-028",
-    dealId: "deal-018",
+    trancheId: "tranche-018",
     businessUnit: "rebu",
     externalRef: "CONV-2026-018",
     businessProcess: "external_cost_accrual",
@@ -409,7 +409,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-029",
-    dealId: "deal-018",
+    trancheId: "tranche-018",
     businessUnit: "rebu",
     externalRef: "PAY-CONV-2026-018",
     businessProcess: "bank_statement_outbound_matched",
@@ -424,7 +424,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-021",
-    dealId: "deal-018",
+    trancheId: "tranche-018",
     businessUnit: "rebu",
     externalRef: "P0021",
     businessProcess: "invoice_issued",
@@ -438,7 +438,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-022",
-    dealId: "deal-018",
+    trancheId: "tranche-018",
     businessUnit: "rebu",
     externalRef: "P0022",
     businessProcess: "bank_statement_inbound_matched",
@@ -467,7 +467,7 @@ export const sharedPostings: Posting[] = [
 
   {
     id: "posting-050",
-    dealId: "deal-020",
+    trancheId: "tranche-020",
     businessUnit: "rebu",
     externalRef: "P0050",
     businessProcess: "invoice_issued",
@@ -479,7 +479,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-054",
-    dealId: "deal-020",
+    trancheId: "tranche-020",
     businessUnit: "rebu",
     externalRef: "P0054",
     businessProcess: "bank_statement_inbound_matched",
@@ -491,7 +491,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-051",
-    dealId: "deal-020",
+    trancheId: "tranche-020",
     businessUnit: "rebu",
     externalRef: "AGINV-020",
     businessProcess: "commission_accrual",
@@ -503,7 +503,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-052",
-    dealId: "deal-020",
+    trancheId: "tranche-020",
     businessUnit: "rebu",
     externalRef: "AGINV-020-TL",
     businessProcess: "commission_accrual",
@@ -515,7 +515,7 @@ export const sharedPostings: Posting[] = [
   },
   {
     id: "posting-053",
-    dealId: "deal-020",
+    trancheId: "tranche-020",
     businessUnit: "rebu",
     externalRef: "AGINV-020-MGR",
     businessProcess: "commission_accrual",
@@ -531,7 +531,7 @@ export const sharedPostings: Posting[] = [
   // 1. Client invoice issued
   {
     id: "posting-056",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "P0021",
     businessProcess: "invoice_issued",
@@ -544,7 +544,7 @@ export const sharedPostings: Posting[] = [
   // 2. Client payment received
   {
     id: "posting-057",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "P0021-PAY",
     businessProcess: "bank_statement_inbound_matched",
@@ -557,7 +557,7 @@ export const sharedPostings: Posting[] = [
   // 3. Agent commission accrual — Guilherme Castro
   {
     id: "posting-058",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "AGINV-021",
     businessProcess: "commission_accrual",
@@ -570,7 +570,7 @@ export const sharedPostings: Posting[] = [
   // 4. TL commission accrual — Santiago Vega
   {
     id: "posting-059",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "AGINV-021-TL",
     businessProcess: "commission_accrual",
@@ -583,7 +583,7 @@ export const sharedPostings: Posting[] = [
   // 5. Mgr commission accrual — Isabel Torres
   {
     id: "posting-060",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "AGINV-021-MGR",
     businessProcess: "commission_accrual",
@@ -596,7 +596,7 @@ export const sharedPostings: Posting[] = [
   // 6. Referral accrual — Marta Sáez (salaried, HR export)
   {
     id: "posting-061",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "AGINV-021-REF",
     businessProcess: "commission_accrual",
@@ -609,7 +609,7 @@ export const sharedPostings: Posting[] = [
   // 7. Conveyance accrual — Gestoría López
   {
     id: "posting-062",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "CONV-021",
     businessProcess: "external_cost_accrual",
@@ -622,7 +622,7 @@ export const sharedPostings: Posting[] = [
   // 8. Conveyance payment
   {
     id: "posting-063",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "CONV-021-PAY",
     businessProcess: "bank_statement_outbound_matched",
@@ -635,7 +635,7 @@ export const sharedPostings: Posting[] = [
   // 9. Agent invoice accrual — Guilherme submits inv-022
   {
     id: "posting-064",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "AGINV-ACCRUAL-021",
     businessProcess: "agent_invoice_accrual",
@@ -648,7 +648,7 @@ export const sharedPostings: Posting[] = [
   // 10. Agent payout — Huspy pays Guilherme
   {
     id: "posting-065",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     businessUnit: "rebu",
     externalRef: "AGINV-ACCRUAL-021-PAY",
     businessProcess: "bank_statement_outbound_matched",
@@ -665,7 +665,7 @@ export const sharedPostings: Posting[] = [
   // deal → invoicing: Huspy invoices DIB 18 000 + VAT 5% 900 = 18 900 AED
   {
     id: "posting-070",
-    dealId: "deal-011",
+    trancheId: "tranche-011",
     businessUnit: "mortgage",
     externalRef: "MBU-INV-011",
     businessProcess: "invoice_issued",
@@ -681,7 +681,7 @@ export const sharedPostings: Posting[] = [
   // Omar < 5M GMV → DIB rate 52% → 52% × 18 000 = 9 360
   {
     id: "posting-071",
-    dealId: "deal-011",
+    trancheId: "tranche-011",
     businessUnit: "mortgage",
     externalRef: "MBU-BROKER-011",
     businessProcess: "commission_accrual",
@@ -698,7 +698,7 @@ export const sharedPostings: Posting[] = [
   // Huspy invoices ADIB 35 000 + VAT 5% 1 750 = 36 750 AED
   {
     id: "posting-072",
-    dealId: "deal-022",
+    trancheId: "tranche-022",
     businessUnit: "mortgage",
     externalRef: "MBU-INV-022",
     businessProcess: "invoice_issued",
@@ -713,7 +713,7 @@ export const sharedPostings: Posting[] = [
   // ADIB pays 36 750 AED; deal → finalized
   {
     id: "posting-073",
-    dealId: "deal-022",
+    trancheId: "tranche-022",
     businessUnit: "mortgage",
     externalRef: "MBU-INV-022-PAY",
     businessProcess: "bank_statement_inbound_matched",
@@ -728,7 +728,7 @@ export const sharedPostings: Posting[] = [
   // Month-end May 2026: Omar GMV < 5M → ADIB rate 53% | deal split 60% → base 21 000 → 11 130
   {
     id: "posting-074",
-    dealId: "deal-022",
+    trancheId: "tranche-022",
     businessUnit: "mortgage",
     externalRef: "MBU-BROKER-022-OMAR",
     businessProcess: "commission_accrual",
@@ -743,7 +743,7 @@ export const sharedPostings: Posting[] = [
   // Month-end May 2026: Khalid GMV < 5M → ADIB rate 53% | deal split 40% → base 14 000 → 7 420
   {
     id: "posting-075",
-    dealId: "deal-022",
+    trancheId: "tranche-022",
     businessUnit: "mortgage",
     externalRef: "MBU-BROKER-022-KHALID",
     businessProcess: "commission_accrual",
@@ -809,4 +809,20 @@ export const sharedPostings: Posting[] = [
     description: "Broker payout — Khalid & Associates INV-2026-026 (AED 7 791)",
   },
 
+  // ── tranche-026a ─ Arras tranche ─ finalized ─ ES/EUR ────────────────────
+  { id: "posting-026a-1", trancheId: "tranche-026a", businessUnit: "rebu", businessProcess: "invoice_issued",
+    createdBy: "system", createdAt: "2026-06-03T09:00:00.000Z", valueDate: "2026-06-03", currency: "EUR",
+    description: "Commission earned — Arras tranche (Apartment in Malasaña, €300k)" },
+  { id: "posting-026a-2", trancheId: "tranche-026a", businessUnit: "rebu", businessProcess: "bank_statement_inbound_matched",
+    createdBy: "system", createdAt: "2026-06-03T11:00:00.000Z", valueDate: "2026-06-03", currency: "EUR",
+    description: "Payment received — INV-2026-027 (Arras)" },
+  { id: "posting-026a-3", trancheId: "tranche-026a", businessUnit: "rebu", businessProcess: "commission_accrual",
+    createdBy: "system", createdAt: "2026-06-03T11:30:00.000Z", valueDate: "2026-06-03", currency: "EUR",
+    description: "Commission accrual — Felicia Canovas EUR 1,800 (Arras)" },
+  { id: "posting-026a-4", trancheId: "tranche-026a", businessUnit: "rebu", businessProcess: "commission_accrual",
+    createdBy: "system", createdAt: "2026-06-03T11:30:00.000Z", valueDate: "2026-06-03", currency: "EUR",
+    description: "Commission accrual — Santiago Vega TL EUR 180 (Arras)" },
+  { id: "posting-026a-5", trancheId: "tranche-026a", businessUnit: "rebu", businessProcess: "commission_accrual",
+    createdBy: "system", createdAt: "2026-06-03T11:30:00.000Z", valueDate: "2026-06-03", currency: "EUR",
+    description: "Commission accrual — Isabel Torres Mgr EUR 90 (Arras)" },
 ];

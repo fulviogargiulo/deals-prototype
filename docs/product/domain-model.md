@@ -60,12 +60,28 @@ erDiagram
         string type "optional"
         string developmentName "optional"
     }
+    Mortgage {
+        string id
+        string lenderName
+        Country country
+        Currency currency
+        number loanAmount "optional"
+        number termYears "optional"
+        string productType "fixed | variable | islamic"
+    }
+    Asset {
+        string id
+        AssetType assetType "real_estate | financial_product"
+        string sourceSystem "rebu | mbu"
+        string sourceId FK "Property.id or Mortgage.id"
+    }
     Offer {
         string id
         OfferStatus status
         Country country
         Currency currency
-        string propertyId FK "optional"
+        string assetId FK "optional"
+        string assetName "display cache"
         string opportunityId FK "optional"
         string clientId FK "optional"
         number offerAmount "optional"
@@ -79,13 +95,26 @@ erDiagram
     Deal {
         string id
         string offerId FK "optional"
-        string propertyId FK "optional"
-        DealType type
-        DealStatus status
+        string assetId FK "optional"
         number dealAmount
-        Currency currency
-        BusinessUnit businessUnit
-        string blueprintId FK
+        Currency currency "optional"
+        BusinessUnit businessUnit "optional"
+        Country country "optional"
+        string channel "optional"
+        string clientName "display cache"
+        string agentName "display cache"
+    }
+    Tranche {
+        string id
+        string dealId FK
+        string label "optional — Arras, Escritura, Full"
+        number index "0-based tab ordering"
+        DealStatus status
+        string blueprintId FK "optional"
+        PnlEngine pnlEngine "optional"
+        string reportDate
+        string ofCaseNumber "optional"
+        number disbursedAmount "optional — MBU only"
     }
     Blueprint {
         string id
@@ -97,20 +126,27 @@ erDiagram
         number withholdingRate "optional — markets with income withholding (e.g. IRPF)"
         string withholdingLabel "optional — e.g. IRPF"
     }
-    DealStakeholder {
+    DealParticipant {
         string id
         string dealId FK
         string partyId FK
-        StakeholderType role
+        ParticipantRole role "DEMAND | SUPPLY"
+        boolean isPrimary "optional"
+    }
+    PnlEntry {
+        string id
+        string trancheId FK
+        string partyId FK
+        PnlRole role "REVENUE_SOURCE | AGENT_PAYOUT | ACQUISITION_DEDUCTION | OPERATIONAL_DEDUCTION"
         number splitPercentage "agent pool share (0-100); rate-based engines only"
         number amount "signed: + = revenue, - = cost"
         string source "engine | manual — who wrote the amount"
         string status "draft | confirmed"
     }
-    DealStakeholderAudit {
+    PnlEntryAudit {
         string id
         string stakeId FK
-        string dealId FK
+        string trancheId FK
         string field
         string oldValue
         string newValue
@@ -119,7 +155,7 @@ erDiagram
     }
     DealDocumentRequirement {
         string id
-        string dealId FK
+        string trancheId FK
         string label
         boolean required
         DocumentRequirementStatus status
@@ -137,7 +173,7 @@ erDiagram
         string id
         string direction "inbound | outbound"
         string partyId FK
-        string dealId FK
+        string trancheId FK "optional"
         string invoiceNumber
         InvoiceStatus status
         number subtotal "base commission (pre-VAT); gross = subtotal + vatAmount"
@@ -185,7 +221,7 @@ erDiagram
     }
     Posting {
         string id
-        string dealId FK
+        string trancheId FK "optional"
         BusinessUnit businessUnit
         string externalRef
         BusinessProcess businessProcess
@@ -208,17 +244,23 @@ erDiagram
     Agent           ||--o{ AgentDocument                : "has compliance docs"
     Client          ||--o{ Opportunity                  : "has"
     Opportunity     ||--o{ Offer                        : "produces"
-    Property        ||--o{ Offer                        : "subject of"
+    Property        |o--o{ Asset                        : "sourced by"
+    Mortgage        |o--o{ Asset                        : "sourced by"
+    Asset           |o--o{ Offer                        : "subject of"
+    Asset           |o--o{ Deal                         : "referenced by"
     Offer           ||--o| Deal                         : "spawns"
-    Deal            ||--|{ DealStakeholder               : "involves"
-    DealStakeholder ||--o{ DealStakeholderAudit           : "audited by"
-    Deal            ||--o{ DealDocumentRequirement       : "requires"
-    Deal            ||--o{ DealComment                    : "has thread"
-    Deal            |o--o{ Posting                       : "generates"
-    Deal            |o--|{ Invoice                       : "creates"
-    Blueprint       |o--o{ Deal                          : "governs tax for"
+    Deal            ||--|{ Tranche                       : "settled via"
+    Deal            ||--o{ DealParticipant               : "involves (identity)"
+    Tranche         ||--|{ PnlEntry                      : "involves (P&L)"
+    PnlEntry        ||--o{ PnlEntryAudit                 : "audited by"
+    Tranche         ||--o{ DealDocumentRequirement       : "requires"
+    Tranche         ||--o{ DealComment                    : "has thread"
+    Tranche         |o--o{ Posting                       : "generates"
+    Tranche         |o--|{ Invoice                       : "creates"
+    Blueprint       |o--o{ Tranche                       : "governs tax for"
     DocumentRequirementTemplate ||--o{ DealDocumentRequirement : "instantiates"
-    Party           ||--o{ DealStakeholder               : "participates as"
+    Party           ||--o{ PnlEntry                      : "participates as (P&L)"
+    Party           ||--o{ DealParticipant               : "participates as (identity)"
     Party           |o--o{ Ledger                        : "owns (optional)"
     Party           ||--o{ Invoice                       : "billed to/from"
     Posting         ||--|{ PostingLine                   : "has"
@@ -237,9 +279,14 @@ erDiagram
 | Entity | One-line summary |
 | --- | --- |
 | `Party` | Central identity record. `Agent` and `Client` are sub-types that link to a `Party` via `partyId`. Third parties (banks, developers, buyers, sellers) are also Parties. Deduplicated by `taxId`. Before creating a new Party record, look up by `taxId` |
-| `Deal` | Central transaction record: status, amount, market, channel, BU, country. |
-| `DealStakeholder` | Each deal now has one or more stakeholder records, each linking a Party to a **financial role** (`StakeholderType`). This naturally supports multi-agent commission splits and mixed revenue/cost structures. `status: "draft"` while editable; `status: "confirmed"` (immutable) from the invoicing transition onwards. |
-| `Invoice` | Billing instrument. Outbound (Huspy bills client) or inbound (agent/vendor bills Huspy). |
+| `Asset` | Lightweight deal-level bridge to the thing being transacted. Carries only `assetType` (discriminator) + `sourceSystem`/`sourceId` (redirect key to the canonical record in the BU-specific system — `Property` for REBU, `Mortgage` for MBU). Display name is cached on `Offer.assetName` / `Deal.title`. |
+| `Property` | REBU source record: the real-estate unit (address, type, development). Referenced by `Asset.sourceId` when `assetType = real_estate`. |
+| `Mortgage` | MBU source record: the loan product brokered by Huspy (lender, amount, term, product type). Referenced by `Asset.sourceId` when `assetType = financial_product`. |
+| `Deal` | Commercial agreement header: amount, market, channel, BU, country, linked offer/asset. Carries no state machine and no P&L data of its own — all financial logic lives on its Tranches. A Deal always has at least one Tranche. |
+| `Tranche` | A single financial settlement event within a Deal. Owns the state machine (`status`), P&L engine config (`pnlEngine`, `blueprintId`), report date, and all financial participants (`PnlEntry`). A Spain REBU split-payment deal has two Tranches: one for Arras (deposit commission) and one for Escritura (completion commission). |
+| `DealParticipant` | Identity-only party on a Deal: `DEMAND` (buyer/tenant/borrower) and `SUPPLY` (seller/developer/bank). Deal-scoped — the buyer is the same person across Arras and Escritura Tranches. No amount, no waterfall position. |
+| `PnlEntry` | One line in a Tranche's P&L waterfall. Scoped to a Tranche — two Tranches on the same Deal have independent entry sets with independent amounts and confirmation state. Role is one of `REVENUE_SOURCE`, `AGENT_PAYOUT`, `ACQUISITION_DEDUCTION`, `OPERATIONAL_DEDUCTION`. `status: "draft"` while editable; `status: "confirmed"` (immutable) from the invoicing transition onwards. |
+| `Invoice` | Billing instrument scoped to a Tranche. Outbound (Huspy bills client) or inbound (agent/vendor bills Huspy). Agent invoices span multiple Tranches and are not linked to a specific Tranche. |
 | `Posting` / `PostingLine` | Double-entry primitives — every business event creates a balanced posting across one or more ledger accounts. |
 | `Ledger` | A GL account or agent/broker subledger in the chart of accounts. |
 
@@ -247,26 +294,35 @@ erDiagram
 
 ### 3.1 Party - the identity anchor
 
-`Party` is the single identity record for every person or organisation in the system: buyer, seller, developer, bank, notary, agent. Deduplicated by `taxId` . All other entities that represent a person/legal entity with which we interact with point here — `Agent`, `DealStakeholder`, and `Invoice` all carry a `partyId`.
+`Party` is the single identity record for every person or organisation in the system: buyer, seller, developer, bank, notary, agent. Deduplicated by `taxId`. All other entities that represent a person/legal entity point here — `Agent`, `PnlEntry`, `DealParticipant`, and `Invoice` all carry a `partyId`.
 
-### 3.2 Deal → DealStakeholder → Party
+### 3.2 Deal → Tranche + DealParticipant → PnlEntry → Party
 
-A `Deal` has no notion of "who is involved" by itself. All financial and identity participants are expressed as `DealStakeholders`. Stakeholders can be added at any point from deal creation up to, but not including, the transition to `invoicing` status. Each stakeholder links a `Party` to the deal with a role:
+A `Deal` carries two types of participants:
+
+| Entity | Scope | Purpose |
+| --- | --- | --- |
+| `DealParticipant` | Deal-level | Identity only: who is the buyer (`DEMAND`) and seller/bank (`SUPPLY`). No amounts. Shared across all Tranches on the deal. |
+| `PnlEntry` | Tranche-level | Financial waterfall entries: revenue sources, agent payouts, cost deductions. Each Tranche has its own independent set. |
+
+This separation means the buyer doesn't change when you add an Escritura Tranche — only the financial amounts do.
+
+**Why Tranche for PnlEntry?** A deal can be settled in multiple financial events. The canonical Spain REBU case is a split-payment sale: a deposit commission (Arras) is collected when the reservation contract is signed, and the completion commission (Escritura) is collected at notarisation. Each is a separate invoicing cycle with its own P&L confirmation, document checklist, and accounting entries — they are modelled as two Tranches on the same Deal. Single-payment deals simply have one Tranche.
+
+`PnlEntry` records can be added to a Tranche at any point up to, but not including, that Tranche's transition to `invoicing` status. Each entry links a `Party` to the Tranche with a financial role:
 
 | Role | Effect on waterfall |
 | --- | --- |
-| `REVENUE_SOURCE` | Adds to gross revenue |
+| `REVENUE_SOURCE` | Adds to gross revenue. `grossRevenue` is always **derived** at runtime as the sum of all `REVENUE_SOURCE` entry amounts — it is never stored on the Tranche directly. |
 | `ACQUISITION_DEDUCTION` | Deducted from gross revenue (reduces agent commission pool) |
 | `AGENT_PAYOUT` | Agent commission — rate-based (splitPercentage + AgentStrategy) pre-confirmation; fixed amount (amount) post-confirmation |
 | `OPERATIONAL_DEDUCTION` | Deducted from net revenues after agent splits |
-| `DEMAND` | Buyer / tenant / borrower / client — identity only, no financial effect |
-| `SUPPLY` | Seller / developer / lender / bank — identity only, no financial effect |
 
-**Sub-stakeholders:** A `DealStakeholder` can carry a `parentStakeholderId`, linking it to an `AGENT_PAYOUT` stakeholder. When set, the cost is deducted from the parent agent's commission pool rather than from Huspy's share (e.g. a referral fee funded by the agent's own cut, not by Huspy).
+**Sub-entries:** A `PnlEntry` can carry a `parentEntryId`, linking it to an `AGENT_PAYOUT` entry. When set, the cost is deducted from the parent agent's commission pool rather than from Huspy's share (e.g. a referral fee funded by the agent's own cut, not by Huspy).
 
-**Connected agents (TL, manager) as stakes:** Connected agent payouts exist as `AGENT_PAYOUT` stakes from deal creation (`source: "engine"`, `amount` = initial engine estimate). While the deal is in draft, the engine re-derives their amounts live from `AgentFinancials.connectedAgents`. At confirmation (invoicing transition), the amounts are locked and the stakes become first-class confirmed entries. The confirmed stakeholder table is self-contained: the full P&L can be reconstructed without consulting AgentFinancials.
+**Connected agents (TL, manager) as PnlEntries:** Connected agent payouts exist as `AGENT_PAYOUT` entries from Tranche creation (`source: "engine"`, `amount` = initial engine estimate). While the Tranche is in draft, the engine re-derives their amounts live from `AgentFinancials.connectedAgents`. At confirmation (invoicing transition), the amounts are locked and the entries become first-class confirmed records. The confirmed PnlEntry table is self-contained: the full P&L can be reconstructed without consulting AgentFinancials.
 
-**Lifecycle:** Stakes are `status: "draft"` while the deal is editable. On the transition to `invoicing`, all stakes are confirmed atomically: `amount` is locked on rate-based AGENT_PAYOUT stakes, connected-agent stakes are updated to confirmed. Who confirmed and when is in `deal.statusHistory`.
+**Lifecycle:** Entries are `status: "draft"` while the Tranche is editable. On the transition to `invoicing`, all entries are confirmed atomically: `amount` is locked on rate-based AGENT_PAYOUT entries, connected-agent entries are updated to confirmed. Who confirmed and when is in `tranche.statusHistory`.
 
 ### 3.3 Party → Ledger
 
@@ -282,9 +338,9 @@ Agent/brokers/MCs/DS have subledgers set under general ledger `LIAB_AGENT_{CUR}`
 
 An agent must have an AF record for the deal's engine before they can be added to a deal (validation enforced at deal creation and bulk upload). Fixed-amount stakes (`financialAmount` set) are exempt from this requirement.
 
-### 3.5 Deal → Invoice → PostingLine
+### 3.5 Tranche → Invoice → PostingLine
 
-When a deal reaches `invoicing`, an outbound `Invoice` is created linking the `Deal` to the receivable `Party` (same for inbound invoices non-agent related). When the agent submits a statement, an inbound `Invoice` is created linking back to the `Party` (the agent). Not all invoices are linked to specific deals (e.g. agent invoice can group multiple deals related postinglines and non-deal specific postinlines).
+When a Tranche reaches `invoicing`, an outbound `Invoice` is created linking the `Tranche` to the receivable `Party` (same for inbound invoices for non-agent parties). When the agent submits a statement, an inbound `Invoice` is created linking back to the `Party` (the agent) — agent invoices span multiple Tranches and are not linked to a single Tranche. Not all invoices are linked to specific Tranches (e.g. agent invoice can group multiple finalized Tranches and non-deal-specific entries).
 
 `Invoice` is directional:
 
@@ -344,6 +400,6 @@ Key ledgers and what they do:
 
 * Every `Party` is unique by `taxId`. Always look up before creating.
 * Every `Posting`'s lines must sum to zero. The system rejects unbalanced postings.
-* `DealStakeholder` financial entries are locked once the `status === "confirmed"`. Confirmation fires atomically on the transition to `invoicing`. No P&L edits are permitted after that point.
-* `invoicing → finalized` is automatic — triggered when the last outbound invoice is marked Paid, never by a manual status change.
+* `PnlEntry` records are locked once `status === "confirmed"`. Confirmation fires atomically on the Tranche's transition to `invoicing`. No P&L edits are permitted after that point.
+* `invoicing → finalized` is automatic per Tranche — triggered when the last outbound invoice linked to that Tranche is marked Paid, never by a manual status change.
 * Agent subledger balance at any point = sum of all CREDIT lines minus DEBIT lines on that ledger = what Huspy currently owes the agent.

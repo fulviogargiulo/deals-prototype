@@ -2,7 +2,7 @@ import { Deal } from "./types";
 import { mockDeals } from "./mockDeals";
 
 const STORAGE_KEY = "karvel-deals";
-const STORAGE_VERSION = "3"; // bump when fixture schema or recalculate logic changes
+const STORAGE_VERSION = "4"; // bumped: Deal no longer carries status/financial fields (moved to Tranche) // bump when fixture schema or recalculate logic changes
 
 function loadDeals(): Deal[] {
   try {

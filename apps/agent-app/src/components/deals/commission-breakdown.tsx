@@ -1,5 +1,5 @@
 import { sharedAgents } from '@huspy/shared-domain';
-import type { DealStakeholder, ProjectedPnL } from '@huspy/shared-domain';
+import type { PnlEntry, ProjectedPnL } from '@huspy/shared-domain';
 import type { Deal } from '@/types';
 
 type AgentSplit = ProjectedPnL['splits'][number];
@@ -54,7 +54,7 @@ function Anchor({ label, value, currency }: { label: string; value: number; curr
 
 interface Props {
   deal: Deal;
-  stake: DealStakeholder | undefined;
+  stake: PnlEntry | undefined;
   projection: ProjectedPnL | null;
   agentSplit: AgentSplit | undefined;
   personalCommission: number;

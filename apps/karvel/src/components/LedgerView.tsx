@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight, ArrowLeft, Plus, Upload, Filter, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { sharedLedgers, sharedPostings, sharedPostingLines } from "@huspy/shared-domain";
+import { sharedLedgers, sharedPostings, sharedPostingLines, sharedTranches } from "@huspy/shared-domain";
 import type { Ledger, Posting, PostingLine } from "@huspy/shared-domain";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { Badge } from "@/components/ui/badge";
@@ -164,7 +164,7 @@ export function LedgerView() {
     const now = new Date().toISOString();
     const reversalPosting: Posting = {
       id: reversalId,
-      dealId: posting.dealId,
+      trancheId: posting.trancheId,
       businessUnit: posting.businessUnit,
       externalRef: posting.externalRef,
       businessProcess: "reversal",
@@ -546,14 +546,17 @@ export function LedgerView() {
                           {line.posting?.description ?? "—"}
                         </td>
                         <td className="px-4 py-3 text-[13px]">
-                          {line.posting?.dealId ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); navigate(`/deals/${line.posting!.dealId}`); }}
-                              className="text-primary underline underline-offset-2 hover:opacity-80 font-mono text-[12px]"
-                            >
-                              {line.posting.dealId}
-                            </button>
-                          ) : "—"}
+                          {line.posting?.trancheId ? (() => {
+                            const dealId = sharedTranches.find((t) => t.id === line.posting!.trancheId)?.dealId;
+                            return dealId ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); navigate(`/deals/${dealId}?tranche=${line.posting!.trancheId}`); }}
+                                className="text-primary underline underline-offset-2 hover:opacity-80 font-mono text-[12px]"
+                              >
+                                {line.posting.trancheId}
+                              </button>
+                            ) : <span className="font-mono text-[12px] text-muted-foreground">{line.posting.trancheId}</span>;
+                          })() : "—"}
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant="secondary" className="capitalize text-[11px]">

@@ -1,5 +1,6 @@
 import type {
   AgentDocumentType,
+  AssetType,
   BusinessProcess,
   BusinessUnit,
   CommissionPayer,
@@ -13,9 +14,10 @@ import type {
   OfferStatus,
   OpportunityStatus,
   OpportunityType,
+  ParticipantRole,
   PnlEngine,
+  PnlRole,
   PostingSide,
-  StakeholderType,
 } from "./enums";
 
 // ============================================================
@@ -133,6 +135,32 @@ export interface Property {
 }
 
 // ============================================================
+// Mortgage — a loan product brokered by Huspy MBU.
+// ============================================================
+export interface Mortgage {
+  id: string;
+  lenderName: string;
+  country: Country;
+  currency: Currency;
+  loanAmount?: number;
+  termYears?: number;
+  productType?: "fixed" | "variable" | "islamic";
+}
+
+// ============================================================
+// Asset — generic deal-level bridge to the thing being transacted.
+// Lightweight: just a type discriminator + redirect key to the
+// canonical record in the BU-specific system (Property for REBU,
+// loan product for MBU, etc.).
+// ============================================================
+export interface Asset {
+  id: string;
+  assetType: AssetType;
+  sourceSystem?: "rebu" | "mbu";
+  sourceId?: string;
+}
+
+// ============================================================
 // Offer — a formal bid on a property, linking a client + agents
 // to a specific transaction. A Deal is spawned when an Offer
 // reaches the `documents-complete` state.
@@ -146,7 +174,7 @@ export interface Offer {
   currency: Currency;
 
   // Links
-  propertyId?: string;
+  assetId?: string;
   opportunityId?: string;
   clientId?: string;
 
@@ -169,7 +197,7 @@ export interface Offer {
   updatedAt: string;
 
   // Display caches
-  propertyName?: string;
+  assetName?: string;
   clientName?: string;
 }
 
@@ -335,78 +363,65 @@ export interface ClientWithOpportunities extends Client {
 export interface Deal {
   // Required core
   id: string;
-  status: DealStatus;
   dealAmount: number;
-  reportDate: string;
 
   // Optional canonical
   offerId?: string;
-  propertyId?: string;
+  assetId?: string;
   market?: Market;
   businessUnit?: BusinessUnit;
   country?: Country;
   currency?: Currency;
+  channel?: string;
   createdAt?: string;
   updatedAt?: string;
-  statusHistory?: StatusHistoryEntry[];
 
   // Display caches (used by both apps)
   clientName?: string;
   agentName?: string;
   title?: string;
+  /** Optional free-text label for this deal (e.g. "Arras + Escritura split"). */
+  description?: string;
 
-  // ==========================================================
-  // Karvel — operational / financial fields
-  // ==========================================================
-  channel?: string;
-  pnlEngine?: PnlEngine;
-  ofCaseNumber?: string;
+  // Agent-app alias
+  marketType?: "primary" | "secondary" | "leasing";
+}
 
-  // Property (REBU)
-  buildingName?: string;
-  unitNumber?: string;
-  community?: string;
-  subCommunity?: string;
-  fullAddress?: string;
-  propertyType?: string;
-  projectName?: string;
+// ============================================================
+// Tranche — a single financial settlement event within a Deal.
+// Each commission payment is a Tranche: one Deal can have 1..N
+// Tranches (e.g. Arras tranche + Escritura tranche in Spain).
+// The state machine, P&L, invoices, postings and documents are
+// all scoped to a Tranche, not the parent Deal.
+// ============================================================
+export interface Tranche {
+  // Identity
+  id: string;
+  dealId: string;
+  /** Short human label shown on tabs: "Arras", "Escritura", "Full". */
+  label?: string;
+  /** 0-based ordering index within the deal. Controls tab order. */
+  index: number;
 
-  // Buyer / Seller — use DEMAND/SUPPLY DealStakeholders linked to Party records.
-  paymentMode?: PaymentMode;
+  // State machine
+  status: DealStatus;
+  statusHistory?: StatusHistoryEntry[];
 
-  // Revenue
-  dealPrice?: number;
-  takeRate?: number;
-  huspyRevenue?: number;
-  netHuspyRevenue?: number;
-
-  // Lean waterfall — set by the new Deal creation flow.
-  /** Gross commission Huspy charges. For multi-payer deals, equals Σ DealStakeholder.amount where > 0. */
-  grossRevenue?: number;
-  /** Blueprint id the engine used for the most recent projection. */
+  // Metadata
+  /** Tax config to apply when invoicing this tranche. */
   blueprintId?: string;
-
-  // MBU-specific
-  bankName?: string;
-  accountManager?: string;
-  numberOfTranches?: number;
+  /** Which P&L calculation engine to use. */
+  pnlEngine?: PnlEngine;
+  /** Reporting / recognition date for this settlement. */
+  reportDate: string;
+  /** Ops case reference. */
+  ofCaseNumber?: string;
+  /** MBU: mortgage principal actually disbursed for this tranche. */
   disbursedAmount?: number;
-  bankSlab?: number;
-  externalCommissionRate?: number;
-  externalPayout?: number;
 
-  // Receivables (derived from outbound Invoices)
-  receivables?: ReceivableEntry[];
-  paymentReceivedDate?: string;
-  paymentReceivedAmount?: number;
-
-  // ==========================================================
-  // Agent-app — agent-facing commission / invoice fields
-  // ==========================================================
-  marketType?: "primary" | "secondary" | "leasing"; // alias for `market` used by agent-app UI
-  commissionPercentage?: number;
-  commissionAmount?: number;
-  paymentDate?: string;
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================================
@@ -539,28 +554,46 @@ export interface Blueprint {
 }
 
 // ============================================================
-// DealStakeholder — links a Party to a Deal with a specific role.
-//
-// Lifecycle:
-//   status === "draft"     — working copy. For rate-based AGENT_PAYOUT stakes (source === "engine"),
-//                            the P&L re-runs the engine live; amount is the last saved engine estimate.
-//                            For declared amounts (source === "manual"), amount is used as-is.
-//   status === "confirmed" — locked when the deal transitions to invoicing. amount is the
-//                            authoritative value; engine uses it directly without recomputing.
-//                            Who confirmed and when is on deal.statusHistory (to === "invoicing").
-//
-// Override detection: source === "manual" on a rate-based AGENT_PAYOUT stake means ops set a
-// fixed amount instead of using the engine. Full change history is in DealStakeholderAudit.
+// DealParticipant — identity-only party on a Deal.
+// DEMAND (buyer / tenant / borrower) and SUPPLY (seller / developer / bank).
+// Deal-scoped, not Tranche-scoped: the buyer is the same across all Tranches.
+// No financial effect — no amount, no waterfall position.
 // ============================================================
-export interface DealStakeholder {
+export interface DealParticipant {
   id: string;
   dealId: string;
   partyId: string;
-  role: StakeholderType;
+  role: ParticipantRole;
+  isPrimary?: boolean;
+  description?: string;
+}
+
+// ============================================================
+// PnlEntry — one line in a Tranche's P&L waterfall.
+// Scoped to a Tranche (not the Deal). Two Tranches on the same
+// Deal have independent PnlEntry sets with independent amounts
+// and confirmation state.
+//
+// Lifecycle:
+//   status === "draft"     — working copy. For rate-based AGENT_PAYOUT entries (source === "engine"),
+//                            the P&L re-runs the engine live; amount is the last saved engine estimate.
+//                            For declared amounts (source === "manual"), amount is used as-is.
+//   status === "confirmed" — locked when the Tranche transitions to invoicing. amount is the
+//                            authoritative value; engine uses it directly without recomputing.
+//                            Who confirmed and when is on tranche.statusHistory (to === "invoicing").
+//
+// Override detection: source === "manual" on a rate-based AGENT_PAYOUT entry means ops set a
+// fixed amount instead of using the engine. Full change history is in PnlEntryAudit.
+// ============================================================
+export interface PnlEntry {
+  id: string;
+  trancheId: string;
+  partyId: string;
+  role: PnlRole;
   isPrimary?: boolean;
   /** Agent's share of the commission pool (0–100). Only meaningful on rate-based AGENT_PAYOUT roles. */
   splitPercentage?: number;
-  /** The financial amount for this stake.
+  /** The financial amount for this entry.
    *  Positive → party pays Huspy (REVENUE_SOURCE) or receives a payout (AGENT_PAYOUT).
    *  Negative → cost Huspy pays (ACQUISITION_DEDUCTION / OPERATIONAL_DEDUCTION).
    *  - source === "manual": ops-declared value; engine uses it directly.
@@ -568,27 +601,27 @@ export interface DealStakeholder {
    *  - source === "engine" + status === "draft": last saved engine estimate; engine recomputes live. */
   amount?: number;
   /** Who wrote the current amount value.
-   *  "engine" — written by the P&L engine (at deal creation or save-for-approval).
-   *  "manual" — explicitly entered by ops (overrides the engine for this stake). */
+   *  "engine" — written by the P&L engine (at Tranche creation or save-for-approval).
+   *  "manual" — explicitly entered by ops (overrides the engine for this entry). */
   source?: "engine" | "manual";
   /** draft = editable; confirmed = locked at the invoicing transition. */
   status?: "draft" | "confirmed";
   /** Human-readable label for this line (e.g. "Team Lead", "Conveyance Fee"). */
   description?: string;
-  /** Links an ACQUISITION_DEDUCTION or OPERATIONAL_DEDUCTION stake to a parent AGENT_PAYOUT stake.
+  /** Links an ACQUISITION_DEDUCTION or OPERATIONAL_DEDUCTION entry to a parent AGENT_PAYOUT entry.
    *  When set, the cost is deducted from the parent agent's pool rather than from Huspy's gross revenue. */
-  parentStakeholderId?: string;
+  parentEntryId?: string;
 }
 
 // ============================================================
-// DealStakeholderAudit — append-only record of every mutation
-// to a draft DealStakeholder. Written before each change.
+// PnlEntryAudit — append-only record of every mutation
+// to a draft PnlEntry. Written before each change.
 // No records are written after status === "confirmed".
 // ============================================================
-export interface DealStakeholderAudit {
+export interface PnlEntryAudit {
   id: string;
-  stakeId: string;
-  dealId: string;
+  entryId: string;
+  trancheId: string;
   field: string;
   oldValue: string | number | null;
   oldSource?: "engine" | "manual";
@@ -608,7 +641,7 @@ export interface DealStakeholderAudit {
 // ============================================================
 export interface DealDocumentRequirement {
   id: string;
-  dealId: string;
+  trancheId: string;
   label: string;
   required: boolean;
   status: DocumentRequirementStatus;
@@ -660,7 +693,7 @@ export interface AgentDocument {
 // ============================================================
 export interface DealComment {
   id: string;
-  dealId: string;
+  trancheId: string;
   author: "ops" | "agent";
   authorName: string;
   text: string;
@@ -685,7 +718,7 @@ export interface Ledger {
 
 export interface Posting {
   id: string;
-  dealId?: string;
+  trancheId?: string;
   businessUnit?: BusinessUnit | null;
   externalRef?: string;
   businessProcess: BusinessProcess;
@@ -718,7 +751,7 @@ export interface Invoice {
   id: string;
   direction: "outbound" | "inbound";
   partyId: string;
-  dealId?: string;
+  trancheId?: string;
   invoiceNumber: string;
   status: InvoiceStatus;
   /** Pre-VAT base amount. For invoices without a VAT breakdown this is the full face value. */

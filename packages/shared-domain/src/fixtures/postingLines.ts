@@ -358,4 +358,25 @@ export const sharedPostingLines: PostingLine[] = [
   { id: "pline-079-1", postingId: "posting-079", ledgerId: 11, side: "DEBIT",  amount: 7791,    invoiceId: "inv-026" },
   { id: "pline-079-2", postingId: "posting-079", ledgerId: 8,  side: "CREDIT", amount: 7791 },
 
+  // ── tranche-026a ─ Arras tranche ─ ES/EUR ─────────────────────────────────
+  // posting-026a-1: invoice_issued | DR AR(2) 5445, CR REV(6) 4500, CR VAT(5) 945
+  { id: "pline-026a-1-1", postingId: "posting-026a-1", ledgerId: 2, side: "DEBIT",  amount: 5445, invoiceId: "inv-026a" },
+  { id: "pline-026a-1-2", postingId: "posting-026a-1", ledgerId: 6, side: "CREDIT", amount: 4500 },
+  { id: "pline-026a-1-3", postingId: "posting-026a-1", ledgerId: 5, side: "CREDIT", amount: 945 },
+
+  // posting-026a-2: bank_statement_inbound | DR BANK(1) 5445, CR AR(2) 5445
+  { id: "pline-026a-2-1", postingId: "posting-026a-2", ledgerId: 1, side: "DEBIT",  amount: 5445 },
+  { id: "pline-026a-2-2", postingId: "posting-026a-2", ledgerId: 2, side: "CREDIT", amount: 5445, invoiceId: "inv-026a" },
+
+  // posting-026a-3: commission_accrual Felicia | DR EXP(7) 1800, CR AgentLiability_agent-001(22) 1800
+  { id: "pline-026a-3-1", postingId: "posting-026a-3", ledgerId: 7,  side: "DEBIT",  amount: 1800 },
+  { id: "pline-026a-3-2", postingId: "posting-026a-3", ledgerId: 22, side: "CREDIT", amount: 1800 },
+
+  // posting-026a-4: commission_accrual TL Santiago | DR EXP(7) 180, CR AgentLiability_santiago(31) 180
+  { id: "pline-026a-4-1", postingId: "posting-026a-4", ledgerId: 7,  side: "DEBIT",  amount: 180 },
+  { id: "pline-026a-4-2", postingId: "posting-026a-4", ledgerId: 31, side: "CREDIT", amount: 180 },
+
+  // posting-026a-5: commission_accrual Mgr Isabel | DR EXP(7) 90, CR AgentLiability_isabel(32) 90
+  { id: "pline-026a-5-1", postingId: "posting-026a-5", ledgerId: 7,  side: "DEBIT",  amount: 90 },
+  { id: "pline-026a-5-2", postingId: "posting-026a-5", ledgerId: 32, side: "CREDIT", amount: 90 },
 ];

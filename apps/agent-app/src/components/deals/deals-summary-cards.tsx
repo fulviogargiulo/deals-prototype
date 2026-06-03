@@ -1,23 +1,28 @@
 import { Deal } from '@/types';
 import { FileText, Banknote, TrendingUp } from 'lucide-react';
-import { type DealStakeholder, computeAgentCommission, buildWaterfallInput, calculateProjectedPnL } from '@huspy/shared-domain';
+import { type PnlEntry, sharedPnlEntries, computeAgentCommission } from '@huspy/shared-domain';
+import { getTranchesForDeal } from '@/data/mockDeals';
 
 interface DealsSummaryCardsProps {
   deals: Deal[];
-  agentStakeMap?: Map<string, DealStakeholder>;
+  agentStakeMap?: Map<string, PnlEntry>;
 }
 
 export function DealsSummaryCards({ deals, agentStakeMap }: DealsSummaryCardsProps) {
   const totalDealValue = deals.reduce((sum, d) => sum + d.dealAmount, 0);
-  const totalCommissionsPaid = deals
-    .filter(d => d.status === 'finalized')
-    .reduce((sum, d) => {
-      const stake = agentStakeMap?.get(d.id);
-      const waterfallInput = buildWaterfallInput(d);
-      const projection = waterfallInput ? calculateProjectedPnL(waterfallInput) : null;
-      const agentSplit = projection?.splits.find(s => s.partyId === stake?.partyId);
-      return sum + (agentSplit?.agentPayout ?? computeAgentCommission(d.commissionAmount, stake));
+  // Sum confirmed AGENT_PAYOUT amounts from finalized tranches across all deals.
+  const totalCommissionsPaid = deals.reduce((sum, d) => {
+    const finalizedTranches = getTranchesForDeal(d.id).filter(t => t.status === 'finalized');
+    return sum + finalizedTranches.reduce((s, t) => {
+      const stake = agentStakeMap?.get(t.id);
+      if (!stake) return s;
+      if (stake.amount != null) return s + Math.abs(stake.amount);
+      const trancheGross = sharedPnlEntries
+        .filter(sk => sk.trancheId === t.id && sk.role === 'REVENUE_SOURCE' && (sk.amount ?? 0) > 0)
+        .reduce((r, sk) => r + Math.abs(sk.amount ?? 0), 0);
+      return s + computeAgentCommission(trancheGross, stake);
     }, 0);
+  }, 0);
 
   const cards = [
     {

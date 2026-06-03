@@ -71,103 +71,139 @@ Pure technical tasks (no user-facing change) skip the "As a..." line and use a p
 
 ---
 
-# 2. Phase 1 Epics — Spain REBU MVP
+# 2. Phase 1 Build Epics — Foundation + Spain REBU MVP
 
-> **Status: Blocked — Awaiting Engineering.** These epics exist so Phase 1 scope is visible on the board, but no tickets get worked until engineers are hired and §4.1 (MVP scope lock) closes.
+> **Status: Blocked — Awaiting Engineering.** These epics exist so Phase 1 scope is visible on the board, but no tickets get worked until engineers are hired and §4.1 (Pre-engineering readiness) closes.
 
-8 epics. One per major workstream, mapped to the [Spain REBU MVP scope table](spain-rebu-mvp.md#1-scope). Quarter tag is provisional (`Q3'26`) — adjust once engineering kick-off date is confirmed.
+10 epics in two layers, deliberately separated so engineers build the foundation **as foundation** (reused by every future market/BU), not as a Spain-specific delivery:
+- **§2.1 – §2.5 Foundation** — built once, exercised by Spain REBU MVP first, reused by every Phase 2+ market/BU.
+- **§2.6 – §2.10 Spain REBU MVP** — the Spain-specific configurations and workflows on top of the foundation.
 
-## 2.1 `[Q3'26][Spain REBU] Deal Lifecycle`
-
-**Epic Goal:** Ship the full deal state machine in Karvel and the Agent App, with both deal-creation entry points (offer submission + CSV upload).
-
-**Problem Statement:** Today, deal state is tracked across spreadsheets and ops follow-ups. Ops cannot tell at a glance which deals are blocked, agents cannot see what stage their deals are at, and creating a new deal requires manual hand-offs between systems. Addresses problem §1.1.1 (agent visibility) and §1.1.4 (ops scaling).
-
-**Solution Overview:** [lifecycle.md](lifecycle.md) · [domain-model.md](domain-model.md) · [Spain REBU MVP scope §1, row "Deal lifecycle"](spain-rebu-mvp.md)
-
-**Out of scope (Phase 2+):** Single-deal creation UI.
+Quarter tag is provisional (`Q3'26`) — adjust once engineering kick-off date is confirmed.
 
 ---
 
-## 2.2 `[Q3'26][Spain REBU] Deal P&L & Stakeholders`
+## Layer A — Foundation (reused across markets/BUs)
 
-**Epic Goal:** Compute the full P&L waterfall for every Spain REBU deal, supporting all stakeholder types and connected-agent overlays (if confirmed in REBU Spain — see open question).
+### 2.1 `[Q3'26][Foundation] Deal lifecycle + Stakeholder waterfall engine`
 
-**Problem Statement:** Commissions are calculated manually in spreadsheets, with no enforced waterfall structure. Splits, deductions, and connected-agent overheads are computed inconsistently across deals, leading to payout errors and disputes. Addresses problem §1.1.3 (manual commission calculation errors).
+**Epic Goal:** Universal deal state machine (under-review → invoicing → finalized + canceled) and the multi-stakeholder waterfall engine. Engine implementations (`rebu`, `mbu-*`) sit on top of this engine; the engine itself is engine-agnostic. Multi-tranche deals (1 deal per arras + 1 per escritura) work out of the box.
 
-**Solution Overview:** [pnl-engines.md](pnl-engines.md) · [domain-model.md §2.2 (DealStakeholder)](domain-model.md) · [intro.md §4.2 — DealStakeholder polymorphism](intro.md)
+**Problem Statement:** Every market and BU needs the same lifecycle semantics: states, transitions, permissions, stakeholder mechanics, waterfall computation. Building this as Spain-specific would force a rewrite when MBU lands.
 
-**In scope:** `rebu` engine only. **Out of scope (Phase 2+):** Connected-agent overhead UI (logic only in MVP); `mbu-ma-broker`, `mbu-direct`, `manual` engines.
+**Solution Overview:** [lifecycle.md](lifecycle.md) · [domain-model.md §2.2 (DealStakeholder)](domain-model.md) · [intro.md §4.2 — DealStakeholder polymorphism](intro.md)
 
----
-
-## 2.3 `[Q3'26][Spain REBU] Deal Document Requirements`
-
-**Epic Goal:** Enforce a per-deal document checklist with approve / waive / upload actions, seeded from a hardcoded template per (market, BU, dealType).
-
-**Problem Statement:** Document requirements vary by market and BU; today they live in ops people's heads. Missing or stale documents block invoicing without surfacing the blocker to anyone. Addresses problem §1.1.2 (invoice mismatches from stale data) and §1.1.4 (ops scaling).
-
-**Solution Overview:** [domain-model.md §1 (DealDocumentRequirement, DocumentRequirementTemplate)](domain-model.md) · [Spain REBU MVP scope §1, row "Document requirements"](spain-rebu-mvp.md)
-
-**Out of scope (Phase 2+):** Deal configuration template editing UI (templates hardcoded in MVP).
+**Out of scope:** Specific engine implementations (see §2.6 / Phase 2+); single-deal creation UI (Phase 2+).
 
 ---
 
-## 2.4 `[Q3'26][Spain REBU] Outbound Invoicing`
+### 2.2 `[Q3'26][Foundation] Invoice lifecycle + Document Requirements framework`
 
-**Epic Goal:** Auto-create outbound invoice drafts on `deal.state = invoicing`, support the full draft → issued → paid lifecycle, and bulk-status upload for payment reconciliation.
+**Epic Goal:** Universal invoice state machine (draft → issued → paid, both directions) with `PostingLine.invoiceId` back-pointer for settlement tracking, and the document-checklist framework (template → per-deal instance with approve / waive / upload).
 
-**Problem Statement:** Outbound invoices are created manually in Xero with no link back to the originating deal. Reconciling client payments to deals is a spreadsheet exercise. Addresses problem §1.1.2 (invoice mismatches) and §1.1.4 (ops scaling).
+**Problem Statement:** Direction-handling and document-checklist mechanics are universal. The *content* of templates and the *implementation* of invoice creation (e.g. via Xero) differ per market and live in Layer B.
 
-**Solution Overview:** [domain-model.md §2.4 (Deal → Invoice → PostingLine)](domain-model.md) · [Spain REBU MVP scope §1, row "Invoice lifecycle"](spain-rebu-mvp.md)
+**Solution Overview:** [domain-model.md §2.4](domain-model.md) · [intro.md §4.2 — Invoice vs PostingLine](intro.md)
 
-**Out of scope (Phase 2+):** Automated comms to clients on `invoice.state = issued`; [Xero integration](https://huspy.atlassian.net/wiki/spaces/corp/pages/2445574152) (sync written separately).
-
----
-
-## 2.5 `[Q3'26][Spain REBU] Agent Confirmation & Inbound Invoicing`
-
-**Epic Goal:** Agent-facing flows for confirming deal details and submitting their factura, including IVA / IRPF selection and the posting-line picker that lets one factura claim N deals' commissions.
-
-**Problem Statement:** Agents submit facturas via email or WhatsApp with manual reconciliation against deal commissions. Cadence-batched facturas (one monthly invoice spanning multiple deals) are reconciled by hand. Addresses problem §1.1.1 (agent visibility) and §1.1.3 (manual processes).
-
-**Solution Overview:** [domain-model.md §2.4](domain-model.md) · [intro.md §4.3 — why the subledger isn't optional](intro.md) · [Spain REBU MVP scope §1, rows "Agent confirmation" + "Agent invoice"](spain-rebu-mvp.md)
-
-**Out of scope (Phase 2+):** Salaried agents payroll calculation; OCR for document validation.
+**Out of scope:** Spain document templates (§2.7); Xero invoice creation (§2.9); template authoring UIs (Phase 2+).
 
 ---
 
-## 2.6 `[Q3'26][Spain REBU] Accounting Engine`
+### 2.3 `[Q3'26][Foundation] Accounting engine`
 
-**Epic Goal:** Automated double-entry postings for every business process (`invoice_issued`, `bank_statement_*_matched`, `commission_accrual`, `agent_invoice_accrual`, `external_cost_accrual`), plus manual correction postings. Postings run in shadow mode against Xero.
+**Epic Goal:** Posting / PostingLine primitives, balanced double-entry invariants, ledger and subledger control-account model, and parameterised posting-business-process templates (`invoice_issued`, `bank_statement_*_matched`, `commission_accrual`, `agent_invoice_accrual`, `external_cost_accrual`, `manual_adjustment`, `reversal`). Shadow-mode sync to Xero.
 
-**Problem Statement:** Goal §1.3.3 — fully auditable, double-entry financial records for every event. Today, accounting entries are reconstructed after the fact by Finance from invoice CSVs and bank statements. Pre-invoice agent liability is invisible until the factura lands.
+**Problem Statement:** Accounting is almost entirely foundation — only the tax-account ledgers differ per market, seeded via blueprint data. Posting correctness is the highest-risk Phase 1 component (intro §3.2 critical path).
 
-**Solution Overview:** [domain-model.md §2.5 (Posting → PostingLine → Ledger)](domain-model.md) · [accounting-101.md](accounting-101.md) · [intro.md §4.1 — build vs buy](intro.md) · [intro.md §4.3 — subledger is non-negotiable](intro.md)
+**Solution Overview:** [domain-model.md §2.5](domain-model.md) · [accounting-101.md](accounting-101.md) · [intro.md §4.1 + §4.3](intro.md)
 
-**Out of scope (Phase 2+):** Ledger creation UI (chart of accounts hardcoded in MVP); bank statement CSV / API ingestion (manual mark-as-paid in MVP).
-
----
-
-## 2.7 `[Q3'26][Spain REBU] Karvel UI Shell`
-
-**Epic Goal:** Karvel app with Deals tab, Invoices tab, Ledger tab, wired to the real API (replacing the prototype's in-memory mocks).
-
-**Problem Statement:** The Karvel prototype demonstrates the workflow but runs on mock data. Ops cannot use it as a daily tool until it connects to real APIs with auth, persistence, and live state.
-
-**Solution Overview:** [Karvel prototype on Vercel](https://huspy-deals-karvel-app.vercel.app/) · [Spain REBU MVP scope §1, row "Karvel UI"](spain-rebu-mvp.md)
-
-**Out of scope (Phase 2+):** Deal Configuration tab; Agent configuration tab (financials hardcoded in MVP).
+**Out of scope:** Ledger creation UI (Phase 2+); bank statement CSV / API ingestion (manual mark-as-paid in MVP).
 
 ---
 
-## 2.8 `[Q3'26][Spain REBU] Agent App — Deals & Earnings`
+### 2.4 `[Q3'26][Foundation] Karvel UI shell`
 
-**Epic Goal:** Ship Deals tab (all statuses) and Earnings tab in the Agent App, giving agents live visibility into deal status, accrued commissions, and invoice/payment state.
+**Epic Goal:** Karvel app with auth, layout, navigation, and tab structure (Deals, Invoices, Ledger). Wired to the real backend via the BFF. i18n-ready so Spanish copy and future markets are configuration, not rebuild.
 
-**Problem Statement:** Direct hit on §1.1.1 — agents currently chase ops for payment and invoice status. Earnings tab is the answer to "what does Huspy owe me right now, by deal."
+**Problem Statement:** The shell is reused unchanged across markets. Building it as Spain-specific would force layout / nav / auth rework on every Phase 2+ launch.
 
-**Solution Overview:** [agent-journey.md](agent-journey.md) · [Agent App prototype on Vercel](https://huspy-deals-agent-app.vercel.app/) · [Spain REBU MVP scope §1, row "Agent app UI"](spain-rebu-mvp.md)
+**Solution Overview:** [Karvel prototype on Vercel](https://huspy-deals-karvel-app.vercel.app/)
+
+**Out of scope:** Spanish copy and market-specific tab content (Layer B); Deal Configuration tab; Agent Configuration tab (Phase 2+).
+
+---
+
+### 2.5 `[Q3'26][Foundation] Agent App UI shell`
+
+**Epic Goal:** Deals and Earnings tab structure in the Agent App, wired to the BFF, with i18n + theming. Reusable across all markets via configuration.
+
+**Problem Statement:** Same reasoning as §2.4 — the shell is universal, the content varies per market.
+
+**Solution Overview:** [agent-journey.md](agent-journey.md) · [Agent App prototype on Vercel](https://huspy-deals-agent-app.vercel.app/)
+
+**Out of scope:** Spanish copy and Spain-specific commission breakdown (Layer B).
+
+---
+
+## Layer B — Spain REBU MVP (first concrete implementation)
+
+### 2.6 `[Q3'26][Spain REBU MVP] rebu P&L engine + Spain blueprints`
+
+**Epic Goal:** Implement the `rebu` engine on top of the foundation waterfall (§2.1) and seed Spain blueprints (IVA 21% + IRPF withholding rates) into the Blueprint table referenced by §2.3.
+
+**Problem Statement:** Spain REBU is the first market live; `rebu` is the first of four engines. Connected-agent overlays are **deferred from Spain MVP** per the updated answer in [spain-rebu-mvp.md §2](spain-rebu-mvp.md) — "TL will leave soon; KAM bonuses paid outside product." The capability stays in the foundation (§2.1); only the implementation defers.
+
+**Solution Overview:** [pnl-engines.md §3](pnl-engines.md) · [spain-rebu-mvp.md](spain-rebu-mvp.md)
+
+**Out of scope:** Connected-agent overlay implementation in Spain MVP (deferred); other engines (Phase 2+).
+
+---
+
+### 2.7 `[Q3'26][Spain REBU MVP] Spain document templates + KAM P&L approval flow`
+
+**Epic Goal:** Seed Spain REBU document requirement templates (per [spain-rebu-mvp.md §2](spain-rebu-mvp.md), check with Andreas; confirm escritura penalties). Implement the KAM-driven P&L editing + approval flow: KAMs edit P&L on Karvel; Andreas's team or finance approves before deal transitions to invoicing.
+
+**Problem Statement:** Per the latest spain-rebu-mvp.md §2 answers, KAMs own deal data entry up to invoicing; Andreas / finance is the approver. This is a Spain-specific workflow on top of the universal state machine (§2.1).
+
+**Solution Overview:** [spain-rebu-mvp.md §2](spain-rebu-mvp.md) · [domain-model.md §1 (DocumentRequirementTemplate)](domain-model.md)
+
+**Out of scope:** Template authoring UI (Phase 2+).
+
+---
+
+### 2.8 `[Q3'26][Spain REBU MVP] Spain agent invoice flow`
+
+**Epic Goal:** Agent-facing Spain factura submission flow: factura upload, IVA / IRPF selection, posting-line picker that lets one factura claim N deals' commissions. Agent confirmation flows wired to deal status updates.
+
+**Problem Statement:** Spain factura format (IRPF withholding logic) and the posting-line picker are Spain-specific. Cadence-batching mechanism is foundational; the UI and form fields are Spanish.
+
+**Solution Overview:** [domain-model.md §2.4](domain-model.md) · [intro.md §4.3 — why the subledger isn't optional](intro.md) · [agent-journey.md](agent-journey.md)
+
+**Out of scope:** Salaried agents payroll calculation; OCR for document validation (both Phase 2+).
+
+---
+
+### 2.9 `[Q3'26][Spain REBU MVP] Xero invoice creation via API`
+
+**Epic Goal:** Trigger outbound invoice creation in Xero via API when deal transitions to invoicing. Track invoice state locally; reconcile back from Xero. Manual upload + email-based reconciliation for inbound non-agent invoices (e.g. external co-agency).
+
+**Problem Statement:** Per [spain-rebu-mvp.md §2](spain-rebu-mvp.md), "invoice created via Xero API; template lives there." Scope shrinks to triggering Xero and tracking state — we don't generate invoices. Inbound non-agent invoices arrive "manual via email" in MVP; Xero connectivity for inbound is future.
+
+**Solution Overview:** [xero-integration.md](xero-integration.md) · [spain-rebu-mvp.md §2](spain-rebu-mvp.md)
+
+**Out of scope:** Auto comms to clients on invoice issuance (Phase 2+); inbound Xero connectivity (Phase 2+); invoice generation in our system (Xero owns it).
+
+---
+
+### 2.10 `[Q3'26][Spain REBU MVP] Notary 10% reservation fund flow`
+
+**Epic Goal:** Model the 10% reservation payment in the deal-to-payment fund flow. Use Spain-specific separate bank account on the Posting side. Handle the netting case where buyer = commission payer.
+
+**Problem Statement:** Per [spain-rebu-mvp.md §2](spain-rebu-mvp.md), the 10% reservation lives in a separate bank account; complexity primarily lives in the Offer domain (upstream), with netting when the buyer also pays the commission. The Finance product side handles the held-funds posting and the netted-payout case.
+
+**Solution Overview:** [spain-rebu-mvp.md §2](spain-rebu-mvp.md) · [pnl-engines.md](pnl-engines.md)
+
+**Out of scope:** Offer domain changes (live in CRM / Offer service, not Finance product).
 
 ---
 
@@ -175,7 +211,9 @@ Pure technical tasks (no user-facing change) skip the "As a..." line and use a p
 
 > Parent epic: [§4.1 Pre-engineering readiness](#41-q326-pre-engineering-readiness). Labelled `[Discovery][Spain REBU]` when created.
 
-Each row of [spain-rebu-mvp.md §2](spain-rebu-mvp.md) is a real action item with an owner. Create as `Task` (not `Story` — there's no user-facing change yet). One ticket per question; close when the answer is captured in the MVP page.
+Each row of [spain-rebu-mvp.md §2](spain-rebu-mvp.md) is a real action item. Create as `Task` (not `Story` — there's no user-facing change yet). One ticket per question; close when the answer is captured in the MVP page.
+
+**Status:** The MVP page now has initial answers for all 8 rows. Most still require follow-up (typically "Check with Andreas") and the implications for Phase 1 epic scope are summarised in [spain-rebu-mvp.md §3](spain-rebu-mvp.md). Close each ticket once the follow-up is complete and the relevant Layer B epic in §2 has the answer baked in.
 
 Suggested title prefix: `[Q&A][Spain REBU]`.
 
@@ -197,7 +235,9 @@ Suggested title prefix: `[Q&A][Spain REBU]`.
 
 **Summary:** Decide whether deal creation is offer-submission-driven, CSV-upload-driven, or both. Validate the CSV template.
 
-**Context:** Two creation flows are in scope for MVP. We need the CSV column spec and the trigger conditions for each path before [Deal Lifecycle epic](#21-q326spain-rebu-deal-lifecycle) can be broken into stories.
+**Context:** Two creation flows are in scope for MVP. We need the CSV column spec and the trigger conditions for each path before §2.1 (Foundation deal lifecycle) can be broken into stories.
+
+**Latest answer (per spain-rebu-mvp.md §2):** Multiple deals get created if there are multiple tranches (1 deal per arras + 1 per escritura when revenues collected separately). Follow up with Andreas on template fields.
 
 **Acceptance criteria:**
 - CSV template confirmed and attached to MVP page.
@@ -211,7 +251,9 @@ Suggested title prefix: `[Q&A][Spain REBU]`.
 
 **Summary:** List the documents required per Spain REBU deal. Confirm whether requirements vary by channel or market.
 
-**Context:** Blocks the seed data for `DocumentRequirementTemplate` rows in [Deal Document Requirements epic](#23-q326spain-rebu-deal-document-requirements).
+**Context:** Blocks the seed data for `DocumentRequirementTemplate` rows in §2.7 (Spain document templates + KAM approval flow).
+
+**Latest answer (per spain-rebu-mvp.md §2):** Check with Andreas; confirm penalties in case of absence of escritura.
 
 **Acceptance criteria:**
 - Document list captured in MVP page.
@@ -225,7 +267,9 @@ Suggested title prefix: `[Q&A][Spain REBU]`.
 
 **Summary:** Do we have connected-agent (Team Lead / Manager) cuts in REBU Spain?
 
-**Context:** Drives whether the [P&L epic](#22-q326spain-rebu-deal-pl--stakeholders) needs the connected-agent overlay logic in Phase 1 or can defer it to Phase 2.
+**Context:** Drives whether §2.6 (rebu engine + Spain blueprints) needs connected-agent overlay logic in Phase 1.
+
+**Latest answer (per spain-rebu-mvp.md §2):** "TL will leave soon; KAM bonuses paid most likely outside product." → Connected agents **deferred from Spain MVP**. Capability stays in foundation §2.1; implementation defers.
 
 **Acceptance criteria:**
 - Yes / no decision recorded.
@@ -239,7 +283,9 @@ Suggested title prefix: `[Q&A][Spain REBU]`.
 
 **Summary:** Do we need a P&L approval flow involving multiple ops users (e.g. ops approves, finance signs off)?
 
-**Context:** Affects the state machine in the [Deal Lifecycle epic](#21-q326spain-rebu-deal-lifecycle) and the role / permission model.
+**Context:** Affects state machine permissions in §2.1 (Foundation deal lifecycle) and the workflow in §2.7 (Spain KAM P&L approval flow).
+
+**Latest answer (per spain-rebu-mvp.md §2):** KAM edits P&L on Karvel; Andreas's team or finance approves before invoicing. Andreas is the named owner of the deal-to-invoicing transition.
 
 **Acceptance criteria:**
 - Approval flow decision recorded (single approver vs multi-step).
@@ -253,7 +299,9 @@ Suggested title prefix: `[Q&A][Spain REBU]`.
 
 **Summary:** How does the 10% notary payment work end-to-end? Who pays, who receives, when, and how does it appear in the deal's P&L and accounting entries?
 
-**Context:** Notary handling is a Spain-specific edge case in the fund flow that needs to land somewhere in [pnl-engines.md](pnl-engines.md) or [accounting-101.md](accounting-101.md). Blocks the [Accounting Engine epic](#26-q326spain-rebu-accounting-engine) for the notary case.
+**Context:** Drives the model for §2.10 (Notary 10% fund flow) and the posting shapes in §2.3 (Foundation accounting engine).
+
+**Latest answer (per spain-rebu-mvp.md §2):** Separate bank account; complexity primarily in Offer domain (upstream); netting case when buyer = commission payer. Follow up with Andreas on full fund-flow detail.
 
 **Acceptance criteria:**
 - Fund flow documented (sender, recipient, timing, posting shape).
@@ -266,7 +314,9 @@ Suggested title prefix: `[Q&A][Spain REBU]`.
 
 **Summary:** How are non-agent invoices (e.g. external co-agency) sent to Huspy? Do we store them in Karvel? How do we reconcile them with the originating deal?
 
-**Context:** Affects scope of [Outbound Invoicing epic](#24-q326spain-rebu-outbound-invoicing) (or whether co-agency needs a sibling inbound flow). Today these likely arrive by email — we need to decide if MVP supports upload + matching or punts to manual.
+**Context:** Affects §2.2 (Invoice lifecycle foundation, inbound direction) and §2.9 (Xero integration).
+
+**Latest answer (per spain-rebu-mvp.md §2):** Manual via email in MVP. Xero upload connectivity is future. MVP scope: receive file, store reference, link to deal, manually reconcile.
 
 **Acceptance criteria:**
 - Ingestion mechanism decided (upload UI vs out-of-band).
@@ -280,7 +330,9 @@ Suggested title prefix: `[Q&A][Spain REBU]`.
 
 **Summary:** Provide the templates (legal copy, layout, required fields) for outbound invoice drafts auto-created on `deal.state = invoicing`.
 
-**Context:** Blocks the auto-creation logic in the [Outbound Invoicing epic](#24-q326spain-rebu-outbound-invoicing) — we need the field list and Spain-compliant template.
+**Context:** Affects §2.9 (Xero invoice creation via API).
+
+**Latest answer (per spain-rebu-mvp.md §2):** Invoice created via Xero API; template lives there. **Largely answered** — Xero owns templates and creation. Remaining follow-up: confirm which fields we pass to Xero on invoice trigger.
 
 **Acceptance criteria:**
 - Template attached to MVP page.

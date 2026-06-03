@@ -16,8 +16,8 @@ function generateMonthlyIncome() {
   const months = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
 
   // Simulated monthly income based on mock deals spread across months
-  const paidDeals = agentDeals.filter(d => d.status === 'finalized');
-  const totalPaid = paidDeals.reduce((sum, d) => sum + (d.commissionAmount || 0), 0);
+  const paidDeals = agentDeals.filter(d => d.agentDealStatus === 'closed');
+  const totalPaid = paidDeals.reduce((sum, d) => sum + (d.grossRevenue || 0), 0);
   const baseMonthly = totalPaid / 4;
 
   const data = months.map((month, i) => ({

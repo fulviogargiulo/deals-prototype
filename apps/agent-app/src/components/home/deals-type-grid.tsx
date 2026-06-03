@@ -86,7 +86,7 @@ export function DealsTypeGrid() {
     deals.filter(d => group.statuses.includes(d.status)).length;
 
   const getGroupCommission = (group: StatusGroup) =>
-    deals.filter(d => group.statuses.includes(d.status)).reduce((sum, d) => sum + d.commissionAmount, 0);
+    deals.filter(d => group.statuses.includes(d.status)).reduce((sum, d) => sum + (d.grossRevenue ?? 0), 0);
 
   const filteredDeals = activeFilter
     ? deals.filter(d => {
@@ -209,7 +209,7 @@ export function DealsTypeGrid() {
 
                     {/* Property */}
                     <span className="text-sm truncate text-muted-foreground">
-                      {deal.title ?? deal.buildingName ?? "—"}
+                      {deal.title ?? "—"}
                     </span>
 
                     {/* Amount */}
@@ -219,7 +219,7 @@ export function DealsTypeGrid() {
 
                     {/* Commission */}
                     <span className="text-sm font-semibold text-foreground text-right tabular-nums">
-                      €{deal.commissionAmount.toLocaleString()}
+                      €{(deal.grossRevenue ?? 0).toLocaleString()}
                     </span>
 
                     {/* Status */}

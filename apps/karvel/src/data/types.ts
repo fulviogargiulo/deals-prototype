@@ -1,5 +1,6 @@
 import type {
   Deal as BaseDeal,
+  Tranche as BaseTranche,
   DealStatus,
   PayableStatus,
   StatusHistoryEntry,
@@ -52,11 +53,14 @@ export interface ExternalPartnerEntry {
   partnerBankAccount?: string;
 }
 
-// ─── Karvel Deal = shared Deal + Karvel operational fields ───────────────────
-// Karvel enriches the canonical deal with agent entries, payables, and derived
-// P&L scalars at load time (see lib/dealEnricher.ts).
-export type Deal = BaseDeal & {
-  // Agent payout model
+// ─── Karvel Tranche = shared Tranche + Karvel operational fields ─────────────
+// Karvel enriches each tranche with derived P&L outputs and operational arrays.
+export type Tranche = BaseTranche & {
+  // P&L outputs (computed by waterfall engine — not stored on BaseTranche)
+  huspyRevenue?: number;
+  netHuspyRevenue?: number;
+
+  // Agent payout model (derived from P&L engine)
   agents?: AgentEntry[];
   agentShare?: number;
   agentCommissionRate?: number;
@@ -87,17 +91,18 @@ export type Deal = BaseDeal & {
 
   // External partners
   externalPartners?: ExternalPartnerEntry[];
-  externalPartnerName?: string;
-  externalPartnerShare?: number;
-  externalPartnerBank?: string;
-  externalPartnerBankAccount?: string;
 
-  // Payables (writable via Karvel UI; starts empty per deal)
+  // Payables
   payables?: PayableEntry[];
   payableRefNumber?: string;
   payableStatus?: PayableStatus;
-
 };
+
+// ─── Karvel Deal = shared Deal + Karvel operational fields ───────────────────
+// Karvel enriches the canonical deal with agent entries, payables, and derived
+// P&L scalars at load time (see lib/dealEnricher.ts).
+// Deal is now a thin header — no P&L or state fields.
+export type Deal = BaseDeal;
 
 // ─── Re-exports from shared domain ──────────────────────────────────────────
 export type {
@@ -120,6 +125,7 @@ export type {
 } from "@huspy/shared-domain";
 
 export type { DealStatus, PayableStatus };
+export type { Tranche as BaseTranche } from "@huspy/shared-domain";
 
 // Backward-compat alias used historically in karvel
 import type { Market } from "@huspy/shared-domain";

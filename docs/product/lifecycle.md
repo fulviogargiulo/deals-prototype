@@ -6,6 +6,12 @@ This process flow aims to support all type of deals across all geographies and b
 
 # 1. State Machine
 
+**The state machine belongs to the Tranche, not the Deal.** A `Deal` is a commercial header (amount, market, parties) with no status of its own. Each `Tranche` within the deal progresses independently through the states below. A Deal always has at least one Tranche; a split-payment deal (e.g. Spain REBU Arras + Escritura) has two or more.
+
+For display purposes, a Deal's aggregate status in the ops list is derived from its Tranches (highest priority active state wins). The agent-facing status uses a simplified 3-state model — see §1.2 below.
+
+## 1.1 Tranche States
+
 | State | Description | Can go to | Trigger |
 | --- | --- | --- | --- |
 | **Under Review** | Starting state. Ops is actively reviewing. Stakeholders and deal data can be edited. | Pending Details · Pending Agent Approval · Canceled | Ops on Karvel → Pending Agent Approval all documents must be approved or waived |
@@ -14,6 +20,22 @@ This process flow aims to support all type of deals across all geographies and b
 | **Invoicing** | Deal locked. Finance is collecting the commission payment from receivable parties. | Finalized · Canceled | auto → Finalized when all invoices paid |
 | **Finalized** | All outbound invoices paid. Agent commission liability recorded. Auto-triggered — no manual step. | — terminal |  |
 | **Canceled** | Deal voided. Reachable from any non-terminal status. Cannot be reactivated. | — terminal |  |
+
+## 1.2 Agent-Facing Deal Status
+
+Agents see a simplified 3-state status derived from all Tranches on the Deal. This avoids exposing internal ops states (e.g. `under-review`) to agents who have nothing to act on at that moment.
+
+| `AgentDealStatus` | When it applies | What the agent sees |
+| --- | --- | --- |
+| `action-required` | Any Tranche is `pending-agent-approval` or `pending-details` | Deal appears in the agent's action queue |
+| `in-progress` | No Tranche needs action; at least one is `under-review` or `invoicing` | Deal is progressing; no agent action needed |
+| `closed` | All Tranches are `finalized` or `canceled` | Deal is closed; commission locked |
+
+Priority: `action-required` > `in-progress` > `closed`.
+
+## 1.3 Adding a Tranche
+
+A second Tranche can be added to a Deal by Ops in Karvel, but **only when the existing Tranche is in `under-review`**. The constraint prevents creating parallel financial tracks while a prior settlement is already locked or being invoiced. Once added, each Tranche advances independently.
 
 # 2. Who's Involved
 
@@ -26,40 +48,42 @@ This process flow aims to support all type of deals across all geographies and b
 
 # 3. The 6 Stages
 
-### Stage 1 — Deal Created → `under-review`
+Each stage below refers to a **Tranche** moving through its state machine. The Deal itself has no status. In a single-Tranche deal the distinction is invisible; in a multi-Tranche deal (e.g. Arras + Escritura), each Tranche can be at a different stage simultaneously.
 
-A deal enters the system in **Under Review**. It is created either directly by Ops in Karvel, or triggered automatically. Agents do not currently create deals directly; an offer submission flow is being built that will allow REBU agents to submit offers — when accepted, a deal will be created automatically.
+### Stage 1 — Tranche Created → `under-review`
 
-* **Ops**: Validates available data, begins reviewing documents, edits stakeholders, and reviews the P&L waterfall.
-* If all information is present: Ops advances to **Pending Agent Approval**.
-* If anything is missing: Ops sends the deal to **Pending Details** to request input from the agent.
+A Tranche enters the system in **Under Review**. The first Tranche is created automatically when the Deal is created. Additional Tranches (e.g. Escritura) are added by Ops. Agents do not currently create deals directly; an offer submission flow is being built that will allow REBU agents to submit offers — when accepted, a deal and its first Tranche will be created automatically.
 
-**Permissions note:** Karvel has two internal roles — **Ops** and **Senior Ops**. Standard Ops users can edit deal data and stakeholders freely while the deal is in Under Review. Changes to the P&L waterfall that affect commission terms require approval from a Senior Ops user before the deal can advance to Pending Agent Approval.
+* **Ops**: Validates available data, begins reviewing documents, edits stakeholders on this Tranche, and reviews the P&L waterfall.
+* If all information is present: Ops advances this Tranche to **Pending Agent Approval**.
+* If anything is missing: Ops sends this Tranche to **Pending Details** to request input from the agent.
+
+**Permissions note:** Karvel has two internal roles — **Ops** and **Senior Ops**. Standard Ops users can edit Tranche data and stakeholders freely while the Tranche is in Under Review. Changes to the P&L waterfall that affect commission terms require approval from a Senior Ops user before the Tranche can advance to Pending Agent Approval.
 
 ### Stage 2 — Requesting Agent Input → `pending-details`
 
-**Pending Details** is a backward step from Under Review — not the starting state. Ops triggers it when required documents or information are missing. The agent is notified and the deal appears in their action queue.
+**Pending Details** is a backward step from Under Review — not the starting state. Ops triggers it when required documents or information are missing. The agent is notified and the Tranche appears in their action queue (`AgentDealStatus: action-required`).
 
 * **Agent**: Uploads required documents, fills in missing fields, writes a note to Ops, and clicks **Submit for Review**.
-* On submission, the deal returns to **Under Review**. This loop can repeat.
+* On submission, the Tranche returns to **Under Review**. This loop can repeat.
 
-**Future direction:** In a later version, deals could start directly in Pending Details — so that as soon as a deal is created, the agent is automatically prompted for all required documents without Ops having to manually trigger the step.
+**Future direction:** In a later version, Tranches could start directly in Pending Details — so that as soon as a Tranche is created, the agent is automatically prompted for all required documents without Ops having to manually trigger the step.
 
 ### Stage 3 — Agent Confirms Commission → `pending-agent-approval`
 
-Ops has locked the commission terms. The agent must review and explicitly confirm before any invoicing can begin.
+Ops has locked the commission terms for this Tranche. The agent must review and explicitly confirm before any invoicing can begin.
 
-* **Agent**: Reviews the full commission breakdown (deal price → gross revenue → deductions → their payout). Clicks **Confirm** to approve.
-* If the agent disagrees, they click **Request Review** and provide a reason. The deal reverts to **Under Review**. This can loop.
-* On confirmation: deal moves to **Invoicing**. The agent is notified.
+* **Agent**: Reviews the full commission breakdown for this Tranche (deal price → gross revenue → deductions → their payout). Clicks **Confirm** to approve.
+* If the agent disagrees, they click **Request Review** and provide a reason. The Tranche reverts to **Under Review**. This can loop.
+* On confirmation: Tranche moves to **Invoicing**. The agent is notified.
 
 ### Stage 4 — Invoicing → `invoicing`
 
-Finance takes over. The deal is now locked, stakeholders cannot be changed. The focus is collecting the commission from the receivable parties and paying the involved external parties (not agent) if there are.
+Finance takes over for this Tranche. The Tranche is now locked; stakeholders cannot be changed. The focus is collecting the commission from the receivable parties and paying involved external parties (not agent).
 
-* Invoices are **automatically created in Draft** when the deal reaches Invoicing. Finance validates the amounts and issues it to the relevant party (developer, bank, buyer, tenant …).
+* Invoices are **automatically created in Draft** when the Tranche reaches Invoicing. Finance validates the amounts and issues the invoice to the relevant party (developer, bank, buyer, tenant …).
 * **Finance**: Matches the incoming/outgoing bank transfer to the invoice, optionally uploads proof of payment, and marks the invoice as **Paid**.
-* Once **all** outbound invoices are marked Paid, the deal **automatically** transitions to Finalized.
+* Once **all** outbound invoices linked to this Tranche are marked Paid, the Tranche **automatically** transitions to Finalized.
 
 | Status | What it means |
 | --- | --- |
@@ -74,14 +98,16 @@ Parties with subledgers (agents/brokers appearing as cost parties) skip invoice 
 
 Once an invoice is ISSUED in our system, we should create it in Xero as well. Same for PAID status in Xero, we should pull this information. Further info in [Xero integration](https://huspy.atlassian.net/wiki/spaces/corp/pages/2445574152).
 
-### Stage 5 — Deal Closed → `finalized`
+### Stage 5 — Tranche Closed → `finalized`
 
-Triggered automatically when the last outbound invoice is marked Paid. Terminal — no further edits are possible.
+Triggered automatically when the last outbound invoice linked to this Tranche is marked Paid. Terminal for this Tranche — no further edits are possible.
 
-* Agent's commissions accounting entries are created: the agent's commission liability is credited to their individual subledger (Huspy now owes them money).
-* **Agent**: Sees the deal appear in their earnings statement as a new ledger entry.
+* Agent's commission accounting entries are created: the agent's commission liability is credited to their individual subledger (Huspy now owes them money).
+* **Agent**: Sees the new commission entry appear in their earnings statement.
 
-For MBU, agents/broker liability recognition happens when deal moves to the invoicing stage.
+A Deal is considered fully closed when all its Tranches are `finalized` or `canceled`. Only then does `AgentDealStatus` become `closed`.
+
+For MBU, agents/broker liability recognition happens when the Tranche moves to the invoicing stage (not finalized).
 
 ### Stage 6 — Agent Payout (separate cycle)
 
@@ -131,7 +157,25 @@ Worked example: Spain REBU deal, property sold for **€100,000**, Huspy commiss
 
 Tax rates by market: Spain charges 21% IVA on the client invoice and withholds 19% IRPF from the agent. UAE applies 5% VAT on both sides. Saudi Arabia applies 15% VAT on the client invoice. **TO CONFIRM**
 
-# 4. When Things Go Sideways
+# 4. Multi-Tranche Example: Spain REBU Arras + Escritura
+
+In Spain, real-estate sales commonly involve two separate payment events. Huspy's commission is recognised in two tranches:
+
+| | Tranche 1 — Arras | Tranche 2 — Escritura |
+| --- | --- | --- |
+| **Trigger** | Reservation contract signed | Notarisation completed |
+| **Commission** | ~40–50% of total commission | Remaining ~50–60% |
+| **Invoice** | Outbound invoice to buyer (deposit) | Outbound invoice to buyer (completion) |
+| **Agent confirmation** | Required before invoicing starts | Required before invoicing starts |
+| **Documents** | Contract, ID | Title deed, Nota simple |
+
+Both Tranches live on the same Deal (same commercial agreement, same parties). Ops creates the Arras Tranche first. When the reservation contract is signed and Ops is ready to move to the completion phase, they add the Escritura Tranche to the same Deal.
+
+**Independent lifecycles:** Tranche 1 can reach `finalized` months before Tranche 2 even reaches `under-review`. The agent's ledger receives two separate commission entries — one per Tranche at finalization. The agent sees both Tranches under the same Deal in their app, with independent progress indicators and document checklists per Tranche.
+
+**Accounting:** Each Tranche generates its own set of postings and invoices. The agent's subledger is credited once per Tranche at finalization.
+
+# 5. When Things Go Sideways
 
 ### Agent requests a review
 
@@ -143,4 +187,4 @@ Finance cancels the invoice — a written reason is mandatory. Finance alerts Op
 
 ### Cancellation
 
-A deal can be moved to **Canceled** from any status except Finalized — enforced by the system's transition rules (see state machine above). Canceled is terminal; there is no reactivation path.
+A Tranche can be moved to **Canceled** from any status except Finalized — enforced by the system's transition rules (see state machine above). Canceled is terminal for that Tranche; there is no reactivation path. Other Tranches on the same Deal are unaffected.

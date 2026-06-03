@@ -31,41 +31,47 @@ From Under Review, Ops has two paths:
 
 Once the agent submits their information, the deal returns to Under Review automatically. This loop can repeat.
 
-A deal has multiple deal stakeholders, check the domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692). When adding a stakeholder, Ops verifies the `Party` record using `taxId` (NIE in Spain, Emirates ID in UAE…). If the `taxId` already exists in the system, the existing Party record is reused — no duplicate is created. This keeps the ledger accurate across multiple deals involving the same buyer, developer, or other third parties.
+Every Deal starts with one Tranche (also in `under-review`). If the deal involves multiple settlement events (e.g. Spain Arras + Escritura), additional Tranches can be added later. All P&L entries (TrancheStakeholders) are scoped to a specific Tranche — not to the Deal. Check the domain model [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692). When adding a P&L entry, Ops verifies the `Party` record using `taxId` (NIE in Spain, Emirates ID in UAE…). If the `taxId` already exists in the system, the existing Party record is reused — no duplicate is created. This keeps the ledger accurate across multiple deals involving the same buyer, developer, or other third parties.
 
 # 4. The Deals Tab
 
-The Deals tab is a paginated, searchable table of all deals across all statuses, markets, business units and all table headers.
+The Deals tab is a paginated, searchable table. **Each row represents a Tranche**, not a Deal. A Deal with two Tranches (e.g. Arras + Escritura) appears as two rows. This gives Finance a per-Tranche view of status, gross/net revenue, and report date.
 
 * **Search** by agent name, client name, deal ID, or market
-* **Filter and sort** by status, business unit, country, deal ID, status, gross revenue, net revenue, Huspy margin, created date
+* **Filter and sort** by status, business unit, country, deal ID, gross revenue, net revenue, Huspy margin, report date
 * **Add Deal** and **Bulk Upload** (CSV) buttons for deal creation
 
-Each row shows: Deal ID, status, BU, country, market, gross revenue, net revenue, Huspy margin, and creation date.
+Each row shows: Deal ID, Tranche index, status, BU, country, market, gross revenue, net revenue, Huspy margin, and report date. Clicking a row opens the deal detail page at that specific Tranche.
 
 ## 4.1. Inside a Deal — What Ops Does
 
+### Tranche Tabs
+
+When a Deal has multiple Tranches (e.g. Arras + Escritura), a tab strip appears at the top of the detail panel. Each tab shows the Tranche index, its label (if set), and status badge. All sections below the tabs — status transitions, stakeholders, P&L, documents, invoices, accounting events — are scoped to the selected Tranche.
+
+**Adding a Tranche** is available when the currently selected Tranche is in `under-review`. This prevents creating parallel settlement tracks while a prior Tranche is locked.
+
 ### Status Transitions
 
-The deal status is changed via a dropdown in the deal detail header. Every status change is timestamped and recorded in the deal's history. Check the deal state machine [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911) for more details.
+The **Tranche** status is changed via a dropdown in the detail header. Every status change is timestamped and recorded in the Tranche's status history. Check the deal state machine [here](https://huspy.atlassian.net/wiki/spaces/corp/pages/2411429911) for more details.
 
-### Stakeholders Panel
+### P&L Entries (TrancheStakeholders)
 
-Stakeholders are the parties involved in the commission waterfall. This panel is **editable only when the deal is in Under Review or Pending Details**. Once the deal advances, it locks. User can add all these stakeholder types and whether they are paid from huspy's or agent's pockets.
+P&L entries are the financial participants in this Tranche's commission waterfall. This panel is **editable only when the Tranche is in Under Review or Pending Details**. Once the Tranche advances, it locks. User can add all these entry types:
 
-| Stakeholder type | Role |
+| Entry type | Role |
 | --- | --- |
-| **Revenue Source** | The parties paying Huspy (buyer, developer, bank, tenant…). Their amount is Huspy's gross revenue. |
+| **Revenue Source** | The parties paying Huspy (buyer, developer, bank, tenant…). Their amounts sum to Huspy's gross revenue for this Tranche. |
 | **Agent Payout** | A Huspy agent/broker. Commission is calculated by the system from the agent's commission structure — not entered manually. |
-| **Acquisition Deduction** | External commercial partner (co-broker, referral). Huspy pays them; deducted from gross. |
-| **Operational Deduction** | Fixed service cost (notary, conveyance, legal). Deducted from net. |
+| **Acquisition Deduction** | External commercial partner (co-broker, referral). Huspy pays them; deducted from gross revenue. |
+| **Operational Deduction** | Fixed service cost (notary, conveyance, legal). Deducted from net after agent payouts. |
 
 ### P&L Waterfall
 
-Displayed on every deal detail page. Shows how gross revenue flows to Huspy's margin:
+Displayed on every Tranche detail view. Shows how this Tranche's gross revenue flows to Huspy's margin. `grossRevenue` is always derived at runtime from the sum of `REVENUE_SOURCE` entry amounts — it is never stored separately.
 
 1. Deal amount (and any rebate/subsidy applied)
-2. Gross revenue (sum of Revenue Source stakeholders)
+2. Gross revenue (sum of Revenue Source entries for this Tranche)
 3. Minus Acquisition Deductions (external partners)
 4. = Net revenue
 5. Minus Agent payouts (calculated from each agent's commission strategy)

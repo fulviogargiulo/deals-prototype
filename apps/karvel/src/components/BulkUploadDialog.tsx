@@ -3,9 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, CheckCircle, AlertTriangle, X, Download } from "lucide-react";
 import { Deal } from "@/data/types";
-import { DealStakeholder, StakeholderType, sharedDealStakeholders, sharedDealDocumentRequirements, sharedDocumentRequirementTemplates, sharedParties, sharedAgents, type StatusHistoryEntry } from "@huspy/shared-domain";
+import { type PnlEntry, type DealParticipant, type ParticipantRole, StakeholderType, sharedPnlEntries, sharedDealParticipants, sharedDealDocumentRequirements, sharedDocumentRequirementTemplates, sharedParties, sharedAgents, type StatusHistoryEntry } from "@huspy/shared-domain";
 import { toast } from "@/hooks/use-toast";
 import { recalculateDeal, derivePnlEngine, getMissingAgentFinancials, type DealEngineKey } from "@/lib/dealCalculations";
+import { addTranche } from "@/data/trancheStore";
+import type { Tranche } from "@/data/types";
 import { getBlueprint } from "@huspy/shared-domain";
 
 interface Props {
@@ -79,7 +81,8 @@ function downloadTemplate(): void {
 
 interface ParsedDeal {
   deal: Deal;
-  stakeholders: DealStakeholder[];
+  pnlEntries: PnlEntry[];
+  participants: DealParticipant[];
 }
 
 const VALID_ROLES = new Set<string>(["AGENT_PAYOUT", "REVENUE_SOURCE", "ACQUISITION_DEDUCTION", "OPERATIONAL_DEDUCTION", "DEMAND", "SUPPLY"]);
@@ -124,12 +127,8 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
     currency,
     blueprintId: blueprint.id,
     dealAmount: parseFloat(header.dealPrice) || 0,
-    dealPrice: parseFloat(header.dealPrice) || 0,
     grossRevenue: positiveRevenue,
-    takeRate: 0,
-    commissionPercentage: 0,
     title: header.propertyName || "Untitled Property",
-    buildingName: header.propertyName || "Untitled Property",
     reportDate: header.reportDate || new Date().toISOString().split("T")[0],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -143,21 +142,22 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
     payables: [],
   };
 
-  const stakeholders: DealStakeholder[] = [];
-  // Maps agent partyId → the stake ID assigned to them, for resolving chargedTo.
-  const agentStakeIdByPartyId: Record<string, string> = {};
+  const pnlEntries: PnlEntry[] = [];
+  const participants: DealParticipant[] = [];
+  // Maps agent partyId → the entry ID assigned to them, for resolving chargedTo.
+  const agentEntryIdByPartyId: Record<string, string> = {};
   let agentIdx = 0;
 
-  // First pass: build agent stakes and stake-ID map.
+  // First pass: build agent P&L entries and ID map.
   for (const row of rows) {
     if (row.stakeRole !== "AGENT_PAYOUT") continue;
-    const stakeId = `ds-${offerId}-agent-${agentIdx++}`;
-    agentStakeIdByPartyId[row.partyId] = stakeId;
+    const entryId = `ds-${offerId}-agent-${agentIdx++}`;
+    agentEntryIdByPartyId[row.partyId] = entryId;
     const fa = parseFloat(row.amount);
     const fixedAmount = !isNaN(fa) && fa > 0 ? fa : undefined;
-    stakeholders.push({
-      id: stakeId,
-      dealId: offerId,
+    pnlEntries.push({
+      id: entryId,
+      trancheId: offerId,
       partyId: row.partyId,
       role: "AGENT_PAYOUT",
       isPrimary: agentIdx === 1,
@@ -173,37 +173,37 @@ function buildDeal(offerId: string, rows: Record<string, string>[], dealIndex: n
   for (const row of rows) {
     const role = row.stakeRole as StakeholderType;
     if (role === "AGENT_PAYOUT") continue;
-    const stakeId = `ds-${offerId}-s-${otherIdx++}`;
+    const entryId = `ds-${offerId}-s-${otherIdx++}`;
 
-    // DEMAND/SUPPLY are non-financial — no amount needed.
+    // DEMAND/SUPPLY are identity-only — go on the Deal as DealParticipants.
     if (role === "DEMAND" || role === "SUPPLY") {
-      stakeholders.push({ id: stakeId, dealId: offerId, partyId: row.partyId, role, isPrimary: true });
+      participants.push({ id: `dp-${offerId}-${role.toLowerCase()}`, dealId: offerId, partyId: row.partyId, role: role as ParticipantRole, isPrimary: true });
       continue;
     }
 
     const rawAmount = parseFloat(row.amount);
     if (Number.isNaN(rawAmount)) continue;
 
-    const parentStakeholderId =
+    const parentEntryId =
       (role === "ACQUISITION_DEDUCTION" || role === "OPERATIONAL_DEDUCTION") && row.chargedTo
-        ? agentStakeIdByPartyId[row.chargedTo.trim()]
+        ? agentEntryIdByPartyId[row.chargedTo.trim()]
         : undefined;
 
-    stakeholders.push({
-      id: stakeId,
-      dealId: offerId,
+    pnlEntries.push({
+      id: entryId,
+      trancheId: offerId,
       partyId: row.partyId,
       role,
       // REVENUE_SOURCE: preserve sign (negative = rebate). Cost roles: engine expects negative.
       amount: role === "REVENUE_SOURCE" ? rawAmount : -Math.abs(rawAmount),
       description: row.description || undefined,
-      parentStakeholderId,
+      parentEntryId,
       source: "manual",
       status: "draft",
     });
   }
 
-  return { deal, stakeholders };
+  return { deal, pnlEntries, participants };
 }
 
 function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
@@ -295,17 +295,31 @@ export function BulkUploadDialog({ open, onClose, onDealsCreated }: Props) {
     for (const [offerId, rows] of groups) {
       results.push(buildDeal(offerId, rows, i++));
     }
-    for (const { stakeholders } of results) {
-      for (const s of stakeholders) sharedDealStakeholders.push(s);
+    for (const { pnlEntries, participants } of results) {
+      for (const e of pnlEntries) sharedPnlEntries.push(e);
+      for (const p of participants) sharedDealParticipants.push(p);
     }
     const deals = results.map(({ deal }) => recalculateDeal(deal));
+    const now = new Date().toISOString();
     for (const deal of deals) {
+      // Each bulk-uploaded deal gets one Tranche with the same ID as the deal.
+      const tranche: Tranche = {
+        id: deal.id,
+        dealId: deal.id,
+        index: 0,
+        status: "under-review",
+        pnlEngine: derivePnlEngine({ businessUnit: deal.businessUnit, channel: deal.channel }),
+        reportDate: now.slice(0, 10),
+        createdAt: now,
+        updatedAt: now,
+      };
+      addTranche(tranche);
       sharedDocumentRequirementTemplates
         .filter((t) => t.market === deal.market && t.businessUnit === deal.businessUnit && t.country === deal.country)
         .forEach((t, i) => {
           sharedDealDocumentRequirements.push({
             id: `ddr-${deal.id}-${i}`,
-            dealId: deal.id,
+            trancheId: deal.id,
             label: t.label,
             required: t.required,
             status: "pending",

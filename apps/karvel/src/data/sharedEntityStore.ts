@@ -1,5 +1,6 @@
 import {
-  sharedDealStakeholders,
+  sharedPnlEntries,
+  sharedDealParticipants,
   sharedParties,
   sharedDealDocumentRequirements,
   sharedDealComments,
@@ -13,7 +14,8 @@ import {
 const V = "karvel-v1";
 
 const KEYS = {
-  stakeholders:    `${V}-deal-stakeholders`,
+  pnlEntries:      `${V}-pnl-entries`,
+  participants:    `${V}-deal-participants`,
   parties:         `${V}-parties`,
   docRequirements: `${V}-doc-requirements`,
   comments:        `${V}-deal-comments`,
@@ -59,7 +61,8 @@ function autoPersist<T>(arr: T[], key: string): void {
  */
 export function initSharedEntityStore(): void {
   const entries: [any[], string][] = [
-    [sharedDealStakeholders,        KEYS.stakeholders],
+    [sharedPnlEntries,               KEYS.pnlEntries],
+    [sharedDealParticipants,         KEYS.participants],
     [sharedParties,                  KEYS.parties],
     [sharedDealDocumentRequirements, KEYS.docRequirements],
     [sharedDealComments,             KEYS.comments],

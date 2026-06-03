@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Deal, DealStatus } from "@/data/types";
-import { type DealStakeholder, sharedParties } from "@huspy/shared-domain";
+import { type PnlEntry, type DealParticipant, sharedParties } from "@huspy/shared-domain";
 import { Input } from "./ui/input";
 import { CheckCircle2, Circle, Upload, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -11,15 +11,15 @@ interface MissingField {
   type: "text" | "file";
 }
 
-export function getMissingFields(deal: Deal, stakeholders: DealStakeholder[]): { details: MissingField[]; documents: MissingField[] } {
+export function getMissingFields(deal: Deal, _pnlEntries: PnlEntry[], participants: DealParticipant[]): { details: MissingField[]; documents: MissingField[] } {
   const details: MissingField[] = [];
   const documents: MissingField[] = [];
 
   if (!deal.externalPartners?.[0]?.partnerBank) {
     details.push({ label: "Bank Account (IBAN)", placeholder: "e.g. ES91 2100 0418 4502 0005 1332", type: "text" });
   }
-  const supplyStake = stakeholders.find(s => s.dealId === deal.id && s.role === "SUPPLY");
-  const supplyParty = supplyStake ? sharedParties.find(p => p.id === supplyStake.partyId) : undefined;
+  const supplyParticipant = participants.find(p => p.dealId === deal.id && p.role === "SUPPLY");
+  const supplyParty = supplyParticipant ? sharedParties.find(p => p.id === supplyParticipant.partyId) : undefined;
   if (!supplyParty?.taxId) {
     details.push({ label: "Beneficiary Tax ID (NIF/CIF)", placeholder: "e.g. 12345678A", type: "text" });
   }
@@ -34,14 +34,15 @@ export function getMissingFields(deal: Deal, stakeholders: DealStakeholder[]): {
 
 interface PendingDetailsSectionProps {
   deal: Deal;
-  stakeholders?: DealStakeholder[];
+  pnlEntries?: PnlEntry[];
+  participants?: DealParticipant[];
   onSave?: (updated: Deal) => void;
   /** "panel" for side panels, "page" for full-page layout */
   variant?: "panel" | "page";
 }
 
-export function PendingDetailsSection({ deal, stakeholders = [], onSave, variant = "panel" }: PendingDetailsSectionProps) {
-  const missing = getMissingFields(deal, stakeholders);
+export function PendingDetailsSection({ deal, pnlEntries = [], participants = [], onSave, variant = "panel" }: PendingDetailsSectionProps) {
+  const missing = getMissingFields(deal, pnlEntries, participants);
   const [missingValues, setMissingValues] = useState<Record<string, string>>({});
   const [submittedDetails, setSubmittedDetails] = useState<Set<string>>(new Set());
   const [submittedDocs, setSubmittedDocs] = useState<Set<number>>(new Set());

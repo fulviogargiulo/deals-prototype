@@ -2,11 +2,11 @@ import { useState, useRef, useEffect, Fragment } from "react";
 import { X, Plus, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
-  sharedDealStakeholders,
+  sharedPnlEntries,
   sharedParties,
   sharedAgents,
 } from "@huspy/shared-domain";
-import type { DealStakeholder, Party } from "@huspy/shared-domain";
+import type { PnlEntry, Party } from "@huspy/shared-domain";
 import type { Deal } from "@/data/types";
 import { getDealEngine, syncEngineAmounts } from "@/lib/dealCalculations";
 
@@ -558,25 +558,25 @@ function AgentEditForm({
 export function PnLWaterfall({ deal, currency, canEdit, onChanged }: Props) {
   const navigate = useNavigate();
 
-  const [stakes, setStakes] = useState<DealStakeholder[]>(() => {
-    // On first mount for draft deals, create any missing engine-derived stakes
-    // (e.g. connected agents not yet seeded for newly-created deals).
+  const [stakes, setStakes] = useState<PnlEntry[]>(() => {
+    // On first mount for draft deals, create any missing engine-derived stakes.
+    // deal.id here is the tranche ID (set by DealDetail via spread); deal carries all fields.
     if (deal.status === "under-review" || deal.status === "pending-details" || deal.status === "pending-agent-approval") {
-      syncEngineAmounts(deal);
+      syncEngineAmounts(deal as any, deal as any);
     }
-    return sharedDealStakeholders.filter((s) => s.dealId === deal.id);
+    return sharedPnlEntries.filter((s) => s.trancheId === deal.id);
   });
   const [adding, setAdding] = useState<AddSection>(null);
   const [editingStakeId, setEditingStakeId] = useState<string | null>(null);
-  const engine = getDealEngine(deal);
+  const engine = getDealEngine(deal, deal as any);
 
   // All AGENT_PAYOUT stakes — primary agents, co-agents, and connected agents (TL, Manager) flat.
   const agentStakes = stakes.filter((s) => s.role === "AGENT_PAYOUT");
   const revStakes   = stakes.filter((s) => s.role === "REVENUE_SOURCE");
-  const serviceStakes = stakes.filter((s) => s.role === "OPERATIONAL_DEDUCTION" && !s.parentStakeholderId);
-  const partnerStakes = stakes.filter((s) => s.role === "ACQUISITION_DEDUCTION" && !s.parentStakeholderId);
+  const serviceStakes = stakes.filter((s) => s.role === "OPERATIONAL_DEDUCTION" && !s.parentEntryId);
+  const partnerStakes = stakes.filter((s) => s.role === "ACQUISITION_DEDUCTION" && !s.parentEntryId);
   const agentSourcedStakes = stakes.filter(
-    (s) => (s.role === "ACQUISITION_DEDUCTION" || s.role === "OPERATIONAL_DEDUCTION") && !!s.parentStakeholderId,
+    (s) => (s.role === "ACQUISITION_DEDUCTION" || s.role === "OPERATIONAL_DEDUCTION") && !!s.parentEntryId,
   );
 
   // Summary values computed from stakes — no engine run needed for display.
@@ -599,46 +599,46 @@ export function PnLWaterfall({ deal, currency, canEdit, onChanged }: Props) {
 
   // After every stake mutation: sync engine-derived amounts then re-read stakes.
   const commitChange = () => {
-    syncEngineAmounts(deal);
-    setStakes(sharedDealStakeholders.filter((s) => s.dealId === deal.id));
+    syncEngineAmounts(deal as any, deal as any);
+    setStakes(sharedPnlEntries.filter((s) => s.trancheId === deal.id));
     onChanged();
   };
 
   const removeStake = (stakeId: string) => {
-    const idx = sharedDealStakeholders.findIndex((s) => s.id === stakeId);
-    if (idx !== -1) sharedDealStakeholders.splice(idx, 1);
+    const idx = sharedPnlEntries.findIndex((s) => s.id === stakeId);
+    if (idx !== -1) sharedPnlEntries.splice(idx, 1);
     commitChange();
   };
 
-  const addStake = (stake: DealStakeholder) => {
-    sharedDealStakeholders.push(stake);
+  const addStake = (stake: PnlEntry) => {
+    sharedPnlEntries.push(stake);
     setAdding(null);
     commitChange();
   };
 
   const handleAddRevenue = (partyId: string, amount: number | undefined) => {
-    addStake({ id: `ds-${deal.id}-rev-${Date.now()}`, dealId: deal.id, partyId, role: "REVENUE_SOURCE", amount, source: "manual", status: "draft" });
+    addStake({ id: `ds-${deal.id}-rev-${Date.now()}`, trancheId: deal.id, partyId, role: "REVENUE_SOURCE", amount, source: "manual", status: "draft" });
   };
 
   const handleAddService = (partyId: string, amount: number | undefined, chargedToAgentPartyId?: string) => {
-    const parentStakeholderId = chargedToAgentPartyId
+    const parentEntryId = chargedToAgentPartyId
       ? agentStakes.find((s) => s.partyId === chargedToAgentPartyId)?.id
       : undefined;
-    addStake({ id: `ds-${deal.id}-svc-${Date.now()}`, dealId: deal.id, partyId, role: "OPERATIONAL_DEDUCTION", amount: amount != null ? -Math.abs(amount) : undefined, source: "manual", status: "draft", parentStakeholderId });
+    addStake({ id: `ds-${deal.id}-svc-${Date.now()}`, trancheId: deal.id, partyId, role: "OPERATIONAL_DEDUCTION", amount: amount != null ? -Math.abs(amount) : undefined, source: "manual", status: "draft", parentEntryId });
   };
 
   const handleAddPartner = (partyId: string, amount: number | undefined, chargedToAgentPartyId?: string) => {
-    const parentStakeholderId = chargedToAgentPartyId
+    const parentEntryId = chargedToAgentPartyId
       ? agentStakes.find((s) => s.partyId === chargedToAgentPartyId)?.id
       : undefined;
-    addStake({ id: `ds-${deal.id}-ptn-${Date.now()}`, dealId: deal.id, partyId, role: "ACQUISITION_DEDUCTION", amount: amount != null ? -Math.abs(amount) : undefined, source: "manual", status: "draft", parentStakeholderId });
+    addStake({ id: `ds-${deal.id}-ptn-${Date.now()}`, trancheId: deal.id, partyId, role: "ACQUISITION_DEDUCTION", amount: amount != null ? -Math.abs(amount) : undefined, source: "manual", status: "draft", parentEntryId });
   };
 
   const handleAddAgent = (partyId: string, mode: AgentCommissionMode, value: number) => {
     const isFirst = agentStakes.filter((s) => !s.description).length === 0;
     addStake({
       id: `ds-${deal.id}-agt-${Date.now()}`,
-      dealId: deal.id,
+      trancheId: deal.id,
       partyId,
       role: "AGENT_PAYOUT",
       isPrimary: isFirst,
@@ -650,7 +650,7 @@ export function PnLWaterfall({ deal, currency, canEdit, onChanged }: Props) {
   };
 
   const handleEditAgent = (stakeId: string, mode: AgentCommissionMode, value: number) => {
-    const record = sharedDealStakeholders.find((s) => s.id === stakeId);
+    const record = sharedPnlEntries.find((s) => s.id === stakeId);
     if (record) {
       record.splitPercentage = mode === "split" ? value : undefined;
       record.amount = mode === "fixed" ? value : undefined;
@@ -664,15 +664,14 @@ export function PnLWaterfall({ deal, currency, canEdit, onChanged }: Props) {
     <div className="max-w-lg">
 
       {/* Deal context */}
-      {(deal.dealPrice ?? deal.dealAmount) > 0 && (
+      {deal.dealAmount > 0 && (
         <div className="mb-3 border-b border-border/40 pb-2">
           <div className="flex items-center justify-between py-1">
             <span className="text-[12px] text-muted-foreground">
               Deal Amount
-              {deal.commissionPercentage ? <span className="ml-1 text-muted-foreground/60">× {deal.commissionPercentage}%</span> : null}
             </span>
             <span className="text-[12px] text-muted-foreground tabular-nums font-mono">
-              {fmt(deal.dealPrice ?? deal.dealAmount, currency)}
+              {fmt(deal.dealAmount, currency)}
             </span>
           </div>
         </div>
@@ -803,7 +802,7 @@ export function PnLWaterfall({ deal, currency, canEdit, onChanged }: Props) {
                   />
                 )}
                 {agentSourcedStakes
-                  .filter((d) => d.parentStakeholderId === s.id)
+                  .filter((d) => d.parentEntryId === s.id)
                   .map((d) => (
                     <WaterfallRow
                       key={d.id}

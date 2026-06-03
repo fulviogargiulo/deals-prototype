@@ -1,8 +1,11 @@
 export { sharedClients } from "./clients";
 export { sharedOpportunities } from "./opportunities";
 export { sharedProperties } from "./properties";
+export { sharedAssets } from "./assets";
+export { sharedMortgages } from "./mortgages";
 export { sharedOffers } from "./offers";
 export { sharedDeals } from "./deals";
+export { sharedTranches } from "./tranches";
 export { sharedInvoices } from "./invoices";
 export { sharedLedgers } from "./ledgers";
 export { sharedPostings } from "./postings";
@@ -11,7 +14,8 @@ export { sharedTasks } from "./tasks";
 export { sharedDocuments } from "./documents";
 export { sharedAgents } from "./agents";
 export { sharedParties } from "./parties";
-export { sharedDealStakeholders } from "./dealStakeholders";
+export { sharedPnlEntries } from "./pnlEntries";
+export { sharedDealParticipants } from "./dealParticipants";
 export { sharedDocumentRequirementTemplates } from "./documentRequirementTemplates";
 export { sharedDealDocumentRequirements } from "./dealDocumentRequirements";
 export { sharedAgentDocuments } from "./agentDocuments";
@@ -49,11 +53,19 @@ export {
   getPostingLinesForPosting,
   getPostingLinesForLedger,
   getPostingLinesForInvoice,
-  getDealStakeholdersForDeal,
-  getDealStakeholdersForParty,
+  getPnlEntriesForTranche,
+  getPnlEntriesForDeal,
+  getDealParticipantsForDeal,
+
   getClientForDeal,
   getAgentStakeForDeal,
   computeAgentCommission,
+  getTranchesForDeal,
+  findTranchById,
+  getStakeholdersForTranche,
+  getDocReqsForTranche,
+  getInvoicesForTranche,
+  getPostingsForTranche,
 } from "./queries";
 export { generateManyClients } from "./manyClientsGenerator";
 export { buildWaterfallInput } from "./dealWaterfall";

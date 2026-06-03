@@ -41,6 +41,8 @@ export type OpportunityStatus =
 
 export type BusinessUnit = "rebu" | "mortgage";
 
+export type AssetType = "real_estate" | "financial_product";
+
 export type PnlEngine = "rebu" | "mbu-ma-broker" | "mbu-direct" | "manual";
 
 export type Country = "ae" | "es" | "sa";
@@ -89,14 +91,14 @@ export type BusinessProcess =
  *   ACQUISITION_DEDUCTION  (Bucket C)
  *     Huspy-borne cost that reduces the commission base shared with agents
  *     (co-brokers, external referrals, partner fees).
- *     When parentStakeholderId is set → cost is charged to that agent's pool instead
+ *     When parentEntryId is set → cost is charged to that agent's pool instead
  *     of the Huspy-level base (agent-borne cost, deducted from agent payout only).
  *     UI label: "External Partners" (top-level) / "Agent cost" (agent-borne)
  *
  *   OPERATIONAL_DEDUCTION  (Bucket D)
  *     Huspy-only cost deducted AFTER agent splits — does not reduce agent commissions
  *     (legal, admin, internal service costs).
- *     When parentStakeholderId is set → same agent-borne logic as ACQUISITION_DEDUCTION.
+ *     When parentEntryId is set → same agent-borne logic as ACQUISITION_DEDUCTION.
  *     UI label: "Service Costs" (top-level) / "Agent cost" (agent-borne)
  *
  *   AGENT_PAYOUT  (Bucket B)
@@ -118,15 +120,21 @@ export type BusinessProcess =
  *     Primary DEMAND party is the canonical source for Deal.clientName display cache.
  *
  * [TO BE DETERMINED] Agent split percentages will migrate to an Offer entity
- * linked from the deal; splitPercentage on DealStakeholder is the interim source of truth.
+ * linked from the deal; splitPercentage on PnlEntry is the interim source of truth.
  */
-export type StakeholderType =
+
+/** Financial waterfall roles — belong on PnlEntry (Tranche-scoped). */
+export type PnlRole =
   | "REVENUE_SOURCE"
   | "OPERATIONAL_DEDUCTION"
   | "ACQUISITION_DEDUCTION"
-  | "AGENT_PAYOUT"
-  | "SUPPLY"
-  | "DEMAND";
+  | "AGENT_PAYOUT";
+
+/** Identity-only roles — belong on DealParticipant (Deal-scoped). No financial effect. */
+export type ParticipantRole = "DEMAND" | "SUPPLY";
+
+/** @deprecated Use PnlRole for financial entries or ParticipantRole for identity roles. */
+export type StakeholderType = PnlRole | ParticipantRole;
 
 // ============================================================
 // Waterfall — cost-bucket taxonomy used by the lean P&L engine.

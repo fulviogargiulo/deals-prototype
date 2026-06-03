@@ -64,7 +64,7 @@ export function DealTimeline({ currentStatus }: DealTimelineProps) {
   return (
     <div className="bg-card rounded-2xl px-5 py-4">
       <p className="text-[12px] font-semibold text-[hsl(var(--fg-secondary))] leading-[140%] uppercase tracking-wide mb-4">
-        Deal Progress
+        Progress
       </p>
 
       <div className="grid items-center gap-y-1.5" style={{ gridTemplateColumns: gridCols }}>

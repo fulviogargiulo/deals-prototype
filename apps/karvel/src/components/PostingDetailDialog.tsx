@@ -91,12 +91,12 @@ export function PostingDetailDialog({
               </div>
               <div>
                 <p className="text-muted-foreground text-[11px] uppercase tracking-wide font-semibold mb-0.5">Deal</p>
-                {posting.dealId ? (
+                {posting.trancheId ? (
                   <button
-                    onClick={() => { onOpenChange(false); navigate(`/deals/${posting.dealId}`); }}
+                    onClick={() => { onOpenChange(false); navigate(`/deals/${posting.trancheId}`); }}
                     className="font-medium font-mono text-primary underline underline-offset-2 hover:opacity-80"
                   >
-                    {posting.dealId}
+                    {posting.trancheId}
                   </button>
                 ) : <p className="font-medium">—</p>}
               </div>

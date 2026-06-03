@@ -117,11 +117,34 @@ Two adjacent products exist on the market. We rent one and build the other.
 
 Revolut runs a transactional ledger engine internally, what they don't run is statutory bookkeeping. Same split here: bookkeeping → Xero, transactional sub-ledger → us.
 
-For full REBU+MBU coverage across geographies with actors paid at different cadence and grouping, these are three requirements have no shape in Xero:
+Three requirements have no shape in Xero:
 
-1. **Multi-party running balances.** Banks, mortgage consultants, MA/BYOB/BBG brokers all carry ongoing balances with Huspy across many deals, see [P&L Engines](https://huspy.atlassian.net/wiki/spaces/corp/pages/2441248770). Xero gives one number per vendor, post-invoice.
-2. **Cadence settlement.** Agents, Brokers and MCs can be paid weekly or monthly, with one invoice claiming N deals' commissions. Modelled as `commission_accrual` postings per deal, claimed later. See [Domain Model — 3.5 Deal → Invoice → PostingLine](https://huspy.atlassian.net/wiki/spaces/corp/pages/2431090692/Domain+Model+-+Entity+Relationships#3.5-Deal-%E2%86%92-Invoice-%E2%86%92-PostingLine)
-3. **Non-deal events.** Training fees, bonuses, manual adjustments land on the party's balance without belonging to a deal.
+| Requirement | Why Xero can't cover it | MBU specifics |
+| --- | --- | --- |
+| **Per-party running balances** | Xero shows a vendor balance only after an invoice exists. Between `commission_accrual` and the agent's next invoice submission, there is no Xero record — only the subledger answers "what do we owe this agent right now?" | MA/BYOB brokers accumulate accruals across deals in a reporting month. Their rate tier depends on total monthly GMV across all banks — unknown until month-end. Provisional accruals sit in the subledger while the month is open. |
+| **Cadence settlement** | Commission liability is recognised at deal status change, not at invoice arrival. `PostingLine.invoiceId` is null from accrual until the agent picks lines for their statement — that pick event assembles the invoice and triggers the Xero push. No subledger means no ledger of uninvoiced liabilities to pick from. | BBG deals have up to 4 parties (RM, TL, DS, External broker) each accruing independently and invoicing at different times. |
+| **Non-deal events** | Bonuses, platform fees, and manual adjustments post directly to the agent's subledger and are included in their next invoice. Xero never sees these until an invoice exists; without the subledger Finance tracks them in spreadsheets. | Same pattern for broker service fees and BBG incentive corrections. |
+
+**On build vs buy:** the storage layer — two Postgres tables and a balance constraint — is roughly 2–3 days of backend work and is not the engineering risk. The P&L engines, provisional accrual revision, Spain posting-line picker, and Xero sync are domain logic that no vendor supplies; those are the same regardless of where posting rows are stored.
+
+| | **Simple ledger (no double-entry)** | **Build (Postgres + double-entry)** | **Formance** | **Fragment** | **Intacct / NetSuite** |
+| --- | --- | --- | --- | --- | --- |
+| Ledger storage & double-entry invariant | Single-entry only — no invariant | You build | Provided | Provided | Provided |
+| Per-party balance queries | Your SQL | Your SQL | Formance API | Fragment API | Provided (native subledger) |
+| P&L engines (REBU / MBU / BBG) | You build | You build | You build | You build | You build |
+| Blueprint / tax rates | You build | You build | You build | You build | You build |
+| Provisional accrual revision | You build | You build | You build | You build | You build |
+| Posting-line picker (Spain) | Your SQL | Your SQL | Your DB + Formance metadata | Your DB + Fragment metadata | You build |
+| Xero sync | You build | You build | You build | You build | N/A — replaces Xero |
+| Infrastructure ops | Your DB | Your DB | You host | Vendor-managed | Vendor-managed |
+| Vendor cost | None | None | Free (MIT licence); infra ~€50–200/month self-hosted; managed = custom quote | Usage-based, not public — contact sales | €25–100k/year subscription + €30–75k implementation |
+| Silent error detection | No — miscredited entries post without rejection | Yes | Yes | Yes | Yes |
+| Audit / Phase 3 ready | No — must rebuild if ledger flips to source of truth | Yes | Yes | Yes | Yes |
+| **When does it make sense?** | Shadow mode only, never intended to flip to source of truth; team accepts the silent error risk | High volume (>60,000 postings/month) — fixed build cost (~2–3 days) fully amortised; SaaS cost scales linearly | Mid volume (10,000–60,000 postings/month) — want invariant enforcement without SaaS cost; team can manage self-hosted service | Low-to-mid volume (<10,000 postings/month) — usage-based fee is small; SaaS convenience outweighs build cost at early stage | Independent of volume — triggered by multi-entity consolidation need across Spain / UAE / Saudi, or regulated context |
+
+**The real risk is correctness, not build complexity.** Double-entry errors are silent and compounding. Shadow mode (see below) is the mitigation — Xero remains source of truth in Phase 1, so errors in the internal ledger don't corrupt the books while correctness is validated.
+
+**Phase 1 posture:** the subledger runs in shadow mode — Xero remains the statutory source of truth. Flipping that is a Phase 3+ decision gated on a zero-divergence window (see §3.3 risk table).
 
 **Principle.** We are building a deal system that happens to keep clean books, not an accounting platform that happens to know about deals. Every scope conversation is rooted there.
 

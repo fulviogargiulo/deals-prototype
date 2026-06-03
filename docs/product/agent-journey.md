@@ -17,98 +17,114 @@ In relation to Deals & Payments products, we plan to add a new Deals section in 
 
 # 3. The Deals Tab
 
+The Deals list shows one row per Deal. The status shown is the `AgentDealStatus` derived from all Tranches on the deal:
+
+| `AgentDealStatus` | Badge | Meaning |
+| --- | --- | --- |
+| `action-required` | Amber | At least one Tranche needs the agent's input (provide docs, confirm commission) |
+| `in-progress` | Blue | Ops is processing; no agent action needed |
+| `closed` | Green | All Tranches finalized or canceled |
+
+The commission shown in the list is the sum of confirmed `AGENT_PAYOUT` amounts across all **finalized** Tranches on the deal.
+
 ### The Actions Required Section — The Agent's Queue
 
 The top of the Deals page surfaces everything that needs the agent's attention. This is the primary entry point into the deal flow. Two types of action appear here:
 
-**Provide Missing Info** (`pending-details`)
+**Provide Missing Info** (Tranche in `pending-details`)
 
-Ops has reviewed the deal and flagged that something is missing. The agent is notified and the deal appears in the "Pending Info" section. Clicking through opens the deal with the **Missing Information** section expanded:
+Ops has reviewed the Tranche and flagged that something is missing. The agent is notified and the deal appears in the "Pending Info" section. Clicking through opens the deal, defaulting to the affected Tranche tab, with the **Missing Information** section expanded:
 
 * A list of required documents with individual upload buttons (pending items shown first)
 * A mandatory note field to explain anything Ops needs to know
-* A **Submit for Review** button — this moves the deal back to **Under Review**
+* A **Submit for Review** button — this moves the Tranche back to **Under Review**
 
-**Confirm Commission** (`pending-agent-approval`)
+**Confirm Commission** (Tranche in `pending-agent-approval`)
 
-Ops has finalized the commission terms. The agent needs to confirm.
+Ops has finalized the commission terms for this Tranche. The agent needs to confirm.
 
-Inside the deal, the commission breakdown is expanded and non-collapsible at this stage:
+Inside the Tranche view, the commission breakdown is expanded and non-collapsible at this stage:
 
 * Deal price → Gross revenue → Acquisition deductions → Operational deductions → Net revenue → Commission rate → **Your payout**
 * If the agent is one of multiple agents on the deal, their split percentage is shown
 
 | Button | What it does |
 | --- | --- |
-| **Confirm** | Approves the commission terms. Deal moves to Invoicing. Finance can now invoice the client. |
-| **Request Review** | Pushes the deal back to Ops with a written reason. Deal reverts to Under Review. |
+| **Confirm** | Approves the commission terms. Tranche moves to Invoicing. Finance can now invoice the client. |
+| **Request Review** | Pushes the Tranche back to Ops with a written reason. Tranche reverts to Under Review. |
 
 ## 3.1 Inside a Deal Page
 
-### Pending Details
+When a Deal has multiple Tranches (e.g. Arras + Escritura), the deal detail page shows a **Tranche tab strip** below the deal header. Each tab displays the Tranche index, its label (if set), and a status badge. Switching tabs changes all sections below — progress, documents, comments, commission — to show data scoped to the selected Tranche. Each Tranche has a fully independent document checklist and comment thread.
+
+For single-Tranche deals, no tabs are shown — the experience is identical to the prior single-deal view.
+
+All sections below are scoped to the **selected Tranche**. Switching Tranche tabs resets the view to the selected Tranche's data.
+
+### Pending Details (Tranche)
 
 The user can:
 
-* Upload the requested documents
+* Upload the requested documents for this Tranche
 * Download uploaded documents and templates (if available)
 * Add a note for Huspy
-* Submit note and/or documents for Review (Deal moves from Pending Details → Under Review)
-* See the comments on the deal
+* Submit note and/or documents for Review (Tranche moves from Pending Details → Under Review)
+* See the comments on this Tranche
 
-### Under Review
-
-The user can:
-
-* Download uploaded documents
-* See and create comments on the deal
-
-The deal is pending ops input.
-
-### Pending Agent Approval
+### Under Review (Tranche)
 
 The user can:
 
-* Download uploaded documents
-* See the commission calculation breakdown (Karvel P&L waterfall view), including:
+* Download uploaded documents for this Tranche
+* See and create comments on this Tranche
+
+This Tranche is pending ops input.
+
+### Pending Agent Approval (Tranche)
+
+The user can:
+
+* Download uploaded documents for this Tranche
+* See the commission calculation breakdown for this Tranche (P&L waterfall), including:
 
     * All revenue sources
-    * Acquisition costs beared by agents or Huspy
-    * Net revenues (i.e. commission pool) and agent split
+    * Acquisition costs borne by agents or Huspy
+    * Net revenues (commission pool) and agent split
     * Operational costs
-    * His commission
-    * His connected agents commission
+    * Their commission
+    * Their connected agents' commission
 
-* Confirm commission (Deal moves from Pending Agent Approval → Invoicing)
-* Add a note and request review (Deal moves from Pending Agent Approval → Under Review)
-* See and create comments on the deal
+* Confirm commission (Tranche moves from Pending Agent Approval → Invoicing)
+* Add a note and request review (Tranche moves from Pending Agent Approval → Under Review)
+* See and create comments on this Tranche
 
-The deal is pending agent input.
+This Tranche is pending agent input.
 
-### Invoicing
-
-The user can:
-
-* Download attached documents
-* See the commission calculation breakdown
-* See and create comments on the deal
-
-The deal is pending that linked invoices are Paid.
-
-### Finalized
+### Invoicing (Tranche)
 
 The user can:
 
-* Download attached documents
-* See the commission calculation breakdown
-* See comments on the deal
+* Download attached documents for this Tranche
+* See the commission calculation breakdown for this Tranche
+* See and create comments on this Tranche
 
-### Canceled
+This Tranche is pending that its linked invoices are Paid.
+
+### Finalized (Tranche)
 
 The user can:
 
-* Download attached documents
-* See the commission calculation breakdown
-* See comments on the deal
+* Download attached documents for this Tranche
+* See the commission calculation breakdown for this Tranche
+* See comments on this Tranche
+
+### Canceled (Tranche)
+
+The user can:
+
+* Download attached documents for this Tranche
+* See the commission calculation breakdown for this Tranche
+* See comments on this Tranche
 
 # 4. The Earnings Tab
 

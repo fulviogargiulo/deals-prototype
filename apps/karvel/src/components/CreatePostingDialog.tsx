@@ -21,7 +21,7 @@ type PostingDraft = {
   businessProcess: string;
   businessUnit: BusinessUnit | "";
   externalRef: string;
-  dealId: string;
+  trancheId: string;
   valueDate: string;
   description: string;
   lines: DraftLine[];
@@ -45,7 +45,7 @@ function emptyDraft(defaultSubledgerName = ""): PostingDraft {
     businessProcess: "manual_adjustment",
     businessUnit: "" as BusinessUnit | "",
     externalRef: "",
-    dealId: "",
+    trancheId: "",
     valueDate: new Date().toISOString().slice(0, 10),
     description: "",
     lines: [newLine("CREDIT", defaultGLId, defaultSubId), newLine("DEBIT")],
@@ -137,7 +137,7 @@ export function CreatePostingDialog({ open, onOpenChange, onCreated, defaultSubl
     const now = new Date().toISOString();
     const posting: Posting = {
       id: postingId,
-      dealId: draft.dealId || undefined,
+      trancheId: draft.trancheId || undefined,
       businessUnit: draft.businessUnit || null,
       businessProcess: draft.businessProcess as any,
       externalRef: draft.externalRef || undefined,
@@ -223,8 +223,8 @@ export function CreatePostingDialog({ open, onOpenChange, onCreated, defaultSubl
             </label>
             <input
               type="text"
-              value={draft.dealId}
-              onChange={(e) => setDraft((d) => ({ ...d, dealId: e.target.value }))}
+              value={draft.trancheId}
+              onChange={(e) => setDraft((d) => ({ ...d, trancheId: e.target.value }))}
               placeholder="e.g. deal-001"
               className="w-full border border-border rounded-md px-3 py-2 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
             />

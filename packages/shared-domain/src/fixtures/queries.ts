@@ -1,7 +1,7 @@
 // Query helpers — stand-ins for what a real backend's query layer would do.
 // Both apps can use these against the canonical fixtures.
 
-import type { ClientWithOpportunities, DealStakeholder } from "../entities";
+import type { ClientWithOpportunities, PnlEntry } from "../entities";
 import { sharedClients } from "./clients";
 import { sharedOpportunities } from "./opportunities";
 import { sharedTasks } from "./tasks";
@@ -12,7 +12,12 @@ import { sharedInvoices } from "./invoices";
 import { sharedLedgers } from "./ledgers";
 import { sharedPostings } from "./postings";
 import { sharedPostingLines } from "./postingLines";
-import { sharedDealStakeholders } from "./dealStakeholders";
+import { sharedPnlEntries } from "./pnlEntries";
+import { sharedDealParticipants } from "./dealParticipants";
+import { sharedTranches } from "./tranches";
+import { sharedDeals } from "./deals";
+import { sharedDealDocumentRequirements } from "./dealDocumentRequirements";
+
 
 export const getClientWithOpportunities = (clientId: string): ClientWithOpportunities | undefined => {
   const client = sharedClients.find((c) => c.id === clientId);
@@ -47,15 +52,38 @@ export const getPartyForClient = (clientId: string) => {
 
 export const getInvoiceById = (id: string) => sharedInvoices.find((i) => i.id === id);
 
-// Invoice → Deal is traversed via Posting.dealId → PostingLine.invoiceId.
+// ── Tranche helpers ───────────────────────────────────────────────────────────
+
+export const getTranchesForDeal = (dealId: string) => sharedTranches.filter((t) => t.dealId === dealId);
+export const findTranchById = (id: string) => sharedTranches.find((t) => t.id === id);
+
+export const getPnlEntriesForTranche = (trancheId: string) =>
+  sharedPnlEntries.filter((s) => s.trancheId === trancheId);
+
+/** @deprecated Use getPnlEntriesForTranche. */
+export const getStakeholdersForTranche = getPnlEntriesForTranche;
+
+export const getDocReqsForTranche = (trancheId: string) =>
+  sharedDealDocumentRequirements.filter((r) => r.trancheId === trancheId);
+
+export const getInvoicesForTranche = (trancheId: string) =>
+  sharedInvoices.filter((i) => i.trancheId === trancheId);
+
+export const getPostingsForTranche = (trancheId: string) =>
+  sharedPostings.filter((p) => p.trancheId === trancheId);
+
+// ── Invoice / Posting helpers ─────────────────────────────────────────────────
+
+// Invoice → Tranche via trancheId FK (direct) or via posting.trancheId → posting line invoiceId.
 export const getInvoicesForDeal = (dealId: string) => {
-  const postingIds = new Set(sharedPostings.filter((p) => p.dealId === dealId).map((p) => p.id));
-  const ids = new Set(
+  const trancheIds = new Set(sharedTranches.filter((t) => t.dealId === dealId).map((t) => t.id));
+  const postingIds = new Set(sharedPostings.filter((p) => p.trancheId && trancheIds.has(p.trancheId)).map((p) => p.id));
+  const linkedInvoiceIds = new Set(
     sharedPostingLines
       .filter((l) => postingIds.has(l.postingId) && l.invoiceId)
       .map((l) => l.invoiceId as string)
   );
-  return sharedInvoices.filter((i) => ids.has(i.id));
+  return sharedInvoices.filter((i) => (i.trancheId && trancheIds.has(i.trancheId)) || linkedInvoiceIds.has(i.id));
 };
 
 export const getInvoicesForAgent = (agentId: string) => {
@@ -67,32 +95,44 @@ export const getInvoicesForAgent = (agentId: string) => {
 export const getLedgerById = (id: number) => sharedLedgers.find((l) => l.id === id);
 export const getSubledgersForGL = (glId: number) => sharedLedgers.filter((l) => l.glId === glId);
 
-// Posting → Deal uses the direct dealId FK.
-export const getPostingsForDeal = (dealId: string) => sharedPostings.filter((p) => p.dealId === dealId);
+export const getPostingsForDeal = (dealId: string) => {
+  const trancheIds = new Set(sharedTranches.filter((t) => t.dealId === dealId).map((t) => t.id));
+  return sharedPostings.filter((p) => p.trancheId && trancheIds.has(p.trancheId));
+};
+
 export const getPostingLinesForPosting = (postingId: string) => sharedPostingLines.filter((l) => l.postingId === postingId);
 export const getPostingLinesForLedger = (ledgerId: number) => sharedPostingLines.filter((l) => l.ledgerId === ledgerId);
 export const getPostingLinesForInvoice = (invoiceId: string) => sharedPostingLines.filter((l) => l.invoiceId === invoiceId);
 
-// DealStakeholder helpers.
-export const getDealStakeholdersForDeal = (dealId: string) => sharedDealStakeholders.filter((s) => s.dealId === dealId);
-export const getDealStakeholdersForParty = (partyId: string) => sharedDealStakeholders.filter((s) => s.partyId === partyId);
+// ── PnlEntry helpers ─────────────────────────────────────────────────────────
 
-// Returns the agent-role DealStakeholder for a specific agent party on a given deal.
-export const getAgentStakeForDeal = (dealId: string, agentPartyId: string): DealStakeholder | undefined =>
-  sharedDealStakeholders.find((s) => s.dealId === dealId && s.partyId === agentPartyId && s.role === "AGENT_PAYOUT");
+export const getPnlEntriesForDeal = (dealId: string) => {
+  const trancheIds = new Set(sharedTranches.filter((t) => t.dealId === dealId).map((t) => t.id));
+  return sharedPnlEntries.filter((s) => trancheIds.has(s.trancheId));
+};
 
-// Computes the commission amount attributable to one agent based on their stake.
-// Uses amount when set (fixed payout); otherwise applies splitPercentage (defaults to 100%).
-export const computeAgentCommission = (totalAgentCommission: number, stake: DealStakeholder | undefined): number => {
+
+export const getDealParticipantsForDeal = (dealId: string) =>
+  sharedDealParticipants.filter((p) => p.dealId === dealId);
+
+export const getAgentStakeForDeal = (dealId: string, agentPartyId: string): PnlEntry | undefined => {
+  const trancheIds = new Set(sharedTranches.filter((t) => t.dealId === dealId).map((t) => t.id));
+  return sharedPnlEntries.find(
+    (s) => trancheIds.has(s.trancheId) && s.partyId === agentPartyId && s.role === "AGENT_PAYOUT"
+  );
+};
+
+// Computes the commission amount attributable to one agent based on their PnlEntry.
+export const computeAgentCommission = (totalAgentCommission: number, stake: PnlEntry | undefined): number => {
   if (!stake) return totalAgentCommission;
   if (stake.amount !== undefined) return Math.abs(stake.amount);
   return Math.round(totalAgentCommission * ((stake.splitPercentage ?? 100) / 100));
 };
 
-// Returns the Client record for the primary client stakeholder on a deal.
 export const getClientForDeal = (dealId: string) => {
-  const stakeholders = sharedDealStakeholders.filter((s) => s.dealId === dealId);
-  const clientStakeholder = stakeholders.find((s) => s.role === "REVENUE_SOURCE");
-  if (!clientStakeholder) return undefined;
-  return sharedClients.find((c) => c.partyId === clientStakeholder.partyId);
+  const trancheIds = new Set(sharedTranches.filter((t) => t.dealId === dealId).map((t) => t.id));
+  const entries = sharedPnlEntries.filter((s) => trancheIds.has(s.trancheId));
+  const revenueEntry = entries.find((s) => s.role === "REVENUE_SOURCE");
+  if (!revenueEntry) return undefined;
+  return sharedClients.find((c) => c.partyId === revenueEntry.partyId);
 };

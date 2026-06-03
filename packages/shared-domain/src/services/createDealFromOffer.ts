@@ -1,4 +1,4 @@
-import type { Deal, DealStakeholder, Offer, Property } from "../entities";
+import type { Deal, PnlEntry, Offer, Property } from "../entities";
 import { getBlueprint } from "../blueprints";
 
 const COUNTRY_TO_CURRENCY = { ae: "AED", es: "EUR", sa: "SAR" } as const;
@@ -14,13 +14,13 @@ const COUNTRY_TO_CURRENCY = { ae: "AED", es: "EUR", sa: "SAR" } as const;
 export function createDealFromOffer(
   offer: Offer,
   property?: Property,
-): { dealContext: Pick<Deal, "offerId" | "propertyId" | "country" | "currency" | "blueprintId" | "title" | "buildingName">; agentStakeholders: Omit<DealStakeholder, "dealId">[] } {
+): { dealContext: Pick<Deal, "offerId" | "assetId" | "country" | "currency" | "title">; agentStakeholders: Omit<PnlEntry, "trancheId">[] } {
   const country = offer.country;
   const currency = offer.currency ?? COUNTRY_TO_CURRENCY[country];
   const blueprint = getBlueprint(country, "rebu");
-  const propertyTitle = property?.name ?? offer.propertyName ?? offer.propertyId ?? "Unknown Property";
+  const propertyTitle = property?.name ?? offer.assetName ?? offer.assetId ?? "Unknown Property";
 
-  const agentStakeholders: Omit<DealStakeholder, "dealId">[] = [];
+  const agentStakeholders: Omit<PnlEntry, "trancheId">[] = [];
 
   if (offer.buyerAgentId) {
     agentStakeholders.push({
@@ -49,12 +49,10 @@ export function createDealFromOffer(
   return {
     dealContext: {
       offerId: offer.id,
-      propertyId: offer.propertyId,
+      assetId: offer.assetId,
       country,
       currency,
-      blueprintId: blueprint.id,
       title: propertyTitle,
-      buildingName: propertyTitle,
     },
     agentStakeholders,
   };

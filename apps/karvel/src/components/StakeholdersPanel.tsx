@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { UserPlus, X, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
-  sharedDealStakeholders,
+  sharedPnlEntries,
   sharedParties,
   sharedAgents,
 } from "@huspy/shared-domain";
-import type { DealStakeholder, Party, ProjectedPnL, StakeholderType } from "@huspy/shared-domain";
+import type { PnlEntry, Party, ProjectedPnL, StakeholderType } from "@huspy/shared-domain";
 
 const ALL_TYPES: StakeholderType[] = [
   "AGENT_PAYOUT",
@@ -54,8 +54,8 @@ interface Props {
 
 export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, canEdit = false }: Props) {
   const navigate = useNavigate();
-  const [stakes, setStakes] = useState<DealStakeholder[]>(() =>
-    sharedDealStakeholders.filter((s) => s.dealId === dealId)
+  const [stakes, setStakes] = useState<PnlEntry[]>(() =>
+    sharedPnlEntries.filter((s) => s.trancheId === dealId)
   );
   const [isAdding, setIsAdding] = useState(false);
   const [role, setRole] = useState<StakeholderType>("REVENUE_SOURCE");
@@ -157,7 +157,7 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
     const amount = parseFloat(amountStr) || undefined;
     const splitPercentage = isAgentRole ? (parseInt(splitPctStr) || 100) : undefined;
 
-    const stake: DealStakeholder = {
+    const stake: PnlEntry = {
       id: `ds-${dealId}-${role}-${Date.now()}`,
       dealId,
       partyId: selectedParty.id,
@@ -169,15 +169,15 @@ export function StakeholdersPanel({ dealId, currency = "EUR", pnl, onChanged, ca
         : isPayerRole ? amount
         : undefined,
     };
-    sharedDealStakeholders.push(stake);
+    sharedPnlEntries.push(stake);
     setStakes((prev) => [...prev, stake]);
     setIsAdding(false);
     onChanged?.();
   };
 
   const handleRemove = (stakeId: string) => {
-    const idx = sharedDealStakeholders.findIndex((s) => s.id === stakeId);
-    if (idx !== -1) sharedDealStakeholders.splice(idx, 1);
+    const idx = sharedPnlEntries.findIndex((s) => s.id === stakeId);
+    if (idx !== -1) sharedPnlEntries.splice(idx, 1);
     setStakes((prev) => prev.filter((s) => s.id !== stakeId));
     onChanged?.();
   };

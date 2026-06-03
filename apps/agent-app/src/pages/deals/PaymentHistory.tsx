@@ -10,7 +10,7 @@ import { getInvoices, getPostingLines } from '@/data/earningsStore';
 import { buildWaterfallInput, calculateProjectedPnL, computeAgentCommission, sharedPostings, sharedAgents, sharedLedgers } from '@huspy/shared-domain';
 import { useDevTools } from '@/contexts/dev-tools-context';
 import type { Deal, StatementOfAccount, StatementLineItem } from '@/types';
-import type { DealStakeholder } from '@huspy/shared-domain';
+import type { PnlEntry } from '@huspy/shared-domain';
 
 function formatPeriodLabel(period: string): string {
   if (/^\d{4}-Q\d$/.test(period)) {
@@ -43,7 +43,7 @@ function buildExpectedStatement(agentPartyId: string, agentLedgerId: string | un
             : l.posting.businessProcess === 'huspy_fee' ? 'support-fee'
             : 'other',
     amount: l.amount,
-    dealId: l.posting.dealId,
+    dealId: l.posting.trancheId,
   }));
 
   const totalCredit = lineItems.filter(li => li.type === 'credit').reduce((s, li) => s + li.amount, 0);
@@ -66,12 +66,12 @@ function buildExpectedStatement(agentPartyId: string, agentLedgerId: string | un
   };
 }
 
-function resolvedCommission(d: Deal, agentStakeMap: Map<string, DealStakeholder>): number {
+function resolvedCommission(d: Deal, agentStakeMap: Map<string, PnlEntry>): number {
   const stake = agentStakeMap.get(d.id);
   const input = buildWaterfallInput(d);
   const projection = input ? calculateProjectedPnL(input) : null;
   const split = projection?.splits.find(s => s.partyId === stake?.partyId);
-  return split?.agentPayout ?? computeAgentCommission(d.commissionAmount, stake);
+  return split?.agentPayout ?? computeAgentCommission(d.grossRevenue ?? 0, stake);
 }
 
 const PIPELINE_STATUSES = ['under-review', 'pending-agent-approval', 'invoicing'];

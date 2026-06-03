@@ -11,7 +11,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-001 — buy, finalized, ES/EUR | subtotal 11 377 + IVA 21% 2 389.17 = gross 13 766.17
   {
     id: "inv-001",
-    dealId: "deal-001",
+    trancheId: "tranche-001",
     direction: "outbound",
     partyId: "party-client-001",
     invoiceNumber: "INV-2026-001",
@@ -34,7 +34,7 @@ export const sharedInvoices: Invoice[] = [
   // inv-002: auto-created on deal → invoicing; Finance has not yet set due date or uploaded PDF
   {
     id: "inv-002",
-    dealId: "deal-008",
+    trancheId: "tranche-008",
     direction: "outbound",
     partyId: "party-client-002",
     invoiceNumber: "INV-2026-002",
@@ -49,7 +49,7 @@ export const sharedInvoices: Invoice[] = [
   // inv-003: Finance already completed and sent to Inmobiliaria Grupo Norte
   {
     id: "inv-003",
-    dealId: "deal-008",
+    trancheId: "tranche-008",
     direction: "outbound",
     partyId: "party-third-inmobiliaria-grupo-norte",
     invoiceNumber: "INV-2026-003",
@@ -68,7 +68,7 @@ export const sharedInvoices: Invoice[] = [
   // inv-004: auto-created on deal → invoicing; Finance has not yet set due date or uploaded PDF
   {
     id: "inv-004",
-    dealId: "deal-014",
+    trancheId: "tranche-014",
     direction: "outbound",
     partyId: "party-third-caixabank",
     invoiceNumber: "INV-2026-004",
@@ -85,7 +85,7 @@ export const sharedInvoices: Invoice[] = [
   // inv-005: auto-created on deal → invoicing; Finance has not yet set due date or uploaded PDF
   {
     id: "inv-005",
-    dealId: "deal-015",
+    trancheId: "tranche-015",
     direction: "outbound",
     partyId: "party-third-snb",
     invoiceNumber: "INV-2026-005",
@@ -101,7 +101,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-016 — sell, finalized, AE/AED split seller + developer
   {
     id: "inv-006",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     direction: "outbound",
     partyId: "party-client-007",
     invoiceNumber: "INV-2026-006",
@@ -121,7 +121,7 @@ export const sharedInvoices: Invoice[] = [
   },
   {
     id: "inv-007",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     direction: "outbound",
     partyId: "party-third-emaar",
     invoiceNumber: "INV-2026-007",
@@ -143,7 +143,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-018 — buy, finalized, ES/EUR | subtotal 24 250 + IVA 21% 5 092.50 = gross 29 342.50
   {
     id: "inv-008",
-    dealId: "deal-018",
+    trancheId: "tranche-018",
     direction: "outbound",
     partyId: "party-client-004",
     invoiceNumber: "INV-2026-008",
@@ -231,7 +231,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-020 — outbound to Emaar (AED 24 000 + VAT 5% 1 200 = gross 25 200)
   {
     id: "inv-020",
-    dealId: "deal-020",
+    trancheId: "tranche-020",
     direction: "outbound",
     partyId: "party-third-emaar",
     invoiceNumber: "INV-2026-020",
@@ -255,7 +255,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-001 — Gestoría López & Asociados, EUR 800 + IVA 21% 168 = gross 968 (OPERATIONAL_DEDUCTION ds-deal-001-conv)
   {
     id: "inv-013",
-    dealId: "deal-001",
+    trancheId: "tranche-001",
     direction: "inbound",
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-013",
@@ -278,7 +278,7 @@ export const sharedInvoices: Invoice[] = [
   // inv-014: auto-created on deal → invoicing; vendor has not yet submitted their invoice
   {
     id: "inv-014",
-    dealId: "deal-008",
+    trancheId: "tranche-008",
     direction: "inbound",
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-014",
@@ -294,7 +294,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-016 — TAMM Legal Services, AED 3 000 + VAT 5% 150 = gross 3 150 (OPERATIONAL_DEDUCTION ds-deal-016-conv)
   {
     id: "inv-015",
-    dealId: "deal-016",
+    trancheId: "tranche-016",
     direction: "inbound",
     partyId: "party-conv-tamm-legal",
     invoiceNumber: "INV-2026-015",
@@ -316,7 +316,7 @@ export const sharedInvoices: Invoice[] = [
   // deal-018 — Gestoría López & Asociados, EUR 1 200 + IVA 21% 252 = gross 1 452 (OPERATIONAL_DEDUCTION ds-deal-018-conv)
   {
     id: "inv-016",
-    dealId: "deal-018",
+    trancheId: "tranche-018",
     direction: "inbound",
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-016",
@@ -340,7 +340,7 @@ export const sharedInvoices: Invoice[] = [
   // inv-021 — outbound: Huspy invoices client-003 (14 400 + IVA 21% 3 024 = 17 424)
   {
     id: "inv-021",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     direction: "outbound",
     partyId: "party-client-003",
     invoiceNumber: "INV-2026-021",
@@ -362,7 +362,7 @@ export const sharedInvoices: Invoice[] = [
   // inv-022 — inbound: Guilherme invoices Huspy (6 210 + IVA 21% 1 304.10 − IRPF 15% 931.50 = net 6 582.60)
   {
     id: "inv-022",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     direction: "inbound",
     partyId: "party-agent-002",
     invoiceNumber: "INV-2026-022",
@@ -386,7 +386,7 @@ export const sharedInvoices: Invoice[] = [
   // inv-023 — inbound: Gestoría López invoices Huspy (800 + IVA 21% 168 = 968)
   {
     id: "inv-023",
-    dealId: "deal-021",
+    trancheId: "tranche-021",
     direction: "inbound",
     partyId: "party-conv-gestoria-lopez",
     invoiceNumber: "INV-2026-023",
@@ -411,7 +411,7 @@ export const sharedInvoices: Invoice[] = [
   // deal → invoicing: invoice issued, awaiting DIB payment
   {
     id: "inv-011",
-    dealId: "deal-011",
+    trancheId: "tranche-011",
     direction: "outbound",
     partyId: "party-third-dib",
     invoiceNumber: "INV-2026-011",
@@ -431,7 +431,7 @@ export const sharedInvoices: Invoice[] = [
   // inv-024 — outbound: Huspy invoices ADIB (35 000 + VAT 5% 1 750 = gross 36 750)
   {
     id: "inv-024",
-    dealId: "deal-022",
+    trancheId: "tranche-022",
     direction: "outbound",
     partyId: "party-third-adib",
     invoiceNumber: "INV-2026-024",
@@ -495,5 +495,28 @@ export const sharedInvoices: Invoice[] = [
     paymentReference: "ADIB-TXN-20260522-7742",
     createdAt: "2026-05-18T09:00:00.000Z",
     updatedAt: "2026-05-22T00:00:00.000Z",
+  },
+
+  // ── tranche-026a ─ Arras tranche — finalized, ES/EUR ─────────────────────
+  // Huspy invoices client for arras commission: 4500 + IVA 21% = 5445 EUR
+  {
+    id: "inv-026a",
+    trancheId: "tranche-026a",
+    direction: "outbound",
+    partyId: "party-client-001",
+    invoiceNumber: "INV-2026-027",
+    status: "paid",
+    subtotal: 4500,
+    vatAmount: 945,
+    currency: "EUR",
+    issueDate: "2026-06-03",
+    dueDate: "2026-06-10",
+    paidDate: "2026-06-03",
+    invoiceFileName: "INV-2026-027.pdf",
+    proofFileName: "bank-stmt-2026-06-03-arras.pdf",
+    proofUploadedAt: "2026-06-03T11:00:00.000Z",
+    paymentReference: "SEPA-2026-0603-ARRAS",
+    createdAt: "2026-06-03T09:00:00.000Z",
+    updatedAt: "2026-06-03T11:00:00.000Z",
   },
 ];

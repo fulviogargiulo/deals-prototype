@@ -12,7 +12,7 @@ import { DealsFilterBar } from '@/components/deals/deals-filter-bar';
 import { ActionsRequiredSection } from '@/components/deals/actions-required-section';
 import { DealsTable } from '@/components/deals/deals-table';
 import { AgentEarningsView } from '@/components/deals/agent-earnings-view';
-import { getAgentDeals, getAgentStakeMap } from '@/data/mockDeals';
+import { getAgentDeals, getAgentStakeMap, getTranchesForDeal } from '@/data/mockDeals';
 import { useDevTools } from '@/contexts/dev-tools-context';
 
 export function DealsList() {
@@ -27,8 +27,12 @@ export function DealsList() {
   const agentDeals = getAgentDeals(activeAgentId);
   const agentStakeMap = getAgentStakeMap(activeAgentId);
 
-  const pendingConfirmation = agentDeals.filter(d => d.status === 'pending-agent-approval');
-  const pendingInfo = agentDeals.filter(d => d.status === 'pending-details');
+  const pendingConfirmation = agentDeals.filter(d =>
+    getTranchesForDeal(d.id).some(t => t.status === 'pending-agent-approval')
+  );
+  const pendingInfo = agentDeals.filter(d =>
+    getTranchesForDeal(d.id).some(t => t.status === 'pending-details')
+  );
 
   const filteredDeals = useMemo(() => {
     let result = dateRange

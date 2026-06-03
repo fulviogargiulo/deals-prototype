@@ -2,7 +2,7 @@ import type {
   AgentFinancials,
   AgentStrategy,
   Blueprint,
-  DealStakeholder,
+  PnlEntry,
 } from "./entities";
 import type {
   BusinessUnit,
@@ -29,7 +29,7 @@ import { getBlueprint } from "./blueprints";
  *     − OPERATIONAL_DEDUCTION stakes (Huspy-borne service costs, NOT shared with agents)
  *   = Huspy Net Margin
  *
- * Agent split percentages are read from DealStakeholder.splitPercentage.
+ * Agent split percentages are read from PnlEntry.splitPercentage.
  * [TO BE DETERMINED] These will migrate to an Offer entity once that entity exists.
  */
 
@@ -38,7 +38,7 @@ import { getBlueprint } from "./blueprints";
 export interface ProjectedAgentSplit {
   agentId: string;
   partyId: string;
-  /** Agent's share of the commission pool (DealStakeholder.splitPercentage / 100). */
+  /** Agent's share of the commission pool (PnlEntry.splitPercentage / 100). */
   shareOfPool: number;
   /** Agent's share of the commission base (= commissionBase × shareOfPool). */
   allocatedNet: number;
@@ -88,7 +88,7 @@ export interface ProjectedPnLInput {
    * a % of the disbursed mortgage amount, not of Huspy's gross revenue.
    */
   agentPayoutBase?: number;
-  stakeholders: DealStakeholder[];
+  stakeholders: PnlEntry[];
   agentFinancialsByAgentId: Record<string, AgentFinancials>;
   partyIdToAgentId: Record<string, string>;
   blueprint?: Blueprint;
@@ -165,7 +165,7 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
   let totalOperationalCost = 0;
 
   for (const stake of input.stakeholders) {
-    if (stake.parentStakeholderId) continue; // child of an agent stake — handled in Step 3
+    if (stake.parentEntryId) continue; // child of an agent stake — handled in Step 3
     if (stake.role === "ACQUISITION_DEDUCTION") {
       const deductAmt = Math.abs(stake.amount ?? 0);
       if (deductAmt === 0) continue;
@@ -220,8 +220,8 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
     const allocatedNet = (input.agentPayoutBase ?? commissionBase) * shareOfPool;
     const agentGrossPayout = applyAgentStrategy(af.strategy, allocatedNet);
 
-    // Agent-borne costs: child stakes whose parentStakeholderId points to this agent stake.
-    const childStakes = input.stakeholders.filter((s) => s.parentStakeholderId === stake.id);
+    // Agent-borne costs: child stakes whose parentEntryId points to this agent stake.
+    const childStakes = input.stakeholders.filter((s) => s.parentEntryId === stake.id);
     const agentSourcedDeductions: ProjectedAgentSplit["agentSourcedDeductions"] = [];
     for (const child of childStakes) {
       const childAmount = Math.abs(child.amount ?? 0);

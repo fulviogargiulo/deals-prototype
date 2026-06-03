@@ -1,6 +1,7 @@
 import { sharedInvoices, sharedDeals, sharedPostings, sharedPostingLines, sharedDocuments } from "@huspy/shared-domain";
 import type { Invoice } from "@huspy/shared-domain";
-import { findDeal, updateDeal } from "@/data/dealStore";
+import { findDeal } from "@/data/dealStore";
+import { findTranche, updateTranche } from "@/data/trancheStore";
 import { fireCommissionAccrualOnTransition } from "@/lib/dealCalculations";
 
 const LEDGERS: Record<string, { AR: number; REV: number; VAT: number; EXP: number; AP: number; BANK: number }> = {
@@ -11,7 +12,8 @@ const LEDGERS: Record<string, { AR: number; REV: number; VAT: number; EXP: numbe
 
 export function createPaidPosting(inv: Invoice): void {
   const l = LEDGERS[inv.currency] ?? LEDGERS.EUR;
-  const deal = sharedDeals.find((d) => d.id === inv.dealId);
+  const tranche = inv.trancheId ? findTranche(inv.trancheId) : undefined;
+  const deal = tranche ? findDeal(tranche.dealId) : undefined;
   const now = new Date().toISOString();
   const pid = `posting-auto-${inv.id}-paid-${Date.now()}`;
   const vat = inv.vatAmount ?? 0;
@@ -19,7 +21,7 @@ export function createPaidPosting(inv: Invoice): void {
 
   sharedPostings.push({
     id: pid,
-    dealId: inv.dealId,
+    trancheId: inv.trancheId,
     businessUnit: deal?.businessUnit ?? null,
     businessProcess: (inv.direction === "outbound" ? "bank_statement_inbound_matched" : "bank_statement_outbound_matched") as any,
     createdBy: "ops",
@@ -38,22 +40,18 @@ export function createPaidPosting(inv: Invoice): void {
   }
 }
 
-/**
- * Attach an outbound invoice to its deal as a Document so the agent can
- * download it from agent-app and chase the client for payment. Idempotent.
- * Inbound invoices are not surfaced to the agent.
- */
 export function attachInvoiceDocumentToDeal(invoice: Invoice): void {
-  if (invoice.direction !== "outbound" || !invoice.dealId) return;
+  if (invoice.direction !== "outbound" || !invoice.trancheId) return;
   if (sharedDocuments.some((d) => d.invoiceId === invoice.id)) return;
   const now = new Date().toISOString();
+  const tranche = findTranche(invoice.trancheId);
   sharedDocuments.push({
     id: `doc-inv-${invoice.id}`,
     name: `${invoice.invoiceNumber}.pdf`,
     type: "invoice",
     size: 0,
     mimeType: "application/pdf",
-    dealId: invoice.dealId,
+    dealId: tranche?.dealId,
     invoiceId: invoice.id,
     uploadedBy: "ops",
     createdAt: now,
@@ -62,20 +60,22 @@ export function attachInvoiceDocumentToDeal(invoice: Invoice): void {
 }
 
 export function autoFinalizeDealIfComplete(invoice: Invoice): void {
-  if (!invoice.dealId) return;
-  const deal = findDeal(invoice.dealId);
-  if (!deal || deal.status !== "invoicing") return;
-  const dealInvoices = sharedInvoices.filter((i) => i.dealId === invoice.dealId);
-  if (dealInvoices.length > 0 && dealInvoices.every((i) => i.status === "paid")) {
+  if (!invoice.trancheId) return;
+  const tranche = findTranche(invoice.trancheId);
+  if (!tranche || tranche.status !== "invoicing") return;
+  const deal = findDeal(tranche.dealId);
+  if (!deal) return;
+  const trancheInvoices = sharedInvoices.filter((i) => i.trancheId === invoice.trancheId);
+  if (trancheInvoices.length > 0 && trancheInvoices.every((i) => i.status === "paid")) {
     const now = new Date().toISOString();
-    updateDeal({
-      ...deal,
+    updateTranche({
+      ...tranche,
       status: "finalized",
       statusHistory: [
-        ...(deal.statusHistory ?? []),
+        ...(tranche.statusHistory ?? []),
         { from: "invoicing" as const, to: "finalized" as const, timestamp: now, note: "Auto-finalized: all invoices paid" },
       ],
     });
-    fireCommissionAccrualOnTransition(deal, "finalized");
+    fireCommissionAccrualOnTransition(tranche, deal, "finalized");
   }
 }

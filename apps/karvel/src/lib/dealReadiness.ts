@@ -138,7 +138,7 @@ function pendingAgentApprovalReadiness(): DealReadiness {
 }
 
 function invoicingReadiness(deal: Deal): DealReadiness {
-  const invs = sharedInvoices.filter((i) => i.dealId === deal.id);
+  const invs = sharedInvoices.filter((i) => i.trancheId === deal.id);
   const out = invs.filter((i) => i.direction === "outbound");
   const outPaid = out.filter((i) => i.status === "paid").length;
   return {
