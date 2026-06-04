@@ -21,7 +21,7 @@ export function ClosedStatusBanner({
     >
       {/* Status Icon - Circular with translucent green bg */}
       <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#10B18966]">
-        <CheckCheck className="w-4 h-4 text-ds-green" strokeWidth={2.5} />
+        <CheckCheck className="w-4 h-4 text-tier-success" strokeWidth={2.5} />
       </div>
 
       {/* Title & Subtitle */}

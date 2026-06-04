@@ -1,205 +1,9 @@
+@import "@huspy/design-system/tokens.css";
+@import "@huspy/design-system/shadcn-bridge.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
-@layer base {
-  :root {
-    --background: 0 0% 96%;
-    --background-card: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 0 0% 89.4%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.75rem;
-    
-    /* Huspy Brand Colors - Opportunity Types */
-    --huspy-buy: 185 100% 27%;
-    --huspy-buy-foreground: 0 0% 100%;
-    --huspy-rent: 240 88% 65%;
-    --huspy-rent-foreground: 0 0% 100%;
-    --huspy-sell: 17 69% 54%;
-    --huspy-sell-foreground: 0 0% 100%;
-    --huspy-lease: 304 56% 56%;
-    --huspy-lease-foreground: 0 0% 100%;
-    --huspy-mortgage: 99 24% 56%;
-    --huspy-mortgage-foreground: 0 0% 100%;
-    
-    /* Status Colors */
-    --status-new: 0 73% 73%;
-    --status-new-foreground: 0 0% 100%;
-    --status-qualified: 167 79% 52%;
-    --status-qualified-foreground: 0 0% 100%;
-    --status-active: 167 79% 52%;
-    --status-active-foreground: 0 0% 100%;
-    --status-under-offer: 33 93% 58%;
-    --status-under-offer-foreground: 30 40% 15%;
-    --status-closed: 142 76% 36%;
-    --status-closed-foreground: 0 0% 100%;
-    
-    /* Verification Colors */
-    --pending: 0 73% 73%;
-    --pending-foreground: 0 0% 100%;
-    --verified: 231 65% 63%;
-    --verified-foreground: 0 0% 100%;
-    
-    /* Updates & Actions */
-    --update-count: 0 73% 73%;
-    --update-count-foreground: 0 0% 100%;
-    --portal-badge: 45 93% 70%;
-    --portal-badge-foreground: 30 40% 15%;
-    
-    /* Missing/Warning */
-    --warning: 0 73% 73%;
-    --warning-foreground: 0 0% 100%;
-    --missing: 0 73% 73%;
-    
-    /* Avatar Colors */
-    --avatar-bg: 243 75% 59%;
-    --avatar-foreground: 0 0% 100%;
-    
-    /* ===== Design System Colors ===== */
-    
-    /* Core Accent Colors */
-    --accent-teal: 183 100% 23%;           /* #006D77 */
-    --accent-terracotta: 17 51% 47%;       /* #B85C38 */
-    --accent-indigo: 240 48% 47%;          /* #3F3FB4 */
-    --accent-orchid: 304 33% 46%;          /* #9C4F96 */
-    --accent-olive: 90 15% 36%;            /* #5C6B4F */
-    
-    /* Status Colors */
-    --ds-green: 160 83% 38%;               /* #10B189 */
-    --ds-orange: 38 85% 51%;               /* #ED9917 */
-    --ds-red: 352 91% 62%;                 /* #F6445C */
-    
-    /* Alpha Surfaces */
-    --surface-red-alpha: 352 91% 62% / 0.15;  /* #F6445C26 - 15% opacity red for error states */
-    --border-destructive-muted: 351 93% 87%;  /* #FCC0C9 - muted error border for unfocused state */
-    
-    /* Surface Colors (Design System) */
-    --surface-page: 0 0% 96%;              /* #F4F4F4 */
-    --surface-page-dark: 0 0% 10%;         /* #1A1A1A */
-    --surface-widget: 0 0% 100%;           /* #FFFFFF */
-    --surface-raised: 0 0% 94%;            /* #F0F0F0 */
-    --surface-accent: 0 0% 10%;            /* #1A1A1A */
-    
-    /* Foreground Colors (Design System) */
-    --fg-primary: 0 0% 10%;                /* #1A1A1A */
-    --fg-secondary: 0 0% 50%;              /* #808080 */
-    --fg-disabled: 0 0% 60%;               /* #999999 */
-    
-    /* Portal Brand Colors */
-    --portal-idealista: 65 85% 70%;        /* #E1F56E */
-    --portal-fotocasa: 236 54% 43%;        /* #333FAB */
-    --portal-pisos: 194 74% 58%;           /* #41B6E6 */
-    
-    /* Enhance dropdown styling */
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
-    
-    /* Navigation Colors */
-    --nav-active: 0 0% 96%;
-    --nav-active-icon: 222.2 84% 4.9%;
-    
-    /* Hierarchical Component Colors for better visual separation */
-    --surface-1: 0 0% 98%;
-    --surface-2: 0 0% 95%;
-    --surface-3: 0 0% 92%;
-    --surface-4: 0 0% 89%;
-    
-    --glass-bg: rgba(255, 255, 255, 0.1);
-    --glass-border: rgba(255, 255, 255, 0.18);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  }
-
-  .dark {
-    --background: 240 10% 3.9%;
-    --background-card: 240 8% 8%;
-    --foreground: 0 0% 98%;
-
-    --card: 240 8% 8%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 240 8% 12%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 64.9%;
-
-    --accent: 240 4% 16%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 240 4% 20%;
-    --input: 240 4% 16%;
-    --ring: 212.7 26.8% 83.9%;
-    
-    /* Dark mode adjustments for Huspy colors */
-    --huspy-buy: 185 100% 27%;
-    --huspy-rent: 240 88% 65%;
-    --huspy-sell: 17 69% 54%;
-    --huspy-lease: 304 56% 56%;
-    --huspy-mortgage: 99 24% 56%;
-    --avatar-bg: 243 75% 59%;
-    --avatar-foreground: 0 0% 100%;
-    
-    /* Hierarchical Component Colors for better visual separation */
-    --surface-1: 240 8% 8%;
-    --surface-2: 240 6% 12%;
-    --surface-3: 240 4% 16%;
-    --surface-4: 240 2% 20%;
-    
-    --glass-bg: rgba(0, 0, 0, 0.3);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    /* Navigation Colors - Dark Mode */
-    --nav-active: 240 4% 16%;
-    --nav-active-icon: 0 0% 98%;
-  }
-}
 
 @layer base {
   * {
@@ -211,42 +15,38 @@ All colors MUST be HSL.
     font-feature-settings: "rlig" 1, "calt" 1;
     letter-spacing: 0;
   }
-  
-  /* Smooth scrolling */
+
   html {
     scroll-behavior: smooth;
   }
-  
-  /* Custom scrollbar */
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
-  
+
   ::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     @apply bg-border rounded-full;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-border/80;
   }
-  
-  /* Focus styles - only show on keyboard navigation */
+
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
-  
+
   :focus:not(:focus-visible) {
     outline: none !important;
     box-shadow: none !important;
     ring: 0 !important;
   }
-  
-  /* Ensure buttons, links, and interactive elements don't show focus styles on click */
+
   button,
   a,
   [role="button"],
@@ -256,81 +56,67 @@ All colors MUST be HSL.
       box-shadow: none !important;
     }
   }
-  
-  /* Selection styles */
+
   ::selection {
     @apply bg-primary/20 text-primary-foreground;
   }
 }
 
-/* Custom utility classes */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
-  
+
   .line-clamp-1 {
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
   }
-  
+
   .line-clamp-2 {
     overflow: hidden;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
-  
-  .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--glass-shadow);
-  }
-  
-  /* Global transition utilities */
+
   .transition-smooth {
     @apply transition-all duration-300 ease-out;
   }
-  
+
   .transition-fast {
     @apply transition-all duration-150 ease-out;
   }
-  
+
   .transition-expand {
     transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
   }
-  
-  /* Expandable content with smooth animation */
+
   .expandable-content {
     display: grid;
     grid-template-rows: 0fr;
     opacity: 0;
     transition: grid-template-rows 0.3s ease-out, opacity 0.25s ease-out;
   }
-  
+
   .expandable-content.expanded {
     grid-template-rows: 1fr;
     opacity: 1;
   }
-  
+
   .expandable-content > * {
     overflow: hidden;
   }
-  
-  /* Hover interactions */
+
   .hover-lift {
     @apply transition-transform duration-200 hover:-translate-y-0.5;
   }
-  
+
   .hover-scale {
     @apply transition-transform duration-200 hover:scale-[1.02];
   }
-  
-  /* Global auto-hiding scrollbar - shows briefly then fades */
+
   .scrollbar-auto-hide,
   [data-radix-scroll-area-viewport],
   .overflow-auto,
@@ -339,87 +125,73 @@ All colors MUST be HSL.
   .overflow-scroll {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
-    
+
     &::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
-    
+
     &::-webkit-scrollbar-track {
       background: transparent;
     }
-    
+
     &::-webkit-scrollbar-thumb {
       background: hsl(var(--muted-foreground) / 0.3);
       border-radius: 3px;
       transition: background 0.3s ease, opacity 0.3s ease;
     }
-    
+
     &::-webkit-scrollbar-thumb:hover {
       background: hsl(var(--muted-foreground) / 0.5);
     }
   }
-  
-  /* Auto-fade scrollbar after initial display */
+
   @keyframes scrollbar-fade {
     0% { scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent; }
     70% { scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent; }
     100% { scrollbar-color: transparent transparent; }
   }
-  
+
   .scrollbar-auto-fade {
     animation: scrollbar-fade 1.5s ease-out forwards;
-    
+
     &:hover, &:active, &.scrolling {
       animation: none;
       scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
     }
-    
+
     &::-webkit-scrollbar-thumb {
       animation: scrollbar-fade 1.5s ease-out forwards;
     }
-    
+
     &:hover::-webkit-scrollbar-thumb,
     &:active::-webkit-scrollbar-thumb {
       animation: none;
       background: hsl(var(--muted-foreground) / 0.3);
     }
   }
-  
-  /* Hide scrollbar completely */
+
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-  
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari and Opera */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
-  /* New card highlight - soft background tint that fades out */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   @keyframes new-card-highlight {
-    0% {
-      background-color: hsl(var(--accent-teal) / 0.08);
-    }
-    60% {
-      background-color: hsl(var(--accent-teal) / 0.06);
-    }
-    100% {
-      background-color: transparent;
-    }
+    0%   { background-color: var(--alpha-teal-16); }
+    60%  { background-color: var(--alpha-teal-16); }
+    100% { background-color: transparent; }
   }
 
   .animate-new-card-highlight {
     animation: new-card-highlight 3s ease-out forwards;
   }
 
-  /* Floating particles animation */
   @keyframes floatParticle {
-    0% {
-      transform: translate(0, 0);
-    }
-    100% {
-      transform: translate(var(--float-dx, 10px), var(--float-dy, -8px));
-    }
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(var(--float-dx, 10px), var(--float-dy, -8px)); }
   }
 }

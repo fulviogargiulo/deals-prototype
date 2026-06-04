@@ -69,13 +69,13 @@ export function DocumentsList() {
   const getTypeColor = (type: DocumentType) => {
     switch (type) {
       case 'contract':
-        return 'bg-huspy-buy text-huspy-buy-foreground';
+        return 'bg-opp-bg-buy text-opportunity-buy';
       case 'id':
-        return 'bg-verified text-verified-foreground';
+        return 'bg-tier-info-bg text-tier-info';
       case 'financial':
-        return 'bg-status-active text-status-active-foreground';
+        return 'bg-tier-neutral-bg text-tier-neutral';
       case 'property':
-        return 'bg-huspy-sell text-huspy-sell-foreground';
+        return 'bg-opp-bg-sell text-opportunity-sell';
       default:
         return 'bg-muted text-muted-foreground';
     }
@@ -104,7 +104,7 @@ export function DocumentsList() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Documents</h1>
+            <h1 className="text-3xl font-semibold">Documents</h1>
             <p className="text-muted-foreground">Manage client and property documents</p>
           </div>
           <Button>
@@ -116,37 +116,37 @@ export function DocumentsList() {
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{typeCounts.all}</div>
+            <div className="text-2xl font-semibold">{typeCounts.all}</div>
             <div className="text-sm text-muted-foreground">Total Documents</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-huspy-buy">{typeCounts.contract}</div>
+            <div className="text-2xl font-semibold text-opportunity-buy">{typeCounts.contract}</div>
             <div className="text-sm text-muted-foreground">Contracts</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-verified">{typeCounts.id}</div>
+            <div className="text-2xl font-semibold text-verified">{typeCounts.id}</div>
             <div className="text-sm text-muted-foreground">ID Documents</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-status-active">{typeCounts.financial}</div>
+            <div className="text-2xl font-semibold text-tier-neutral">{typeCounts.financial}</div>
             <div className="text-sm text-muted-foreground">Financial</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-huspy-sell">{typeCounts.property}</div>
+            <div className="text-2xl font-semibold text-opportunity-sell">{typeCounts.property}</div>
             <div className="text-sm text-muted-foreground">Property</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-muted-foreground">{typeCounts.other}</div>
+            <div className="text-2xl font-semibold text-muted-foreground">{typeCounts.other}</div>
             <div className="text-sm text-muted-foreground">Other</div>
           </CardContent>
         </Card>

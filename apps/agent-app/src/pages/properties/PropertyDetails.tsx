@@ -167,7 +167,7 @@ function SectionTitle({ children, className }: { children: React.ReactNode; clas
 function CardSection({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
     <Card className={cn("p-5 flex flex-col", className)}>
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">{title}</h3>
+      <h3 className="text-sm font-semibold text-muted-foreground mb-4">{title}</h3>
       <div className="flex-1">{children}</div>
     </Card>
   );
@@ -201,7 +201,7 @@ function DescriptionCard({
   
   return (
     <Card className="p-5 flex flex-col h-full" ref={descriptionRef}>
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Description</h3>
+      <h3 className="text-sm font-semibold text-muted-foreground mb-4">Description</h3>
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex items-center gap-2 mb-3">
           <span>{description.translations[0].flag}</span>
@@ -671,7 +671,7 @@ export function PropertyDetails({
                 </div>
                 <div className="flex items-baseline justify-between mb-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-2xl font-bold">{formattedPrice}</span>
+                    <span className="text-2xl font-semibold">{formattedPrice}</span>
                     {hasPriceDrop && (
                       <span className="inline-flex items-center gap-1.5">
                         <span className="text-sm text-muted-foreground line-through">
@@ -815,7 +815,7 @@ export function PropertyDetails({
                       <p className="text-sm font-medium mb-2">Energy certificate</p>
                       <div className="flex items-center gap-4 flex-wrap">
                         <div className="flex items-center gap-2">
-                          <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-600 font-bold">
+                          <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-600 font-semibold">
                             {extendedData.additionalInfo.energyCertificate.consumptionType}
                           </div>
                           <div>
@@ -824,7 +824,7 @@ export function PropertyDetails({
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 font-bold">
+                          <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 font-semibold">
                             {extendedData.additionalInfo.energyCertificate.emissionsType}
                           </div>
                           <div>
@@ -841,7 +841,7 @@ export function PropertyDetails({
               {/* Listed by */}
               <Card className="overflow-hidden">
                 <div className="p-3 border-b bg-muted/30">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Listed by</p>
+                  <p className="text-xs font-medium text-muted-foreground">Listed by</p>
                 </div>
                 <div className="p-4">
                   <div className="flex items-center gap-3 mb-4">
@@ -1059,7 +1059,7 @@ export function PropertyDetails({
             {/* Price */}
             <div className="flex items-baseline justify-between mb-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-2xl font-bold">{formatPrice()}</span>
+                <span className="text-2xl font-semibold">{formatPrice()}</span>
                 {hasPriceDrop && (
                   <span className="inline-flex items-center gap-1.5">
                     <span className="text-sm text-muted-foreground line-through">
@@ -1205,7 +1205,7 @@ export function PropertyDetails({
           {!isOwnProperty && (
             <Card className="overflow-hidden">
               <div className="p-4 border-b bg-muted/30">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Listed by</p>
+                <p className="text-xs font-medium text-muted-foreground">Listed by</p>
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-3 mb-4">
@@ -1246,7 +1246,7 @@ export function PropertyDetails({
               {/* Price row */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-3xl font-bold">{formatPrice()}</span>
+                  <span className="text-3xl font-semibold">{formatPrice()}</span>
                   {hasPriceDrop && (
                     <span className="inline-flex items-center gap-1.5">
                       <span className="text-sm text-muted-foreground line-through">
@@ -1365,11 +1365,11 @@ export function PropertyDetails({
                     <p className="text-sm font-medium mb-3">Energy Certificate</p>
                     <div className="flex items-center gap-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-600 font-bold text-lg">{extendedData.additionalInfo.energyCertificate.consumptionType}</div>
+                        <div className="w-12 h-12 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-600 font-semibold text-lg">{extendedData.additionalInfo.energyCertificate.consumptionType}</div>
                         <div><p className="text-xs text-muted-foreground">Consumption</p><p className="text-sm font-medium">{extendedData.additionalInfo.energyCertificate.consumption} kWh/m² year</p></div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 font-bold text-lg">{extendedData.additionalInfo.energyCertificate.emissionsType}</div>
+                        <div className="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 font-semibold text-lg">{extendedData.additionalInfo.energyCertificate.emissionsType}</div>
                         <div><p className="text-xs text-muted-foreground">Emissions</p><p className="text-sm font-medium">{extendedData.additionalInfo.energyCertificate.emissions} kg CO²/m² year</p></div>
                       </div>
                     </div>
@@ -1386,7 +1386,7 @@ export function PropertyDetails({
               <>
                 <Card className="overflow-hidden">
                   <div className="p-4 border-b bg-muted/30">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your listing</p>
+                    <p className="text-xs font-medium text-muted-foreground">Your listing</p>
                   </div>
                   <div className="p-4 space-y-3">
                     <div className="flex items-center gap-3 pb-3 border-b">
@@ -1416,7 +1416,7 @@ export function PropertyDetails({
               <>
                 <Card className="overflow-hidden">
                   <div className="p-4 border-b bg-muted/30">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Listed by</p>
+                    <p className="text-xs font-medium text-muted-foreground">Listed by</p>
                   </div>
                   <div className="p-4">
                     <div className="flex items-center gap-3 mb-4">

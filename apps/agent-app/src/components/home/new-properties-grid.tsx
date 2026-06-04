@@ -159,7 +159,7 @@ function SectionHeader({ showViewAll }: { showViewAll: boolean }) {
       {showViewAll && (
         <button
           onClick={() => navigate('/properties')}
-          className="text-sm font-semibold text-fg-secondary hover:text-foreground transition-colors flex items-center gap-1"
+          className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
         >
           View all <ArrowRight className="w-3.5 h-3.5" />
         </button>
@@ -174,12 +174,12 @@ function ViewAllCard() {
   return (
     <button
       onClick={() => navigate('/properties')}
-      className="rounded-2xl border-2 border-dashed border-border-ds-primary flex flex-col items-center justify-center gap-3 min-h-[200px] hover:bg-surface-ds-raised transition-colors group"
+      className="rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-3 min-h-[200px] hover:bg-secondary transition-colors group"
     >
-      <div className="w-10 h-10 rounded-full bg-surface-ds-raised flex items-center justify-center group-hover:bg-surface-ds-widget transition-colors">
-        <ArrowRight className="h-5 w-5 text-fg-secondary" />
+      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center group-hover:bg-card transition-colors">
+        <ArrowRight className="h-5 w-5 text-muted-foreground" />
       </div>
-      <span className="text-sm font-semibold text-fg-secondary">View all properties</span>
+      <span className="text-sm font-semibold text-muted-foreground">View all properties</span>
     </button>
   );
 }
@@ -308,7 +308,7 @@ function FeaturedLayout({ showViewAllCard }: { showViewAllCard: boolean }) {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-            <p className="text-xs font-semibold uppercase tracking-wide text-white/70 mb-1">Featured</p>
+            <p className="text-xs font-semibold text-white/70 mb-1">Featured</p>
             <h3 className="text-xl font-semibold leading-heading">{featured.title}</h3>
             <p className="text-sm text-white/70 mt-1">{featured.location}</p>
             <div className="flex items-center gap-3 mt-3">
@@ -372,7 +372,7 @@ function CompactLayout({ showViewAllCard }: { showViewAllCard: boolean }) {
         <button
           key={property.id}
           onClick={() => navigate(`/properties/${property.id}`)}
-          className="w-full flex items-center gap-4 p-3 rounded-xl bg-surface-ds-widget hover:bg-surface-ds-raised transition-colors text-left"
+          className="w-full flex items-center gap-4 p-3 rounded-xl bg-card hover:bg-secondary transition-colors text-left"
         >
           {/* Thumbnail */}
           <img
@@ -383,10 +383,10 @@ function CompactLayout({ showViewAllCard }: { showViewAllCard: boolean }) {
           {/* Info */}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground truncate">{property.title}</p>
-            <p className="text-xs text-fg-secondary mt-0.5">{property.location}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{property.location}</p>
           </div>
           {/* Specs */}
-          <div className="hidden sm:flex items-center gap-3 text-xs text-fg-secondary flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
             {property.bedrooms && <span>{property.bedrooms} bd</span>}
             {property.size && <span>{property.size} {property.sizeUnit}</span>}
           </div>
@@ -399,10 +399,10 @@ function CompactLayout({ showViewAllCard }: { showViewAllCard: boolean }) {
       {showViewAllCard && (
         <button
           onClick={() => navigate('/properties')}
-          className="w-full flex items-center justify-center gap-3 p-3 rounded-xl border-2 border-dashed border-border-ds-primary hover:bg-surface-ds-raised transition-colors"
+          className="w-full flex items-center justify-center gap-3 p-3 rounded-xl border-2 border-dashed border-border hover:bg-secondary transition-colors"
         >
-          <ArrowRight className="h-4 w-4 text-fg-secondary" />
-          <span className="text-sm font-semibold text-fg-secondary">View all properties</span>
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-semibold text-muted-foreground">View all properties</span>
         </button>
       )}
     </div>
@@ -419,13 +419,13 @@ export function NewPropertiesGrid({ layoutMode = 'grid', viewAllMode = 'header',
         <SectionHeader showViewAll={false} />
         <button
           onClick={() => navigate('/properties')}
-          className="w-full rounded-2xl border-2 border-dashed border-border-ds-primary flex flex-col items-center justify-center gap-2 py-12 hover:bg-surface-ds-raised transition-colors group"
+          className="w-full rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 py-12 hover:bg-secondary transition-colors group"
         >
-          <div className="w-10 h-10 rounded-full bg-surface-ds-raised flex items-center justify-center group-hover:bg-surface-ds-widget transition-colors">
-            <ArrowRight className="h-5 w-5 text-fg-secondary" />
+          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center group-hover:bg-card transition-colors">
+            <ArrowRight className="h-5 w-5 text-muted-foreground" />
           </div>
           <p className="text-base font-semibold text-foreground">No new properties</p>
-          <p className="text-sm text-fg-secondary">Browse all available properties in your area</p>
+          <p className="text-sm text-muted-foreground">Browse all available properties in your area</p>
         </button>
       </div>
     );

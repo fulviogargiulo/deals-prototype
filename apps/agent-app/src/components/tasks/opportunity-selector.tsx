@@ -163,9 +163,9 @@ export function OpportunitySelector({
                   <Badge 
                     variant="secondary"
                     className="mb-2"
-                    style={{ 
-                      backgroundColor: `hsl(${config.hslColor} / 0.15)`,
-                      color: `hsl(${config.hslColor})`
+                    style={{
+                      backgroundColor: config.alphaBg,
+                      color: config.tokenColor,
                     }}
                   >
                     <img src={config.icon} alt={config.label} className="w-4 h-4 mr-1" />

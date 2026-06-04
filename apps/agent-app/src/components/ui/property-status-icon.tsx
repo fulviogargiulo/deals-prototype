@@ -20,7 +20,7 @@ const getStatusConfig = (status: PropertyStatus) => {
     case 'published':
       return {
         Icon: CheckCheck,
-        bgColor: 'bg-ds-green',
+        bgColor: 'bg-tier-success',
         label: 'Published',
       };
     case 'in-review':
@@ -32,13 +32,13 @@ const getStatusConfig = (status: PropertyStatus) => {
     case 'draft':
       return {
         Icon: Pencil,
-        bgColor: 'bg-ds-orange',
+        bgColor: 'bg-tier-warning',
         label: 'Draft',
       };
     case 'rejected':
       return {
         Icon: XCircle,
-        bgColor: 'bg-ds-red',
+        bgColor: 'bg-tier-danger',
         label: 'Rejected',
       };
     case 'delisted':

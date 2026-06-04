@@ -7,11 +7,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AreaChart, Area, Tooltip, ResponsiveContainer, YAxis } from "recharts";
 
 const opportunityColorMap: Record<OpportunityType, string> = {
-  sell: "hsl(var(--huspy-sell))",
-  buy: "hsl(var(--huspy-buy))",
-  rent: "hsl(var(--huspy-rent))",
-  lease: "hsl(var(--huspy-lease))",
-  mortgage: "hsl(var(--accent-teal))",
+  buy:      "var(--teal-600)",
+  sell:     "var(--terracota-600)",
+  rent:     "var(--indigo-600)",
+  lease:    "var(--orchid-600)",
+  mortgage: "var(--olive-600)",
 };
 
 interface OpportunityStatsWidgetProps {
@@ -145,8 +145,8 @@ function FunnelStep({
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-semibold text-fg-primary leading-body truncate">{label}</span>
-          <span className="text-xs font-semibold text-fg-primary leading-body tabular-nums">{displayCount}</span>
+          <span className="text-xs font-semibold text-foreground leading-body truncate">{label}</span>
+          <span className="text-xs font-semibold text-foreground leading-body tabular-nums">{displayCount}</span>
         </div>
         <div className="h-1.5 rounded-full bg-surface-raised overflow-hidden">
           <div
@@ -202,11 +202,11 @@ function MetricCard({
       onClick={onClick}
     >
       <div className="flex items-center gap-1.5">
-        <Icon className="w-3.5 h-3.5 text-fg-secondary" />
-        <span className="text-xs text-fg-secondary leading-body">{label}</span>
+        <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground leading-body">{label}</span>
       </div>
       <div className="flex items-baseline gap-1.5">
-        <span className="text-xl font-semibold text-fg-primary leading-heading tabular-nums">
+        <span className="text-xl font-semibold text-foreground leading-heading tabular-nums">
           {displayValue}
         </span>
         <motion.span
@@ -215,7 +215,7 @@ function MetricCard({
           transition={{ duration: 0.3, delay: (delay + 600) / 1000 }}
           className={cn(
             "text-[10px] font-semibold leading-body",
-            positive ? "text-ds-green" : "text-ds-red"
+            positive ? "text-tier-success" : "text-tier-danger"
           )}
         >
           {change}
@@ -266,7 +266,7 @@ function PeriodSelector({ value, onChange }: { value: TimePeriod; onChange: (v: 
             "relative z-10 px-2.5 py-1 text-[10px] font-semibold rounded-full transition-colors duration-200",
             value === p
               ? "text-white"
-              : "text-fg-secondary hover:text-fg-primary"
+              : "text-muted-foreground hover:text-foreground"
           )}
           style={{ width: `calc(100% / ${periodCount})` }}
         >
@@ -404,7 +404,7 @@ export function OpportunityStatsWidget({ opportunityType, className }: Opportuni
   return (
     <Card ref={containerRef} className={cn("p-5 space-y-5 overflow-hidden", className)}>
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-fg-secondary uppercase tracking-wide">Overview</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground">Overview</h3>
         <PeriodSelector value={period} onChange={handlePeriodChange} />
       </div>
 
@@ -437,8 +437,8 @@ export function OpportunityStatsWidget({ opportunityType, className }: Opportuni
                     <div className="px-2.5 pb-2 space-y-1">
                       {getMetricBreakdown(m.label).map((b) => (
                         <div key={b.label} className="flex items-center justify-between">
-                          <span className="text-[10px] text-fg-secondary">{b.label}</span>
-                          <span className="text-[10px] font-semibold text-fg-primary tabular-nums">{b.value}</span>
+                          <span className="text-[10px] text-muted-foreground">{b.label}</span>
+                          <span className="text-[10px] font-semibold text-foreground tabular-nums">{b.value}</span>
                         </div>
                       ))}
                     </div>
@@ -460,8 +460,8 @@ export function OpportunityStatsWidget({ opportunityType, className }: Opportuni
           className="space-y-2 pt-3 border-t border-border-primary"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-fg-secondary leading-body">{sparklineLabels[period]} activity</span>
-            <span className="text-[10px] text-fg-secondary leading-body">{periodLabels[period]}</span>
+            <span className="text-xs font-semibold text-muted-foreground leading-body">{sparklineLabels[period]} activity</span>
+            <span className="text-[10px] text-muted-foreground leading-body">{periodLabels[period]}</span>
           </div>
           <ActivityChart key={`chart-${animKey}`} data={stats.weeklyActivity} color={stats.funnel.color} animate={true} />
         </motion.div>
@@ -474,9 +474,9 @@ export function OpportunityStatsWidget({ opportunityType, className }: Opportuni
             className="flex items-center justify-between w-full group"
             onClick={() => setShowFunnel(prev => !prev)}
           >
-            <span className="text-xs font-semibold text-fg-secondary leading-body">Conversion funnel</span>
+            <span className="text-xs font-semibold text-muted-foreground leading-body">Conversion funnel</span>
             <ChevronDown className={cn(
-              "w-3.5 h-3.5 text-fg-secondary transition-transform duration-300",
+              "w-3.5 h-3.5 text-muted-foreground transition-transform duration-300",
               !showFunnel && "-rotate-90"
             )} />
           </button>

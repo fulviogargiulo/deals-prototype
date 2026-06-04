@@ -430,7 +430,7 @@ function NoteCard({
           
           {/* Metadata row with action buttons */}
           <div className="flex items-center justify-between mt-2">
-            <p className="text-sm leading-body text-fg-secondary">
+            <p className="text-sm leading-body text-muted-foreground">
               {getTimeLabel(note.createdAt)} · Added by {note.createdBy}
             </p>
 
@@ -485,10 +485,10 @@ function NotesEmptyState({ onAddNote }: NotesEmptyStateProps) {
       className="w-full rounded-2xl border-2 border-dashed border-border bg-[hsl(0_0%_0%/0.02)] py-10 px-6 flex flex-col items-center justify-center text-center hover:border-muted-foreground/50 transition-colors cursor-pointer"
     >
       <div className="w-12 h-12 rounded-xl bg-surface-raised flex items-center justify-center mb-4">
-        <StickyNote className="w-6 h-6 text-fg-secondary" />
+        <StickyNote className="w-6 h-6 text-muted-foreground" />
       </div>
       <h3 className="text-base font-semibold leading-heading text-foreground mb-1">Add notes</h3>
-      <p className="text-sm font-normal leading-body text-fg-secondary max-w-[240px]">
+      <p className="text-sm font-normal leading-body text-muted-foreground max-w-[240px]">
         Capture key details, ideas, and learnings about this opportunity in one place.
       </p>
     </button>

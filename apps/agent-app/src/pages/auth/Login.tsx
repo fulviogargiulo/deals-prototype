@@ -469,7 +469,7 @@ export function Login() {
           {/* Solid black background - fades out during transition */}
           <div 
             className={cn(
-              "absolute inset-0 bg-surface-ds-page-dark transition-opacity duration-700 ease-out",
+              "absolute inset-0 bg-foreground transition-opacity duration-700 ease-out",
               splashPhase === "playing" ? "opacity-100" : "opacity-0"
             )} 
           />

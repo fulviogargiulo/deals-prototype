@@ -739,11 +739,11 @@ export function PropertyCard({
       <div className="p-4">
         {/* Title row with timestamp */}
         <div className="flex items-start justify-between gap-2 mb-1">
-          <h3 className="text-sm font-semibold leading-[100%] text-fg-secondary line-clamp-1 flex-1">
+          <h3 className="text-sm font-semibold leading-[100%] text-muted-foreground line-clamp-1 flex-1">
             {getPropertyTypeTitle()}
           </h3>
           {!isMyProperties && timeAgo && (
-            <span className="text-xs font-normal leading-[120%] text-fg-secondary whitespace-nowrap">
+            <span className="text-xs font-normal leading-[120%] text-muted-foreground whitespace-nowrap">
               {timeAgo}
             </span>
           )}
@@ -757,10 +757,10 @@ export function PropertyCard({
             </p>
             {hasPriceDrop && (
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                <span className="text-base font-semibold leading-heading text-fg-secondary line-through">
+                <span className="text-base font-semibold leading-heading text-muted-foreground line-through">
                   {formatOriginalPrice()}
                 </span>
-                <span className="inline-flex items-center gap-0.5 text-xs font-semibold leading-heading text-ds-red">
+                <span className="inline-flex items-center gap-0.5 text-xs font-semibold leading-heading text-tier-danger">
                   <ArrowDown className="h-3 w-3" />
                   -{getPriceDropPercentage()}%
                 </span>
@@ -797,7 +797,7 @@ export function PropertyCard({
               </div>
               <span className="text-sm font-normal leading-body text-foreground">Portal inquired</span>
             </div>
-            <span className="text-sm font-normal leading-body text-fg-secondary">{property.portalInquired.timestamp}</span>
+            <span className="text-sm font-normal leading-body text-muted-foreground">{property.portalInquired.timestamp}</span>
           </div>
         )}
 
@@ -805,7 +805,7 @@ export function PropertyCard({
         {!property.portalInquired && property.propertySaved && (
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
             <span className="text-sm font-normal leading-body text-foreground">Property saved</span>
-            <span className="text-sm font-normal leading-body text-fg-secondary">{property.propertySaved.timestamp}</span>
+            <span className="text-sm font-normal leading-body text-muted-foreground">{property.propertySaved.timestamp}</span>
           </div>
         )}
         

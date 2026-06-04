@@ -26,8 +26,8 @@ export function DuplicateClientModal({
       >
         <div className="flex flex-col items-center text-center">
           {/* Orange warning icon with tinted background */}
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-ds-orange/15">
-            <AlertTriangle className="w-10 h-10 text-ds-orange" />
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-tier-warning-bg">
+            <AlertTriangle className="w-10 h-10 text-tier-warning" />
           </div>
           
           {/* Title */}

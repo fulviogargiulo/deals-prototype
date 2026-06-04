@@ -126,7 +126,7 @@ export function PostingDetailDialog({
                     <tr className="border-b border-border bg-muted/30">
                       <th className="text-left px-3 py-2 text-[12px] font-medium text-muted-foreground">GL Ledger</th>
                       <th className="text-left px-3 py-2 text-[12px] font-medium text-muted-foreground">Subledger</th>
-                      <th className="text-left px-3 py-2 text-[12px] font-medium text-muted-foreground">Type</th>
+                      <th className="text-left px-3 py-2 text-[12px] font-medium text-muted-foreground">Invoice</th>
                       <th className="text-right px-3 py-2 text-[12px] font-medium text-muted-foreground">Debit</th>
                       <th className="text-right px-3 py-2 text-[12px] font-medium text-muted-foreground">Credit</th>
                     </tr>
@@ -140,8 +140,8 @@ export function PostingDetailDialog({
                           <td className={cn("px-3 py-2 font-mono text-[12px]", sub ? "text-primary font-semibold" : "text-muted-foreground/40")}>
                             {sub ?? "—"}
                           </td>
-                          <td className="px-3 py-2 text-muted-foreground text-[12px]">
-                            {posting.businessProcess}
+                          <td className={cn("px-3 py-2 font-mono text-[12px]", l.invoiceId ? "text-primary" : "text-muted-foreground/40")}>
+                            {l.invoiceId ?? "—"}
                           </td>
                           <td className="px-3 py-2 text-right tabular-nums font-semibold">
                             {l.side === "DEBIT" ? fmt(l.amount, posting.currency) : <span className="text-muted-foreground/30">—</span>}

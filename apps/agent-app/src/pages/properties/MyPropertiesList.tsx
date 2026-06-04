@@ -309,7 +309,7 @@ export function MyPropertiesList() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold">My properties</h1>
+              <h1 className="text-3xl font-semibold">My properties</h1>
             </div>
             <Button onClick={() => setShowAddPropertyDialog(true)}>
               + New
@@ -344,7 +344,7 @@ export function MyPropertiesList() {
       <div className="space-y-6">
         <div className="flex justify-between items-center animate-fade-in-fast">
           <div>
-            <h1 className="text-3xl font-bold">My properties</h1>
+            <h1 className="text-3xl font-semibold">My properties</h1>
             {showSubtitles && <p className="text-muted-foreground">Manage your property listings</p>}
           </div>
           <Button onClick={() => setShowAddPropertyDialog(true)}>

@@ -44,12 +44,12 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
     return (
       <div className="bg-card rounded-2xl p-5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[hsl(var(--ds-green)/0.1)]">
-            <CheckCircle2 className="w-4 h-4 text-[hsl(var(--ds-green))]" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-tier-success-bg">
+            <CheckCircle2 className="w-4 h-4 text-tier-success" />
           </div>
           <div>
             <p className="text-[14px] font-semibold text-foreground leading-[120%]">Information Submitted</p>
-            <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%] mt-0.5">
+            <p className="text-[12px] text-muted-foreground leading-[140%] mt-0.5">
               We're now reviewing your deal details.
             </p>
           </div>
@@ -70,43 +70,43 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
   return (
     <Collapsible>
       <div className="bg-card rounded-2xl overflow-hidden">
-        <CollapsibleTrigger className="w-full px-5 py-4 flex items-center gap-3 hover:bg-[hsl(var(--surface-raised))] transition-colors">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[hsl(var(--ds-orange)/0.1)]">
-            <AlertTriangle className="w-4 h-4 text-[hsl(var(--ds-orange))]" />
+        <CollapsibleTrigger className="w-full px-5 py-4 flex items-center gap-3 hover:bg-secondary transition-colors">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-tier-warning-bg">
+            <AlertTriangle className="w-4 h-4 text-tier-warning" />
           </div>
           <div className="flex-1 text-left">
             <p className="text-[14px] font-semibold text-foreground leading-[120%]">
               Action Required — Upload Documents & Submit
             </p>
-            <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%] mt-0.5">
+            <p className="text-[12px] text-muted-foreground leading-[140%] mt-0.5">
               Upload any available documents and add a note for Ops to proceed.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {allDocsUploaded ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[hsl(var(--ds-green)/0.1)] text-[hsl(var(--ds-green))]">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-tier-success-bg text-tier-success">
                 <CheckCircle2 className="w-3 h-3" />
                 All docs uploaded
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[hsl(var(--ds-orange)/0.1)] text-[hsl(var(--ds-orange))]">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-tier-warning-bg text-tier-warning">
                 {pendingDocs.length} doc{pendingDocs.length !== 1 ? 's' : ''} pending
               </span>
             )}
-            <ChevronDown className="w-4 h-4 text-[hsl(var(--fg-secondary))] transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
           </div>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="border-t border-[hsl(var(--border-ds-primary))] px-5 py-5 space-y-6">
+          <div className="border-t border-border px-5 py-5 space-y-6">
             {/* Documents */}
             <div className="space-y-1">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-foreground" />
-                <h4 className="text-[12px] font-semibold text-[hsl(var(--fg-secondary))] leading-[140%] uppercase tracking-wide">
+                <h4 className="text-[12px] font-semibold text-muted-foreground leading-[140%]">
                   Documents
                 </h4>
-                <span className="text-[10px] font-semibold text-[hsl(var(--fg-secondary))] ml-auto">
+                <span className="text-[10px] font-semibold text-muted-foreground ml-auto">
                   {uploadedDocCount} of {documents.length}
                 </span>
               </div>
@@ -130,15 +130,15 @@ export function MissingInfoSection({ deal, documents, uploadedDocs, onUploadDoc,
 
             {/* Note for Ops */}
             <div className="space-y-1.5">
-              <label className="text-[12px] font-semibold leading-[140%] text-[hsl(var(--fg-secondary))]">
-                Add a note for Huspy <span style={{ color: 'hsl(var(--ds-orange))' }}>*</span>
+              <label className="text-[12px] font-semibold leading-[140%] text-muted-foreground">
+                Add a note for Huspy <span className="text-tier-warning">*</span>
               </label>
               <textarea
                 value={submitNote}
                 onChange={(e) => setSubmitNote(e.target.value)}
                 placeholder="Describe what you've completed or any context Huspy Ops should know..."
                 rows={2}
-                className="w-full px-3 py-2 rounded-lg border border-[hsl(var(--border-ds-primary))] bg-transparent text-[13px] leading-[140%] text-foreground placeholder:text-[hsl(var(--fg-secondary))] resize-none focus:outline-none focus:ring-2 focus:ring-[hsl(var(--fg-primary))]"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-transparent text-[13px] leading-[140%] text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 

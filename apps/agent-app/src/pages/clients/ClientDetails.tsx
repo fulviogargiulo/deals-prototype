@@ -1156,7 +1156,7 @@ export function ClientDetails({
                 return (
                   <span
                     className={cn(
-                      "text-xs font-semibold text-fg-secondary flex items-center gap-1 cursor-pointer hover:text-foreground select-none transition-colors",
+                      "text-xs font-semibold text-muted-foreground flex items-center gap-1 cursor-pointer hover:text-foreground select-none transition-colors",
                       align === 'text-right' && "justify-end",
                       align === 'text-center' && "justify-center"
                     )}
@@ -1265,18 +1265,18 @@ export function ClientDetails({
                   {/* Table */}
                   <div className="bg-card rounded-2xl overflow-hidden">
                     {/* Header row */}
-                    <div className="grid grid-cols-[44px_1.2fr_100px_80px_80px_120px_40px] px-4 py-3 border-b border-border-ds-primary gap-3 group/header">
+                    <div className="grid grid-cols-[44px_1.2fr_100px_80px_80px_120px_40px] px-4 py-3 border-b border-border gap-3 group/header">
                       <span />
                       {getHeaderEl('Opportunity', 'title')}
                       {getHeaderEl('Price', 'price', 'text-right')}
                       {getHeaderEl('Beds', 'beds', 'text-center')}
-                      <span className="text-xs font-semibold text-fg-secondary text-center">Matches</span>
+                      <span className="text-xs font-semibold text-muted-foreground text-center">Matches</span>
                       {getHeaderEl('Last interaction', 'interaction', 'text-right')}
                       <span />
                     </div>
 
                     {/* Body */}
-                    <div className="divide-y divide-border-ds-primary">
+                    <div className="divide-y divide-border">
                       {sortedOpps.length > 0 ? sortedOpps.map((opportunity) => {
                         const config = oppTypeConfig[opportunity.type] || oppTypeConfig.buy;
                         const Icon = config.icon;
@@ -1302,7 +1302,7 @@ export function ClientDetails({
                             key={opportunity.id}
                             onClick={() => navigate(`/opportunities/${opportunity.id}`)}
                             className={cn(
-                              "grid grid-cols-[44px_1.2fr_100px_80px_80px_120px_40px] px-4 py-3 w-full text-left hover:bg-surface-ds-raised/50 transition-all items-center gap-3 group",
+                              "grid grid-cols-[44px_1.2fr_100px_80px_80px_120px_40px] px-4 py-3 w-full text-left hover:bg-secondary/50 transition-all items-center gap-3 group",
                               isInactive && "opacity-50"
                             )}
                             style={{ transition: 'opacity 1.5s ease' }}

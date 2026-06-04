@@ -30,13 +30,13 @@ export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome, agen
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border-ds-primary">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
           <DialogTitle className="text-[20px] font-semibold leading-[120%]">
             Paid Invoices
           </DialogTitle>
-          <p className="text-[14px] font-normal leading-[140%] text-fg-secondary mt-1">
+          <p className="text-[14px] font-normal leading-[140%] text-muted-foreground mt-1">
             {deals.length} invoices · Total earned{' '}
-            <span className="font-semibold" style={{ color: 'hsl(var(--accent-teal))' }}>
+            <span className="font-semibold text-tier-success">
               €{totalIncome.toLocaleString()}
             </span>
           </p>
@@ -46,7 +46,7 @@ export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome, agen
           {sortedDeals.map(deal => (
             <div
               key={deal.id}
-              className="bg-surface-raised rounded-xl p-4 space-y-3"
+              className="bg-secondary rounded-xl p-4 space-y-3"
             >
               {/* Header row */}
               <div className="flex items-start justify-between gap-3">
@@ -54,11 +54,11 @@ export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome, agen
                   <p className="text-[14px] font-semibold leading-[140%] text-foreground truncate">
                     {deal.title}
                   </p>
-                  <p className="text-[12px] font-normal leading-[140%] text-fg-secondary">
+                  <p className="text-[12px] font-normal leading-[140%] text-muted-foreground">
                     {deal.clientName}
                   </p>
                 </div>
-                <p className="text-[16px] font-semibold leading-[140%] tabular-nums shrink-0" style={{ color: 'hsl(var(--ds-green))' }}>
+                <p className="text-[16px] font-semibold leading-[140%] tabular-nums shrink-0" className="text-tier-success">
                   {(() => {
                     const stake = agentStakeMap?.get(deal.id);
                     const input = buildWaterfallInput(deal);
@@ -71,7 +71,7 @@ export function PaidInvoicesModal({ open, onOpenChange, deals, totalIncome, agen
 
               {/* Dates row */}
               <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex items-center gap-1.5 text-[12px] font-normal leading-[140%]" style={{ color: 'hsl(var(--ds-green))' }}>
+                <div className="flex items-center gap-1.5 text-[12px] font-normal leading-[140%]" className="text-tier-success">
                   <Calendar className="w-3.5 h-3.5" />
                   Paid: {formatDate(deal.paymentDate)}
                 </div>

@@ -206,11 +206,28 @@ export function calculateProjectedPnL(input: ProjectedPnLInput): ProjectedPnL {
     const useFixed = stake.amount != null && (stake.source === "manual" || stake.status === "confirmed");
     if (useFixed) {
       const agentPayout = Math.abs(stake.amount!);
+      const shareOfPool = (stake.splitPercentage ?? 100) / 100;
+      // allocatedNet = agent's share of commissionBase — used to derive the displayed rate.
+      const allocatedNet = commissionBase * shareOfPool;
       const effectiveId = agentId ?? stake.partyId;
       const name = input.partyDisplayNames?.[stake.partyId] ?? effectiveId;
-      splits.push({ agentId: effectiveId, partyId: stake.partyId, shareOfPool: 1, allocatedNet: agentPayout, agentPayout, agentSourcedDeductions: [], connectedAgentPayouts: [], strategyKind: "flat" });
+
+      // Still compute connected-agent overheads (TL / manager) from agentFinancials.
+      const connectedAgentPayouts: ProjectedAgentSplit["connectedAgentPayouts"] = [];
+      if (af) {
+        for (const ca of (af.connectedAgents ?? [])) {
+          const caAmount = (ca.rate / 100) * agentPayout;
+          if (caAmount > 0) {
+            connectedAgentPayouts.push({ agentId: ca.agentId, label: ca.label, amount: caAmount, ledgerId: ca.ledgerId });
+            ledger.push({ id: `int::${stake.id}::ca::${ca.agentId}`, label: ca.label, bucket: "agent-payout", side: "DEBIT", amount: caAmount });
+          }
+        }
+      }
+      const totalConnected = connectedAgentPayouts.reduce((s, c) => s + c.amount, 0);
+
+      splits.push({ agentId: effectiveId, partyId: stake.partyId, shareOfPool, allocatedNet, agentPayout, agentSourcedDeductions: [], connectedAgentPayouts, strategyKind: af?.strategy.kind ?? "flat" });
       ledger.push({ id: `int::${stake.id}::agent`, label: `${name} — fixed payout`, bucket: "agent-payout", side: "DEBIT", amount: agentPayout, partyId: stake.partyId });
-      totalAgentPayout += agentPayout;
+      totalAgentPayout += agentPayout + totalConnected;
       continue;
     }
 

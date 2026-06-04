@@ -305,12 +305,12 @@ function ReviewCTA({ cardId, countdown, isCompact, onReview, ctaLabel }: { cardI
     >
       {countdown && formattedCountdown ? (
         <>
-          <span className="text-fg-primary font-semibold leading-heading">{label}</span>
-          <span className="text-fg-secondary font-semibold leading-heading mx-1.5">·</span>
-          <span className="text-fg-secondary font-semibold leading-heading tabular-nums">{formattedCountdown}</span>
+          <span className="text-foreground font-semibold leading-heading">{label}</span>
+          <span className="text-muted-foreground font-semibold leading-heading mx-1.5">·</span>
+          <span className="text-muted-foreground font-semibold leading-heading tabular-nums">{formattedCountdown}</span>
         </>
       ) : (
-        <span className="text-fg-primary font-semibold leading-heading">{label}</span>
+        <span className="text-foreground font-semibold leading-heading">{label}</span>
       )}
     </Button>
   );

@@ -10,9 +10,9 @@ interface ExpectedPayoutSectionProps {
 }
 
 function getPaymentStatusLabel(status: string) {
-  if (status === 'paid') return { label: 'Paid', color: 'hsl(var(--ds-green))', bg: 'hsl(var(--ds-green) / 0.1)' };
-  if (status === 'confirmed') return { label: 'Payment Pending', color: 'hsl(var(--accent-teal))', bg: 'hsl(var(--accent-teal) / 0.1)' };
-  return { label: 'In Review', color: 'hsl(var(--ds-orange))', bg: 'hsl(var(--ds-orange) / 0.1)' };
+  if (status === 'paid') return { label: 'Paid', color: 'hsl(var(--tier-success-fg))', bg: 'hsl(var(--tier-success-bg))' };
+  if (status === 'confirmed') return { label: 'Payment Pending', color: 'hsl(var(--tier-info-fg))', bg: 'hsl(var(--tier-info-bg))' };
+  return { label: 'In Review', color: 'hsl(var(--tier-warning-fg))', bg: 'hsl(var(--tier-warning-bg))' };
 }
 
 function getDueDate(statement: StatementOfAccount) {
@@ -31,7 +31,7 @@ export function ExpectedPayoutSection({ statement, title = 'Expected Payout' }: 
   return (
     <>
       <div
-        className="bg-card rounded-2xl overflow-hidden cursor-pointer hover:bg-surface-ds-raised/50 transition-colors"
+        className="bg-card rounded-2xl overflow-hidden cursor-pointer hover:bg-secondary/50 transition-colors"
         onClick={() => setShowInvoice(true)}
       >
         {/* Section header inside card */}
@@ -44,15 +44,12 @@ export function ExpectedPayoutSection({ statement, title = 'Expected Payout' }: 
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: 'hsl(var(--accent-teal) / 0.1)' }}
-              >
-                <Wallet className="w-6 h-6" style={{ color: 'hsl(var(--accent-teal))' }} />
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-secondary">
+                <Wallet className="w-6 h-6 text-muted-foreground" />
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-[12px] font-semibold leading-[140%] text-fg-secondary uppercase tracking-wide">
+                  <p className="text-[12px] font-semibold leading-[140%] text-muted-foreground">
                     {statement.cycleLabel} Cycle
                   </p>
                   <Badge
@@ -64,25 +61,25 @@ export function ExpectedPayoutSection({ statement, title = 'Expected Payout' }: 
                   {isOverdue && statement.status !== 'paid' && (
                     <Badge
                       className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold border-0"
-                      style={{ backgroundColor: 'hsl(var(--ds-red) / 0.1)', color: 'hsl(var(--ds-red))' }}
+                      style={{ backgroundColor: 'hsl(var(--tier-danger-bg))', color: 'hsl(var(--tier-danger-fg))' }}
                     >
                       Overdue
                     </Badge>
                   )}
                 </div>
-                <p className="text-[32px] font-semibold leading-[120%] tabular-nums" style={{ color: 'hsl(var(--accent-teal))' }}>
+                <p className="text-[32px] font-semibold leading-[120%] tabular-nums text-tier-success">
                   €{statement.balance.toLocaleString()}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <Calendar className="w-3.5 h-3.5 text-fg-secondary" />
-                  <span className={`text-[12px] font-semibold leading-[140%] ${isOverdue ? 'text-[hsl(var(--ds-red))]' : 'text-fg-secondary'}`}>
+                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className={`text-[12px] font-semibold leading-[140%] ${isOverdue ? 'text-tier-danger' : 'text-muted-foreground'}`}>
                     Due {dueDateFormatted}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 text-fg-secondary">
+            <div className="flex items-center gap-1 text-muted-foreground">
               <span className="text-[12px] font-semibold leading-[140%]">View Details</span>
               <ChevronRight className="w-4 h-4" />
             </div>

@@ -821,7 +821,7 @@ export function OpportunityDetails() {
       : null;
     if (!createdDate) return null;
     return (
-      <div className={cn("flex items-center gap-2 text-xs font-normal leading-body", variant === 'light' ? "text-white/50" : "text-fg-secondary")}>
+      <div className={cn("flex items-center gap-2 text-xs font-normal leading-body", variant === 'light' ? "text-white/50" : "text-muted-foreground")}>
         {createdDate && <span>Created {createdDate}</span>}
         {lastInteraction && <span>·</span>}
         {lastInteraction && <span>Last interaction {lastInteraction}</span>}
@@ -1265,7 +1265,7 @@ export function OpportunityDetails() {
             <div className={cn("col-span-4 space-y-5", sidebarOnRight && "order-2")}>
               {/* Client Card */}
               <Card className="p-4">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Client</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Client</h3>
                 <div className="flex items-start gap-3">
                   <div className="cursor-pointer" onClick={() => !isDraftOpportunity && navigate(`/clients/${displayClient.id}`)}>
                     <UserAvatar 
@@ -1276,7 +1276,7 @@ export function OpportunityDetails() {
                   </div>
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => !isDraftOpportunity && navigate(`/clients/${displayClient.id}`)}>
                     <h3 className="text-lg font-semibold leading-heading text-foreground truncate">{displayClient.fullName}</h3>
-                    <div className="text-sm font-normal leading-body text-fg-secondary">
+                    <div className="text-sm font-normal leading-body text-muted-foreground">
                       {displayClient.phone && <div>{displayClient.phone}</div>}
                     </div>
                   </div>
@@ -1314,7 +1314,7 @@ export function OpportunityDetails() {
 
               {/* Preferences / Property */}
               <Card className="p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                <h3 className="text-sm font-semibold text-muted-foreground">
                   {isSellingOpportunityDisplay ? 'Property' : 'Preferences'}
                 </h3>
                 {preferencesOrPropertyContent('dark')}
@@ -1326,7 +1326,7 @@ export function OpportunityDetails() {
 
               {/* Activity */}
               <Card className="p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Activity</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground">Activity</h3>
                 {activityWidgetElement}
               </Card>
             </div>
@@ -1401,7 +1401,7 @@ export function OpportunityDetails() {
               <OpportunityStatsWidget opportunityType={devOpportunityType} />
 
               <Card className="p-5 space-y-3 sticky top-6">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Activity</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground">Activity</h3>
                 {activityWidgetElement}
               </Card>
             </div>
@@ -1432,7 +1432,7 @@ export function OpportunityDetails() {
             <div className="flex flex-col items-center text-center space-y-2 max-w-4xl mx-auto">
               {opportunityTypeBadge('light')}
               <TrackedTitle title={displayOpportunity.title}>
-                <h1 className="text-3xl md:text-4xl font-bold text-white">{displayOpportunity.title}</h1>
+                <h1 className="text-3xl md:text-4xl font-semibold text-white">{displayOpportunity.title}</h1>
               </TrackedTitle>
               <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => !isDraftOpportunity && navigate(`/clients/${displayClient.id}`)}>
                 <UserAvatar name={displayClient.fullName} size="sm" className="w-6 h-6 text-xs bg-white text-foreground" />

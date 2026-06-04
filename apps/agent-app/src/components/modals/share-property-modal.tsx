@@ -621,7 +621,7 @@ export function SharePropertyModal({
               {/* Link Type Selection + Message Preview (shown when client is selected) */}
               {currentView === 'select' && selectedClient && (
                 <div className="pb-4 shrink-0 space-y-3">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Share as</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Share as</p>
                   
                   {/* Link type cards */}
                   <div className="flex gap-2">
@@ -666,7 +666,7 @@ export function SharePropertyModal({
                   {/* Message preview */}
                   <div className="bg-muted/30 rounded-xl p-3 border border-border">
                     <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Message preview</p>
+                      <p className="text-[10px] text-muted-foreground font-semibold">Message preview</p>
                       <button
                         onClick={handleCopyMessage}
                         className="flex items-center gap-1 text-[10px] font-medium text-foreground hover:text-foreground/70 transition-colors"
@@ -678,7 +678,7 @@ export function SharePropertyModal({
                     <p className="text-sm leading-relaxed">
                       Hi {selectedClient.name.split(' ')[0]}, {whatsAppShareType === 'pdf' ? 'I have a property that might interest you' : 'check out this property'}: {property.title}
                     </p>
-                    <p className="text-xs text-accent-teal mt-1.5 break-all">
+                    <p className="text-xs text-muted-foreground mt-1.5 break-all">
                       {getShareLink()}
                     </p>
                   </div>

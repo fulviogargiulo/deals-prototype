@@ -1640,7 +1640,7 @@ export function MatchesModal({
                         {/* Property info overlay */}
                         <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 text-white z-20">
                           {/* Price */}
-                          <p className="text-xl sm:text-3xl font-bold mb-0.5 sm:mb-1">
+                          <p className="text-xl sm:text-3xl font-semibold mb-0.5 sm:mb-1">
                             {propertyData.currency}{propertyData.price.toLocaleString()}
                           </p>
                           
@@ -1778,7 +1778,7 @@ export function MatchesModal({
                           {/* Client info overlay */}
                           <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 text-white z-20">
                             {/* Client name */}
-                            <p className="text-xl sm:text-3xl font-bold mb-0.5 sm:mb-1">
+                            <p className="text-xl sm:text-3xl font-semibold mb-0.5 sm:mb-1">
                               {clientData.name}
                             </p>
                             

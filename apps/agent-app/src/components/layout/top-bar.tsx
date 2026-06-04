@@ -211,7 +211,7 @@ export function TopBar() {
                 style={{ color: transparentHeader && !isScrolled ? 'white' : undefined }}
               />
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full flex items-center justify-center">
-                <span className="text-xs text-destructive-foreground font-bold">3</span>
+                <span className="text-xs text-destructive-foreground font-semibold">3</span>
               </div>
             </Button>
           )}
@@ -225,11 +225,11 @@ export function TopBar() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-1.5 rounded-full px-3 text-xs font-semibold bg-surface-ds-raised border-0"
+                className="h-8 gap-1.5 rounded-full px-3 text-xs font-semibold bg-secondary border-0"
               >
                 <span>{countryFlag[activeAgent.country ?? ''] ?? '🌍'}</span>
-                <span className="hidden sm:inline text-fg-secondary">{activeAgent.id}</span>
-                <ChevronDown className="w-3 h-3 text-fg-secondary" />
+                <span className="hidden sm:inline text-muted-foreground">{activeAgent.id}</span>
+                <ChevronDown className="w-3 h-3 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
@@ -241,7 +241,7 @@ export function TopBar() {
                 >
                   <span>{countryFlag[agent.country ?? ''] ?? '🌍'}</span>
                   <span className="flex-1">{agent.id}</span>
-                  <span className="text-fg-secondary uppercase">{agent.country}</span>
+                  <span className="text-muted-foreground uppercase">{agent.country}</span>
                   {agent.id === activeAgentId && <Check className="w-3.5 h-3.5" />}
                 </DropdownMenuItem>
               ))}

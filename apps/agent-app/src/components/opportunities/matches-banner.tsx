@@ -27,7 +27,7 @@ export function MatchesBanner({
   const assetSrc = variant === 'buyers' ? matchesBuyersStack : matchesImagesStack;
   return (
     <Card 
-      className="bg-surface-ds-accent border-0 text-white p-6 cursor-pointer hover:bg-surface-ds-accent/90 transition-all overflow-hidden relative rounded-2xl"
+      className="bg-foreground border-0 text-white p-6 cursor-pointer hover:bg-foreground/90 transition-all overflow-hidden relative rounded-2xl"
       onClick={onViewMatches}
     >
       <div className="flex items-start justify-between gap-6 relative z-10">

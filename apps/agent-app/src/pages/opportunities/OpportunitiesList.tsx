@@ -215,7 +215,7 @@ export function OpportunitiesList() {
         {/* Header */}
         <div className="flex justify-between items-center animate-fade-in-fast">
           <div>
-            <h1 className="text-3xl font-bold">Opportunities</h1>
+            <h1 className="text-3xl font-semibold">Opportunities</h1>
             {showSubtitles && <p className="text-muted-foreground">Manage all client opportunities</p>}
           </div>
           <Button>
@@ -330,14 +330,14 @@ export function OpportunitiesList() {
         {/* Table — same format as home page */}
         {isLoading && skeletonTargets.opportunities ? (
           <div className="bg-card rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[44px_1.2fr_1fr_100px_80px_80px_120px_40px] px-4 py-3 border-b border-border-ds-primary gap-3">
+            <div className="grid grid-cols-[44px_1.2fr_1fr_100px_80px_80px_120px_40px] px-4 py-3 border-b border-border gap-3">
               <span />
-              <span className="text-xs font-semibold text-fg-secondary">Opportunity</span>
-              <span className="text-xs font-semibold text-fg-secondary">Client</span>
-              <span className="text-xs font-semibold text-fg-secondary text-right">Price</span>
-              <span className="text-xs font-semibold text-fg-secondary text-center">Beds</span>
-              <span className="text-xs font-semibold text-fg-secondary text-center">Matches</span>
-              <span className="text-xs font-semibold text-fg-secondary text-right">Last interaction</span>
+              <span className="text-xs font-semibold text-muted-foreground">Opportunity</span>
+              <span className="text-xs font-semibold text-muted-foreground">Client</span>
+              <span className="text-xs font-semibold text-muted-foreground text-right">Price</span>
+              <span className="text-xs font-semibold text-muted-foreground text-center">Beds</span>
+              <span className="text-xs font-semibold text-muted-foreground text-center">Matches</span>
+              <span className="text-xs font-semibold text-muted-foreground text-right">Last interaction</span>
               <span />
             </div>
             <div className="p-4 space-y-3">
@@ -347,16 +347,16 @@ export function OpportunitiesList() {
         ) : (
           <div key={`table-${contentKey}`} className="bg-card rounded-2xl overflow-hidden animate-fade-in">
             {/* Header row */}
-            <div className="grid grid-cols-[44px_1.2fr_1fr_100px_80px_80px_120px_40px] px-4 py-3 border-b border-border-ds-primary gap-3 group/header">
+            <div className="grid grid-cols-[44px_1.2fr_1fr_100px_80px_80px_120px_40px] px-4 py-3 border-b border-border gap-3 group/header">
               <span />
-              <span className="text-xs font-semibold text-fg-secondary">Opportunity</span>
-              <span className="text-xs font-semibold text-fg-secondary">Client</span>
-              <span className="text-xs font-semibold text-fg-secondary text-right">Price</span>
-              <span className="text-xs font-semibold text-fg-secondary text-center">Beds</span>
-              <span className="text-xs font-semibold text-fg-secondary text-center">Matches</span>
+              <span className="text-xs font-semibold text-muted-foreground">Opportunity</span>
+              <span className="text-xs font-semibold text-muted-foreground">Client</span>
+              <span className="text-xs font-semibold text-muted-foreground text-right">Price</span>
+              <span className="text-xs font-semibold text-muted-foreground text-center">Beds</span>
+              <span className="text-xs font-semibold text-muted-foreground text-center">Matches</span>
               <span 
                 className={cn(
-                  "text-xs font-semibold text-fg-secondary text-right flex items-center justify-end",
+                  "text-xs font-semibold text-muted-foreground text-right flex items-center justify-end",
                   sortMode === 'header' && "cursor-pointer hover:text-foreground select-none"
                 )}
                 onClick={() => sortMode === 'header' && handleHeaderSort('interaction')}
@@ -368,7 +368,7 @@ export function OpportunitiesList() {
             </div>
 
             {/* Body */}
-            <div className="divide-y divide-border-ds-primary">
+            <div className="divide-y divide-border">
               {paginatedOpportunities.length > 0 ? paginatedOpportunities.map((opp) => {
                 const config = typeConfig[opp.type] ?? typeConfig['buy'];
                 const Icon = config.icon;
@@ -387,7 +387,7 @@ export function OpportunitiesList() {
                     key={opp.id}
                     onClick={() => navigate(`/opportunities/${opp.id}`)}
                     className={cn(
-                      "grid grid-cols-[44px_1.2fr_1fr_100px_80px_80px_120px_40px] px-4 py-3 w-full text-left hover:bg-surface-ds-raised/50 transition-all items-center gap-3 group",
+                      "grid grid-cols-[44px_1.2fr_1fr_100px_80px_80px_120px_40px] px-4 py-3 w-full text-left hover:bg-secondary/50 transition-all items-center gap-3 group",
                       isInactive && "opacity-50"
                     )}
                     style={{ transition: 'opacity 1.5s ease' }}
@@ -407,7 +407,7 @@ export function OpportunitiesList() {
                         <span style={{ color: isInactive ? '#999999' : config.color, transition: 'color 1.5s ease' }}>
                           <Icon className="w-3 h-3" />
                         </span>
-                        <p className="text-xs text-fg-secondary leading-body">{getOpportunityLabel(opp.type)}</p>
+                        <p className="text-xs text-muted-foreground leading-body">{getOpportunityLabel(opp.type)}</p>
                         {/* Status badges */}
                         {isClosed && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold animate-fade-in shrink-0" style={{ backgroundColor: 'rgba(16, 177, 137, 0.15)', color: '#10B189' }}>
@@ -425,7 +425,7 @@ export function OpportunitiesList() {
                           newMatchesDisplay === 'tag' ? (
                             <NewClientBadge type="new-matches" className="ml-1 scale-90 origin-left" />
                           ) : (
-                            <div className="w-2 h-2 rounded-full ml-1 shrink-0 bg-ds-red" />
+                            <div className="w-2 h-2 rounded-full ml-1 shrink-0 bg-tier-danger" />
                           )
                         )}
                       </div>
@@ -439,7 +439,7 @@ export function OpportunitiesList() {
                           <span className="text-sm text-foreground truncate">{client.fullName}</span>
                         </>
                       ) : (
-                        <span className="text-sm text-fg-secondary">—</span>
+                        <span className="text-sm text-muted-foreground">—</span>
                       )}
                     </div>
 
@@ -461,7 +461,7 @@ export function OpportunitiesList() {
                     {/* Last interaction */}
                     <div className="text-right min-w-0">
                       <p className="text-xs text-foreground truncate">{getLastInteraction(opp.id).text}</p>
-                      <p className="text-[10px] text-fg-secondary">{getLastInteraction(opp.id).time}</p>
+                      <p className="text-[10px] text-muted-foreground">{getLastInteraction(opp.id).time}</p>
                     </div>
 
                     {/* Actions menu */}
@@ -527,7 +527,7 @@ export function OpportunitiesList() {
                   </button>
                 );
               }) : (
-                <div className="py-12 text-center text-sm text-fg-secondary">
+                <div className="py-12 text-center text-sm text-muted-foreground">
                   No opportunities found matching your criteria
                 </div>
               )}

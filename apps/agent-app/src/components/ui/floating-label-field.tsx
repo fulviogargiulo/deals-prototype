@@ -205,8 +205,8 @@ const InputMode = React.forwardRef<HTMLInputElement, InputModeProps>(
               isFocused && !error && "border-primary",
               trailingText && "pr-16",
               trailingIcon && "pr-12",
-              error && !isFocused && "border-[hsl(var(--border-destructive-muted))] bg-[hsl(var(--surface-red-alpha))]",
-              error && isFocused && "border-destructive bg-[hsl(var(--surface-red-alpha))]",
+              error && !isFocused && "border-destructive/40 bg-tier-danger-bg",
+              error && isFocused && "border-destructive bg-tier-danger-bg",
               className
             )}
           />
@@ -294,8 +294,8 @@ const SelectMode = React.forwardRef<HTMLButtonElement, SelectModeProps>(
                 isFloating ? "pt-5 pb-1" : "py-0",
                 "outline-none ring-0 ring-offset-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
                 "[&>svg]:absolute [&>svg]:right-4 [&>svg]:top-1/2 [&>svg]:-translate-y-1/2",
-                error && !isFocused && "border-[hsl(var(--border-destructive-muted))] bg-[hsl(var(--surface-red-alpha))]",
-                error && isFocused && "border-destructive bg-[hsl(var(--surface-red-alpha))]",
+                error && !isFocused && "border-destructive/40 bg-tier-danger-bg",
+                error && isFocused && "border-destructive bg-tier-danger-bg",
                 className
               )}
             >
@@ -486,8 +486,8 @@ const ComboboxMode = React.forwardRef<HTMLInputElement, ComboboxModeProps>(
                   isFloating ? "pt-5 pb-1 px-4" : "py-0 px-4",
                   showPrefix && "pl-7",
                   suffix && "pr-12",
-                  error && !(isFocused || isOpen) && "border-[hsl(var(--border-destructive-muted))] bg-[hsl(var(--surface-red-alpha))]",
-                  error && (isFocused || isOpen) && "border-destructive bg-[hsl(var(--surface-red-alpha))]",
+                  error && !(isFocused || isOpen) && "border-destructive/40 bg-tier-danger-bg",
+                  error && (isFocused || isOpen) && "border-destructive bg-tier-danger-bg",
                   className
                 )}
                 placeholder=""

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ChevronDown, TrendingUp, Clock, CheckCircle2, Banknote } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
-import { agentDeals } from "@/data/mockDeals";
+import { getAgentDeals } from "@/data/mockDeals";
+import { useDevTools } from "@/contexts/dev-tools-context";
 import { DealStatus } from "@/types";
 import { dealStatusColors } from "@huspy/shared-domain";
 import { BuyBareIcon, RentBareIcon, SellBareIcon, LeaseBareIcon } from "@/components/opportunities/opportunity-bare-icons";
@@ -77,10 +78,11 @@ const statusDotColors: Record<DealStatus, string> = Object.fromEntries(
 
 export function DealsTypeGrid() {
   const navigate = useNavigate();
+  const { activeAgentId } = useDevTools();
   const [expanded, setExpanded] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
-  const deals = agentDeals;
+  const deals = getAgentDeals(activeAgentId);
 
   const getGroupCount = (group: StatusGroup) =>
     deals.filter(d => group.statuses.includes(d.status)).length;
@@ -113,13 +115,13 @@ export function DealsTypeGrid() {
         >
           <h2 className="text-xl font-semibold text-foreground">My deals</h2>
           <ChevronDown className={cn(
-            "w-4 h-4 text-fg-secondary transition-transform duration-300",
+            "w-4 h-4 text-muted-foreground transition-transform duration-300",
             expanded && "rotate-180"
           )} />
         </button>
         <button
           onClick={() => navigate('/deals')}
-          className="text-sm font-medium text-fg-secondary hover:text-foreground transition-colors flex items-center gap-1"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
         >
           View all
           <ArrowRight className="w-3.5 h-3.5" />
@@ -155,7 +157,7 @@ export function DealsTypeGrid() {
               </div>
               <div className="min-w-0">
                 <p className="text-2xl font-semibold text-foreground leading-[120%]">{count}</p>
-                <p className="text-sm text-fg-secondary leading-[140%]">{group.label}</p>
+                <p className="text-sm text-muted-foreground leading-[140%]">{group.label}</p>
               </div>
             </button>
           );
@@ -174,24 +176,24 @@ export function DealsTypeGrid() {
           >
             <div className="bg-card rounded-2xl overflow-hidden">
               {/* Table header */}
-              <div className="grid grid-cols-[32px_1.2fr_0.7fr_100px_120px_100px] px-4 py-2.5 border-b border-border-ds-primary gap-3">
+              <div className="grid grid-cols-[32px_1.2fr_0.7fr_100px_120px_100px] px-4 py-2.5 border-b border-border gap-3">
                 <span />
-                <span className="text-xs font-semibold text-fg-secondary">Deal</span>
-                <span className="text-xs font-semibold text-fg-secondary">Opportunity</span>
-                <span className="text-xs font-semibold text-fg-secondary text-right">Amount</span>
-                <span className="text-xs font-semibold text-fg-secondary text-right">Commission</span>
-                <span className="text-xs font-semibold text-fg-secondary text-right">Status</span>
+                <span className="text-xs font-semibold text-muted-foreground">Deal</span>
+                <span className="text-xs font-semibold text-muted-foreground">Opportunity</span>
+                <span className="text-xs font-semibold text-muted-foreground text-right">Amount</span>
+                <span className="text-xs font-semibold text-muted-foreground text-right">Commission</span>
+                <span className="text-xs font-semibold text-muted-foreground text-right">Status</span>
               </div>
 
               {/* Rows */}
-              <div className="divide-y divide-border-ds-primary max-h-[400px] overflow-y-auto scrollbar-hide">
+              <div className="divide-y divide-border max-h-[400px] overflow-y-auto scrollbar-hide">
                 {filteredDeals.map((deal, index) => (
                   <motion.div
                     key={deal.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03, duration: 0.25 }}
-                    className="grid grid-cols-[32px_1.2fr_0.7fr_100px_120px_100px] px-4 py-3 items-center gap-3 hover:bg-surface-ds-raised/50 transition-colors cursor-pointer"
+                    className="grid grid-cols-[32px_1.2fr_0.7fr_100px_120px_100px] px-4 py-3 items-center gap-3 hover:bg-secondary/50 transition-colors cursor-pointer"
                     onClick={() => navigate('/deals')}
                   >
                     {/* Icon */}
@@ -202,7 +204,7 @@ export function DealsTypeGrid() {
                     {/* Title + client */}
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate leading-[120%]">{deal.title}</p>
-                      <p className="text-xs text-fg-secondary leading-[140%]">
+                      <p className="text-xs text-muted-foreground leading-[140%]">
                         {deal.clientName} · <span className="capitalize">{deal.type}</span>
                       </p>
                     </div>
@@ -225,7 +227,7 @@ export function DealsTypeGrid() {
                     {/* Status */}
                     <div className="flex items-center justify-end gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: statusDotColors[deal.status] }} />
-                      <span className="text-xs text-fg-secondary truncate">{statusLabels[deal.status]}</span>
+                      <span className="text-xs text-muted-foreground truncate">{statusLabels[deal.status]}</span>
                     </div>
                   </motion.div>
                 ))}
@@ -234,7 +236,7 @@ export function DealsTypeGrid() {
               {/* Footer */}
               <button
                 onClick={() => navigate('/deals')}
-                className="w-full px-4 py-3 border-t border-border-ds-primary flex items-center justify-center gap-2 text-sm font-semibold text-fg-secondary hover:text-foreground transition-colors"
+                className="w-full px-4 py-3 border-t border-border flex items-center justify-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
               >
                 View all deals <ArrowRight className="w-3.5 h-3.5" />
               </button>

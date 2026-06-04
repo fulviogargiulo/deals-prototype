@@ -117,7 +117,7 @@ export function BuyerCard({
           
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold leading-heading text-foreground truncate">{name}</h3>
-            <div className="text-sm font-normal leading-body text-fg-secondary space-y-0.5">
+            <div className="text-sm font-normal leading-body text-muted-foreground space-y-0.5">
               {location && <div>{location}</div>}
               {(budgetRange || bedrooms || size) && (
                 <div className="flex flex-wrap gap-1">
@@ -274,7 +274,7 @@ export function BuyerCard({
               </div>
               <span className="text-sm font-normal leading-body text-foreground">Portal inquired</span>
             </div>
-            <span className="text-sm font-normal leading-body text-fg-secondary">{portalInquired.timestamp}</span>
+            <span className="text-sm font-normal leading-body text-muted-foreground">{portalInquired.timestamp}</span>
           </div>
         )}
 
@@ -282,7 +282,7 @@ export function BuyerCard({
         {!portalInquired && buyerSaved && (
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
             <span className="text-sm font-normal leading-body text-foreground">Buyer saved</span>
-            <span className="text-sm font-normal leading-body text-fg-secondary">{buyerSaved.timestamp}</span>
+            <span className="text-sm font-normal leading-body text-muted-foreground">{buyerSaved.timestamp}</span>
           </div>
         )}
       </div>

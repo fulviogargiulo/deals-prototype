@@ -29,22 +29,22 @@ export function DealsSummaryCards({ deals, agentStakeMap }: DealsSummaryCardsPro
       label: 'Deals Reported',
       value: deals.length.toString(),
       icon: FileText,
-      color: 'hsl(var(--accent-teal))',
-      bg: 'hsl(var(--accent-teal) / 0.1)',
+      color: 'var(--grey-900)',
+      bg: 'var(--grey-100)',
     },
     {
       label: 'Total Reported Deal Value',
       value: `€${totalDealValue.toLocaleString()}`,
       icon: Banknote,
-      color: 'hsl(var(--accent-indigo))',
-      bg: 'hsl(var(--accent-indigo) / 0.1)',
+      color: 'var(--grey-900)',
+      bg: 'var(--grey-100)',
     },
     {
       label: 'Total Commission Earned',
       value: `€${totalCommissionsPaid.toLocaleString()}`,
       icon: TrendingUp,
-      color: 'hsl(var(--ds-green))',
-      bg: 'hsl(var(--ds-green) / 0.1)',
+      color: 'hsl(var(--tier-success-fg))',
+      bg: 'hsl(var(--tier-success-bg))',
     },
   ];
 
@@ -59,7 +59,7 @@ export function DealsSummaryCards({ deals, agentStakeMap }: DealsSummaryCardsPro
             >
               <card.icon className="w-4 h-4" style={{ color: card.color }} />
             </div>
-            <span className="text-xs font-semibold text-fg-secondary">{card.label}</span>
+            <span className="text-xs font-semibold text-muted-foreground">{card.label}</span>
           </div>
           <p className="text-[28px] font-semibold leading-[120%] text-foreground">{card.value}</p>
         </div>

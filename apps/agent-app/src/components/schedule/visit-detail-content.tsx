@@ -282,8 +282,8 @@ import { ShareVisitModal } from "./share-visit-modal";
                         : 'hsl(var(--muted))'
                     }}
                   >
-                    {isCompleted && activity?.feedback?.clientLiked && <ThumbsUp className="h-5 w-5 text-ds-green" />}
-                    {isCompleted && activity?.feedback?.clientLiked === false && <ThumbsDown className="h-5 w-5 text-ds-red" />}
+                    {isCompleted && activity?.feedback?.clientLiked && <ThumbsUp className="h-5 w-5 text-tier-success" />}
+                    {isCompleted && activity?.feedback?.clientLiked === false && <ThumbsDown className="h-5 w-5 text-tier-danger" />}
                     {(isCancelled || isNoShow) && <CalendarX2 className="h-5 w-5 text-foreground" />}
                   </div>
                   <div>
@@ -331,7 +331,7 @@ import { ShareVisitModal } from "./share-visit-modal";
                      className="h-10 w-10 rounded-full shrink-0"
                    >
                      {addressCopied ? (
-                       <Check className="h-5 w-5 text-ds-green" />
+                       <Check className="h-5 w-5 text-tier-success" />
                      ) : (
                        <Copy className="h-5 w-5" />
                      )}

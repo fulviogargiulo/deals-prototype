@@ -17,6 +17,7 @@ import {
   CheckCheck,
   Lock,
   MessageSquare,
+  MoreHorizontal,
   Undo2,
   ChevronDown,
   Plus,
@@ -50,6 +51,13 @@ import { dealStatusLabel } from "@/lib/labels";
 import { PnLWaterfall } from "@/components/PnLWaterfall";
 import { PostingDetailDialog } from "@/components/PostingDetailDialog";
 import { DealHeader } from "@/components/DealHeader";
+import { CancelDealDialog } from "@/components/CancelDealDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   computeDealReadiness,
   type DealReadiness,
@@ -183,10 +191,12 @@ function TrancheContextBar({
   readiness,
   onTransition,
   savedAt,
+  onCancel,
 }: {
   readiness: DealReadiness;
   onTransition: (to: DealReadiness["primary"] extends infer A ? A extends { to: infer T } ? T : never : never, opts?: { reason?: string }) => void;
   savedAt?: string;
+  onCancel?: () => void;
 }) {
   const palette = MODE_PALETTE[readiness.mode];
   const Icon = palette.icon;
@@ -272,6 +282,19 @@ function TrancheContextBar({
             {primaryEnabled && <ArrowRight className="h-3.5 w-3.5" />}
           </button>
         )}
+        {onCancel && readiness.mode !== "terminal" && readiness.mode !== "canceled" && (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:bg-muted transition-colors shrink-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={onCancel} className="text-destructive focus:text-destructive cursor-pointer">
+                <Ban className="h-3.5 w-3.5 mr-2" />
+                Cancel tranche…
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );
@@ -316,7 +339,7 @@ function DealDetailsCard({ deal, amountLabel, demandName, demandPartyId, supplyN
             <ReadRow label="Country" value={deal.country?.toUpperCase() ?? "—"} />
             <ReadRow label="Market" value={deal.market ?? "—"} />
             <ReadRow label="Channel" value={deal.channel ?? "—"} />
-            <ReadRow label="Amount" value={amountLabel !== "—" ? `${deal.currency ?? ""} ${amountLabel}` : "—"} />
+            <ReadRow label="Amount" value={amountLabel} />
           </div>
           {/* Col 3: Deal ID, Description, Offer ID, Created */}
           <div>
@@ -367,6 +390,7 @@ const DealDetail = () => {
   // ── Add tranche modal ─────────────────────────────────────────────────────
   const [addTrancheOpen, setAddTrancheOpen] = useState(false);
   const [addTrancheLabel, setAddTrancheLabel] = useState("");
+  const [addTrancheEngine, setAddTrancheEngine] = useState<string>("");
   const [addTrancheAmountStr, setAddTrancheAmountStr] = useState("");
   const [addTrancheMoveCosts, setAddTrancheMoveCosts] = useState(false);
 
@@ -378,62 +402,65 @@ const DealDetail = () => {
 
   const handleAddTranche = () => {
     if (!deal || !activeTranche) return;
+    if (!addTrancheLabel.trim()) return;
+    const engine = (addTrancheEngine || activeTranche.pnlEngine || "rebu") as import("@huspy/shared-domain").PnlEngine;
     const splitAmount = parseFloat(addTrancheAmountStr) || 0;
-    if (!addTrancheLabel.trim() || splitAmount <= 0) return;
-    const originRevenue = trancheGrossRevenue(activeTranche.id);
-    if (splitAmount >= originRevenue) return;
+    const isSplit = engine !== "manual" && splitAmount > 0;
 
     const now = new Date().toISOString();
     const newId = `tranche-${String(Date.now()).slice(-8)}`;
-    const remainingRevenue = originRevenue - splitAmount;
 
-    const sourceStakes = sharedPnlEntries.filter((s) => s.trancheId === activeTranche.id);
-    const originRevStake = sourceStakes.find((s) => s.role === "REVENUE_SOURCE");
-    if (originRevStake) originRevStake.amount = remainingRevenue;
+    if (isSplit) {
+      const originRevenue = trancheGrossRevenue(activeTranche.id);
+      if (splitAmount >= originRevenue) return;
+      const remainingRevenue = originRevenue - splitAmount;
 
-    const costRoles = new Set(["ACQUISITION_DEDUCTION", "OPERATIONAL_DEDUCTION"]);
-    const costStakesToMove = addTrancheMoveCosts ? sourceStakes.filter((s) => costRoles.has(s.role)) : [];
-    if (costStakesToMove.length > 0) {
-      const idsToRemove = new Set(costStakesToMove.map((s) => s.id));
-      sharedPnlEntries.splice(0, sharedPnlEntries.length,
-        ...sharedPnlEntries.filter((s) => !idsToRemove.has(s.id)));
+      const sourceStakes = sharedPnlEntries.filter((s) => s.trancheId === activeTranche.id);
+      const originRevStake = sourceStakes.find((s) => s.role === "REVENUE_SOURCE");
+      if (originRevStake) originRevStake.amount = remainingRevenue;
+
+      const costRoles = new Set(["ACQUISITION_DEDUCTION", "OPERATIONAL_DEDUCTION"]);
+      const costStakesToMove = addTrancheMoveCosts ? sourceStakes.filter((s) => costRoles.has(s.role)) : [];
+      if (costStakesToMove.length > 0) {
+        const idsToRemove = new Set(costStakesToMove.map((s) => s.id));
+        sharedPnlEntries.splice(0, sharedPnlEntries.length,
+          ...sharedPnlEntries.filter((s) => !idsToRemove.has(s.id)));
+      }
+
+      updateTranche({ ...activeTranche, updatedAt: now });
+
+      const freshSourceStakes = sharedPnlEntries.filter((s) => s.trancheId === activeTranche.id);
+      freshSourceStakes.filter((s) => s.role === "AGENT_PAYOUT").forEach((s, i) => {
+        sharedPnlEntries.push({ ...s, id: `ds-${newId}-copy-${i}`, trancheId: newId, amount: undefined, source: "engine", status: "draft" });
+      });
+      sharedPnlEntries.push({
+        id: `ds-${newId}-rev`, trancheId: newId,
+        partyId: originRevStake?.partyId ?? "party-client-001",
+        role: "REVENUE_SOURCE", amount: splitAmount, source: "manual", status: "draft",
+      });
+      costStakesToMove.forEach((s, i) => {
+        sharedPnlEntries.push({ ...s, id: `ds-${newId}-cost-${i}`, trancheId: newId });
+      });
+      toast.success(`Tranche "${addTrancheLabel}" created — origin reduced to ${remainingRevenue} ${deal.currency}`);
+    } else {
+      toast.success(`Tranche "${addTrancheLabel}" created — add revenue and payouts in the P&L waterfall`);
     }
 
-    updateTranche({ ...activeTranche, updatedAt: now });
-
-    const freshSourceStakes = sharedPnlEntries.filter((s) => s.trancheId === activeTranche.id);
-    // Only copy financial P&L entries — DEMAND/SUPPLY are Deal-level (sharedDealParticipants) and don't need copying.
-    freshSourceStakes.filter((s) => s.role === "AGENT_PAYOUT").forEach((s, i) => {
-      sharedPnlEntries.push({
-        ...s, id: `ds-${newId}-copy-${i}`, trancheId: newId,
-        amount: s.role === "AGENT_PAYOUT" ? undefined : s.amount,
-        source: s.role === "AGENT_PAYOUT" ? "engine" : s.source, status: "draft",
-      });
-    });
-    sharedPnlEntries.push({
-      id: `ds-${newId}-rev`, trancheId: newId,
-      partyId: originRevStake?.partyId ?? "party-client-001",
-      role: "REVENUE_SOURCE", amount: splitAmount, source: "manual", status: "draft",
-    });
-    costStakesToMove.forEach((s, i) => {
-      sharedPnlEntries.push({ ...s, id: `ds-${newId}-cost-${i}`, trancheId: newId });
-    });
     sharedDocumentRequirementTemplates
       .filter((t) => t.market === deal.market && t.businessUnit === deal.businessUnit && t.country === deal.country)
       .forEach((t, i) => {
         sharedDealDocumentRequirements.push({ id: `ddr-${newId}-${i}`, trancheId: newId, label: t.label, required: t.required, status: "pending" });
       });
 
-    const newTranche: Tranche = {
+    addTranche({
       id: newId, dealId: deal.id, label: addTrancheLabel.trim(), index: tranches.length,
       status: "pending-details",
-      reportDate: activeTranche.reportDate, pnlEngine: activeTranche.pnlEngine,
+      reportDate: activeTranche.reportDate,
+      pnlEngine: engine,
       blueprintId: activeTranche.blueprintId, createdAt: now, updatedAt: now,
-    };
-    addTranche(newTranche);
-    setAddTrancheOpen(false); setAddTrancheLabel(""); setAddTrancheAmountStr(""); setAddTrancheMoveCosts(false);
+    });
+    setAddTrancheOpen(false); setAddTrancheLabel(""); setAddTrancheEngine(""); setAddTrancheAmountStr(""); setAddTrancheMoveCosts(false);
     setSearchParams({ tranche: newId });
-    toast.success(`Tranche "${addTrancheLabel}" created — origin reduced to ${remainingRevenue} ${deal.currency}`);
   };
 
   // ── P&L change tracking ────────────────────────────────────────────────────
@@ -564,6 +591,7 @@ const DealDetail = () => {
     else toast.success(`Moved to ${dealStatusLabel[to]}`);
   };
 
+  const [cancelOpen, setCancelOpen] = useState(false);
   const canCancel = status !== "finalized" && status !== "canceled";
   const readiness = computeDealReadiness({
     deal: { ...deal, status, statusHistory } as any,
@@ -572,11 +600,7 @@ const DealDetail = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-background">
-      <DealHeader
-        deal={deal}
-        canCancel={canCancel}
-        onCancel={(reason) => handleStatusChange("canceled", { reason })}
-      />
+      <DealHeader deal={deal} />
 
       <div className="flex-1 overflow-auto px-6 py-6 space-y-4">
         {/* ── Deal identity card — deal-scoped fields, always visible above the tabs ── */}
@@ -596,7 +620,7 @@ const DealDetail = () => {
             canAdd={status === "under-review"}
             onAdd={() => { setAddTrancheLabel("Escritura"); setAddTrancheAmountStr(String(Math.round(trancheGrossRevenue(activeTranche.id) / 2))); setAddTrancheOpen(true); }} />
 
-          <TrancheContextBar readiness={readiness} onTransition={handleStatusChange} savedAt={savedAt} />
+          <TrancheContextBar readiness={readiness} onTransition={handleStatusChange} savedAt={savedAt} onCancel={canCancel ? () => setCancelOpen(true) : undefined} />
 
           <div className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
@@ -729,30 +753,55 @@ const DealDetail = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setAddTrancheOpen(false)}>
           <div className="bg-background rounded-xl border border-border shadow-xl w-full max-w-sm mx-4 p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-[15px] font-semibold mb-1">Add tranche</h3>
-            <p className="text-[12px] text-muted-foreground mb-5">Moves part of this tranche's revenue to a new tranche in Pending Details.</p>
+            <p className="text-[12px] text-muted-foreground mb-5">New tranche on this deal. Revenue and payouts are set in the P&amp;L waterfall after creation.</p>
             <div className="space-y-4">
               <div>
                 <label className="text-[12px] font-medium text-foreground block mb-1.5">Tranche label</label>
-                <input type="text" value={addTrancheLabel} onChange={(e) => setAddTrancheLabel(e.target.value)} placeholder="e.g. Escritura" autoFocus
+                <input type="text" value={addTrancheLabel} onChange={(e) => setAddTrancheLabel(e.target.value)} placeholder="e.g. Escritura, Cancellation penalty" autoFocus
                   className="w-full px-3 py-2 border border-border rounded-md text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
               </div>
               <div>
-                <label className="text-[12px] font-medium text-foreground block mb-1.5">
-                  Amount to split ({deal.currency})
-                  <span className="ml-2 text-muted-foreground font-normal">origin will become {Math.max(0, trancheGrossRevenue(activeTranche.id) - (parseFloat(addTrancheAmountStr) || 0))} {deal.currency}</span>
-                </label>
-                <input type="number" value={addTrancheAmountStr} onChange={(e) => setAddTrancheAmountStr(e.target.value)} placeholder="0" min={1} max={trancheGrossRevenue(activeTranche.id) - 1}
-                  className="w-full px-3 py-2 border border-border rounded-md text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                <label className="text-[12px] font-medium text-foreground block mb-1.5">P&amp;L Engine</label>
+                <select
+                  value={addTrancheEngine || activeTranche.pnlEngine || "rebu"}
+                  onChange={(e) => { setAddTrancheEngine(e.target.value); setAddTrancheAmountStr(""); setAddTrancheMoveCosts(false); }}
+                  className="w-full px-3 py-2 border border-border rounded-md text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="rebu">REBU</option>
+                  <option value="mbu-ma-broker">MBU — MA / Broker</option>
+                  <option value="mbu-direct">MBU — Direct</option>
+                  <option value="manual">Manual</option>
+                </select>
               </div>
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                <input type="checkbox" checked={addTrancheMoveCosts} onChange={(e) => setAddTrancheMoveCosts(e.target.checked)} className="w-4 h-4 rounded border-border accent-primary" />
-                <span className="text-[12px] text-foreground">Move acquisition &amp; operational costs to new tranche</span>
-              </label>
+              {(addTrancheEngine || activeTranche.pnlEngine) !== "manual" && (
+                <div>
+                  <label className="text-[12px] font-medium text-foreground block mb-1.5">
+                    Split revenue from current tranche ({deal.currency}) — optional
+                    {parseFloat(addTrancheAmountStr) > 0 && (
+                      <span className="ml-2 text-muted-foreground font-normal">origin will become {Math.max(0, trancheGrossRevenue(activeTranche.id) - (parseFloat(addTrancheAmountStr) || 0))} {deal.currency}</span>
+                    )}
+                  </label>
+                  <input type="number" value={addTrancheAmountStr} onChange={(e) => setAddTrancheAmountStr(e.target.value)} placeholder="Leave blank to start empty"
+                    max={trancheGrossRevenue(activeTranche.id) - 1}
+                    className="w-full px-3 py-2 border border-border rounded-md text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                </div>
+              )}
+              {(addTrancheEngine || activeTranche.pnlEngine) !== "manual" && parseFloat(addTrancheAmountStr) > 0 && (
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input type="checkbox" checked={addTrancheMoveCosts} onChange={(e) => setAddTrancheMoveCosts(e.target.checked)} className="w-4 h-4 rounded border-border accent-primary" />
+                  <span className="text-[12px] text-foreground">Move acquisition &amp; operational costs to new tranche</span>
+                </label>
+              )}
             </div>
             <div className="flex gap-2 mt-6 justify-end">
-              <button onClick={() => setAddTrancheOpen(false)} className="px-4 py-2 rounded-md border border-border text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+              <button onClick={() => { setAddTrancheOpen(false); setAddTrancheLabel(""); setAddTrancheEngine(""); setAddTrancheAmountStr(""); setAddTrancheMoveCosts(false); }} className="px-4 py-2 rounded-md border border-border text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
               <button onClick={handleAddTranche}
-                disabled={!addTrancheLabel.trim() || parseFloat(addTrancheAmountStr) <= 0 || parseFloat(addTrancheAmountStr) >= trancheGrossRevenue(activeTranche.id)}
+                disabled={
+                  !addTrancheLabel.trim() ||
+                  ((addTrancheEngine || activeTranche.pnlEngine) !== "manual" &&
+                    parseFloat(addTrancheAmountStr) > 0 &&
+                    parseFloat(addTrancheAmountStr) >= trancheGrossRevenue(activeTranche.id))
+                }
                 className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-[13px] font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">
                 Create tranche
               </button>
@@ -760,6 +809,14 @@ const DealDetail = () => {
           </div>
         </div>
       )}
+
+      <CancelDealDialog
+        open={cancelOpen}
+        deal={deal}
+        tranche={activeTranche}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={(reason) => { setCancelOpen(false); handleStatusChange("canceled", { reason }); }}
+      />
     </div>
   );
 };

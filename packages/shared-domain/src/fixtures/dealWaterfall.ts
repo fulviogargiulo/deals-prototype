@@ -41,6 +41,12 @@ export function buildWaterfallInput(deal: WaterfallInput): ProjectedPnLInput | n
     }
   }
 
+  // When trancheId was supplied explicitly, blueprintId still needs resolving from the tranche.
+  if (resolvedTrancheId && !resolvedBlueprintId) {
+    const tranche = sharedTranches.find(t => t.id === resolvedTrancheId);
+    if (tranche) resolvedBlueprintId = tranche.blueprintId;
+  }
+
   // Always derive grossRevenue from REVENUE_SOURCE stakes — not stored on Tranche.
   if (resolvedTrancheId) {
     const revStakes = sharedPnlEntries.filter(

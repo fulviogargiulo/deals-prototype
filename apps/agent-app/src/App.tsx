@@ -71,8 +71,8 @@ function AppContent() {
                 <Route path="/tasks/:id" element={<MainLayout><TaskDetails /></MainLayout>} />
                 <Route path="/documents" element={<MainLayout><DocumentsList /></MainLayout>} />
                 
-                <Route path="/settings" element={<MainLayout><div className="p-6 animate-fade-in"><h1 className="text-3xl font-bold">Settings</h1><p className="text-muted-foreground">Coming soon</p></div></MainLayout>} />
-                <Route path="/help" element={<MainLayout><div className="p-6 animate-fade-in"><h1 className="text-3xl font-bold">Help</h1><p className="text-muted-foreground">Coming soon</p></div></MainLayout>} />
+                <Route path="/settings" element={<MainLayout><div className="p-6 animate-fade-in"><h1 className="text-3xl font-semibold">Settings</h1><p className="text-muted-foreground">Coming soon</p></div></MainLayout>} />
+                <Route path="/help" element={<MainLayout><div className="p-6 animate-fade-in"><h1 className="text-3xl font-semibold">Help</h1><p className="text-muted-foreground">Coming soon</p></div></MainLayout>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

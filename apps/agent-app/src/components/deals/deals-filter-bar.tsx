@@ -35,7 +35,7 @@ export function DealsFilterBar({ onDateRangeChange }: DealsFilterBarProps) {
     'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
     active
       ? 'bg-foreground text-background'
-      : 'bg-surface-ds-raised text-fg-secondary hover:bg-surface-ds-raised/80'
+      : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
   );
 
   return (
@@ -50,7 +50,7 @@ export function DealsFilterBar({ onDateRangeChange }: DealsFilterBarProps) {
         <div className="flex items-center gap-2">
           <Popover open={fromOpen} onOpenChange={setFromOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full text-xs font-semibold bg-surface-ds-raised border-0">
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full text-xs font-semibold bg-secondary border-0">
                 <CalendarIcon className="h-3.5 w-3.5" />
                 {customFrom ? format(customFrom, 'MMM d, yyyy') : 'From'}
               </Button>
@@ -59,10 +59,10 @@ export function DealsFilterBar({ onDateRangeChange }: DealsFilterBarProps) {
               <Calendar mode="single" selected={customFrom} onSelect={(d) => { setCustomFrom(d); setFromOpen(false); }} initialFocus className="p-3 pointer-events-auto" />
             </PopoverContent>
           </Popover>
-          <span className="text-xs text-fg-secondary">–</span>
+          <span className="text-xs text-muted-foreground">–</span>
           <Popover open={toOpen} onOpenChange={setToOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full text-xs font-semibold bg-surface-ds-raised border-0">
+              <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-full text-xs font-semibold bg-secondary border-0">
                 <CalendarIcon className="h-3.5 w-3.5" />
                 {customTo ? format(customTo, 'MMM d, yyyy') : 'To'}
               </Button>

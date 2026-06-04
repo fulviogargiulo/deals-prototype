@@ -212,7 +212,7 @@ function MatchingPreferencesSection({ property }: MatchingPreferencesProps) {
           {exactMatches.map((match, idx) => (
             <div 
               key={idx}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-ds-green/15 text-ds-green"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-tier-success-bg text-tier-success"
             >
               <match.icon className="h-4 w-4" />
               {match.label}
@@ -223,7 +223,7 @@ function MatchingPreferencesSection({ property }: MatchingPreferencesProps) {
             return (
               <div 
                 key={`amenity-${idx}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-ds-green/15 text-ds-green"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-tier-success-bg text-tier-success"
               >
                 <IconComponent className="h-4 w-4" />
                 {amenity}
@@ -258,7 +258,7 @@ function MatchingPreferencesSection({ property }: MatchingPreferencesProps) {
           {closeMatches.map((match, idx) => (
             <div 
               key={idx}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-ds-orange/15 text-ds-orange"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-tier-warning-bg text-tier-warning"
             >
               <match.icon className="h-4 w-4" />
               {match.label}
@@ -352,13 +352,13 @@ export function PropertyPreviewContent({
   const isExpand = variant === 'expand';
 
   return (
-    <div className={cn("flex flex-col h-full", isExpand ? "bg-surface-ds-page-dark" : "bg-background", className)}>
+    <div className={cn("flex flex-col h-full", isExpand ? "bg-foreground" : "bg-background", className)}>
       {/* Header */}
       {showHeader && (
         <div className={cn(
           "sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b flex-shrink-0",
           isExpand 
-            ? "border-white/10 bg-surface-ds-page-dark" 
+            ? "border-white/10 bg-foreground" 
             : "backdrop-blur-xl bg-white/60 dark:bg-background/60"
         )}>
           <Button
@@ -488,7 +488,7 @@ export function PropertyPreviewContent({
                 <Badge variant="secondary" className={cn("font-mono text-xs", isExpand && "bg-zinc-700 text-white")}>{extendedData.referenceCode}</Badge>
               </div>
               <div className="flex items-baseline justify-between mb-2">
-                <span className={cn("text-2xl font-bold", isExpand && "text-white")}>{formattedPrice}</span>
+                <span className={cn("text-2xl font-semibold", isExpand && "text-white")}>{formattedPrice}</span>
                 <span className={cn("text-sm", isExpand ? "text-zinc-400" : "text-muted-foreground")}>{property.publishedDate}</span>
               </div>
               <h1 className={cn("text-base mb-3", isExpand ? "text-zinc-400" : "text-muted-foreground")}>{property.title}</h1>
@@ -609,7 +609,7 @@ export function PropertyPreviewContent({
                     <p className={cn("text-sm font-medium mb-2", isExpand && "text-white")}>Energy certificate</p>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-600 font-bold">
+                        <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-600 font-semibold">
                           {extendedData.additionalInfo.energyCertificate.consumptionType}
                         </div>
                         <div>
@@ -618,7 +618,7 @@ export function PropertyPreviewContent({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 font-bold">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 font-semibold">
                           {extendedData.additionalInfo.energyCertificate.emissionsType}
                         </div>
                         <div>
@@ -635,7 +635,7 @@ export function PropertyPreviewContent({
             {/* Listed by */}
             <Card className={cn("overflow-hidden", isExpand && "bg-zinc-800/50 border-white/10")}>
               <div className={cn("p-3 border-b", isExpand ? "bg-zinc-800/30 border-white/10" : "bg-muted/30")}>
-                <p className={cn("text-xs font-medium uppercase tracking-wider", isExpand ? "text-zinc-400" : "text-muted-foreground")}>Listed by</p>
+                <p className={cn("text-xs font-medium", isExpand ? "text-zinc-400" : "text-muted-foreground")}>Listed by</p>
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-3 mb-4">

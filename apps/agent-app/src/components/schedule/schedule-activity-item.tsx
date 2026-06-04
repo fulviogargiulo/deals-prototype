@@ -105,7 +105,7 @@ function getVisitFooter(activity: ScheduleActivity): { icon: React.ReactNode; la
     }
     // Completed but no like/dislike info
     return {
-      icon: <Check className="w-4 h-4 text-ds-green" />,
+      icon: <Check className="w-4 h-4 text-tier-success" />,
       label: "Visit completed",
     };
   }
@@ -246,7 +246,7 @@ function CompactActivityItem({ activity, isNewlyAdded = false, showOpportunitySu
               />
               <div 
                 className={cn(
-                  "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-ds-green flex items-center justify-center",
+                  "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-tier-success flex items-center justify-center",
                   isCompleted ? "scale-100" : "scale-0"
                 )}
                 style={{ transition: "transform 1.5s ease-out" }}

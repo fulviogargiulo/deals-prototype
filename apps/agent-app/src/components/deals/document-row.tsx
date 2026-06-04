@@ -52,11 +52,11 @@ export function DocumentRow({
   };
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-[hsl(var(--border-ds-primary))] last:border-b-0">
+    <div className="flex items-center justify-between py-3 border-b border-border last:border-b-0">
       {/* Left: status icon + name */}
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {isUploaded ? (
-          <CheckCircle2 className="w-5 h-5 shrink-0 text-[hsl(var(--ds-green))]" />
+          <CheckCircle2 className="w-5 h-5 shrink-0 text-tier-success" />
         ) : (
           <div className="w-5 h-5 shrink-0 rounded-full border-2 border-[hsl(var(--border))]" />
         )}
@@ -65,7 +65,7 @@ export function DocumentRow({
             {name}
           </p>
           {subtitle && !isUploaded && (
-            <p className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%]">{subtitle}</p>
+            <p className="text-[12px] text-muted-foreground leading-[140%]">{subtitle}</p>
           )}
         </div>
       </div>
@@ -75,14 +75,14 @@ export function DocumentRow({
         {isUploaded ? (
           <>
             {/* Uploaded file name */}
-            <span className="text-[12px] text-[hsl(var(--fg-secondary))] leading-[140%] truncate max-w-[180px] mr-2">
+            <span className="text-[12px] text-muted-foreground leading-[140%] truncate max-w-[180px] mr-2">
               {fileName}
             </span>
 
             {/* Download */}
             <button
               onClick={handleDownload}
-              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--surface-raised))] transition-colors text-[hsl(var(--fg-secondary))]"
+              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground"
               title="Download"
             >
               <Download className="w-4 h-4" />
@@ -98,7 +98,7 @@ export function DocumentRow({
             />
             <button
               onClick={() => replaceRef.current?.click()}
-              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--surface-raised))] transition-colors text-[hsl(var(--fg-secondary))]"
+              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground"
               title="Replace"
             >
               <RefreshCw className="w-4 h-4" />
@@ -108,7 +108,7 @@ export function DocumentRow({
             {onDelete && (
               <button
                 onClick={handleDelete}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--ds-red)/0.1)] transition-colors text-[hsl(var(--ds-red))]"
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-tier-danger-bg transition-colors text-tier-danger"
                 title="Delete"
               >
                 <Trash2 className="w-4 h-4" />
@@ -126,7 +126,7 @@ export function DocumentRow({
             />
             <button
               onClick={() => uploadRef.current?.click()}
-              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[hsl(var(--surface-raised))] transition-colors text-foreground"
+              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-secondary transition-colors text-foreground"
               title="Upload"
             >
               <Upload className="w-4 h-4" />

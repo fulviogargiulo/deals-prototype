@@ -308,7 +308,7 @@ export function OpportunityCard({
             </div>
             
             {/* Price and Specs */}
-            <div className="flex items-center gap-2 text-sm font-normal leading-body text-fg-secondary line-clamp-1">
+            <div className="flex items-center gap-2 text-sm font-normal leading-body text-muted-foreground line-clamp-1">
               {priceRange && (
                 <>
                   <span>{formatPrice()}</span>
@@ -385,7 +385,7 @@ export function OpportunityCard({
         {showActivityFooter && activityText && (
           <div className="flex items-center justify-between pt-3 border-t">
             <span className="text-sm font-normal leading-body text-foreground">{activityText}</span>
-            <span className="text-sm font-normal leading-body text-fg-secondary">{activityTime}</span>
+            <span className="text-sm font-normal leading-body text-muted-foreground">{activityTime}</span>
           </div>
         )}
       </div>

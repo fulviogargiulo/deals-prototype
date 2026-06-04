@@ -80,7 +80,7 @@ export function DealsDateRangeSelector({ onChange }: DealsDateRangeSelectorProps
               'px-3 py-1.5 rounded-lg text-xs font-semibold leading-[140%] transition-all duration-200 uppercase',
               mode === m
                 ? 'bg-card text-foreground shadow-sm'
-                : 'text-fg-secondary hover:text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             {m === 'ytd' ? 'YTD' : m === 'custom' ? 'Custom' : m.charAt(0).toUpperCase() + m.slice(1)}
@@ -129,7 +129,7 @@ export function DealsDateRangeSelector({ onChange }: DealsDateRangeSelectorProps
                 />
               </PopoverContent>
             </Popover>
-            <span className="text-xs text-fg-secondary">–</span>
+            <span className="text-xs text-muted-foreground">–</span>
             <Popover open={toOpen} onOpenChange={setToOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-xl text-xs font-semibold">

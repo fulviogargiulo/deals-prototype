@@ -1,4 +1,4 @@
-import { sharedDeals, sharedTranches, sharedPnlEntries, sharedAgents } from "@huspy/shared-domain";
+import { sharedDeals, sharedTranches, sharedPnlEntries, sharedAgents, sharedOffers, sharedClients } from "@huspy/shared-domain";
 import type { PnlEntry, Tranche } from "@huspy/shared-domain";
 import type { Deal } from "@/types";
 
@@ -34,9 +34,12 @@ function deriveType(d: { market?: string; businessUnit?: string }): Deal["type"]
 export const mockDeals: Deal[] = (sharedDeals as unknown as Deal[]).map(d => {
   const tranches = sharedTranches.filter(t => t.dealId === d.id).sort((a, b) => a.index - b.index);
   const primaryTranche = tranches[0];
+  const offer = sharedOffers.find(o => o.id === d.offerId);
+  const client = offer ? sharedClients.find(c => c.id === offer.clientId) : undefined;
   return {
     ...d,
     type: deriveType(d),
+    clientName: client?.fullName ?? '',
     agentDealStatus: getAgentDealStatus(tranches),
     // Keep legacy status for backward compat with components that still read it
     status: primaryTranche?.status as any,
@@ -60,7 +63,15 @@ export function getAgentDeals(agentId: string): Deal[] {
   const dealIds = new Set(
     sharedTranches.filter(t => trancheIds.has(t.id)).map(t => t.dealId)
   );
-  return mockDeals.filter(d => dealIds.has(d.id));
+  return mockDeals.filter(d => dealIds.has(d.id)).map(d => {
+    const offer = sharedOffers.find(o => o.id === d.offerId);
+    let type = d.type;
+    if (d.businessUnit === 'mortgage') type = 'mortgage';
+    else if (d.market === 'leasing') type = 'lease';
+    else if (offer?.sellerAgentId === agentId) type = 'sell';
+    else if (offer?.buyerAgentId === agentId) type = 'buy';
+    return { ...d, type };
+  });
 }
 
 // Returns a map of trancheId → PnlEntry for the agent's primary stakes.

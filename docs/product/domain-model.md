@@ -6,6 +6,35 @@ This page explains how the core entities in the Deals system connect to each oth
 
 ```
 erDiagram
+    classDef ours fill:#E04C56, color:#FFFFFF
+    classDef existing fill:#FFFFFF
+
+    Party ::: ours
+    Agent ::: existing
+    AgentFinancials ::: ours
+    AgentDocument ::: existing
+    Client ::: existing
+    Opportunity ::: existing
+    Property ::: existing
+    Mortgage ::: existing
+    Asset ::: ours
+    Offer ::: existing
+    Deal ::: ours
+    Tranche ::: ours
+    Blueprint ::: ours
+    DealParticipant ::: ours
+    PnlEntry ::: ours
+    PnlEntryAudit ::: ours
+    DealDocumentRequirement ::: ours
+    DocumentRequirementTemplate ::: ours
+    Invoice ::: ours
+    Task ::: existing
+    Document ::: existing
+    DealComment ::: ours
+    Ledger ::: ours
+    Posting ::: ours
+    PostingLine ::: ours
+
     Party {
         string id
         string displayName

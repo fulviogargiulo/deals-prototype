@@ -23,7 +23,7 @@ export function EmptyMyPropertiesState({ onAddProperty }: EmptyMyPropertiesState
         <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-6">
           <div className="bg-black/70 backdrop-blur-xl rounded-2xl p-5 md:p-6 space-y-4">
             <div className="space-y-1">
-              <h2 className="text-xl md:text-2xl font-bold text-white">
+              <h2 className="text-xl md:text-2xl font-semibold text-white">
                 Your next sale starts here
               </h2>
               <p className="text-sm md:text-base text-white/70">

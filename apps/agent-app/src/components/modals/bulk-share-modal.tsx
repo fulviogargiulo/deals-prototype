@@ -264,7 +264,7 @@ export function BulkShareModal({
                         {item.image ? (
                           <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                          <div className="w-full h-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
                             {item.title.charAt(0)}
                           </div>
                         )}
@@ -272,7 +272,7 @@ export function BulkShareModal({
                     ))}
                     {items.length > 4 && (
                       <div
-                        className="w-12 h-12 rounded-xl border-2 border-card bg-raised flex items-center justify-center text-xs font-bold text-muted-foreground flex-shrink-0 shadow-sm"
+                        className="w-12 h-12 rounded-xl border-2 border-card bg-raised flex items-center justify-center text-xs font-semibold text-muted-foreground flex-shrink-0 shadow-sm"
                         style={{ marginLeft: -12, zIndex: 0 }}
                       >
                         +{items.length - 4}
@@ -306,7 +306,7 @@ export function BulkShareModal({
                     ))}
                     {items.length > 4 && (
                       <div
-                        className="w-8 h-8 rounded-full border-2 border-card bg-raised flex items-center justify-center text-[10px] font-bold text-muted-foreground flex-shrink-0 shadow-sm"
+                        className="w-8 h-8 rounded-full border-2 border-card bg-raised flex items-center justify-center text-[10px] font-semibold text-muted-foreground flex-shrink-0 shadow-sm"
                         style={{ marginLeft: -8, zIndex: 0 }}
                       >
                         +{items.length - 4}
@@ -398,12 +398,12 @@ export function BulkShareModal({
                   <p className="text-sm font-semibold truncate">{client.name}</p>
                   <p className="text-xs text-muted-foreground">{client.phone}</p>
                 </div>
-                <CheckCircle2 className="w-5 h-5 text-status-green ml-auto flex-shrink-0" />
+                <CheckCircle2 className="w-5 h-5 text-tier-success ml-auto flex-shrink-0" />
               </div>
 
               {/* Share as selector */}
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Share as</p>
+                <p className="text-xs font-semibold text-muted-foreground">Share as</p>
                 <div className="flex gap-2">
                   {/* PDF brochure */}
                   <button
@@ -488,7 +488,7 @@ export function BulkShareModal({
               {/* Generated message preview */}
               <div className="bg-muted/30 rounded-xl p-4 border border-border">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Message preview</p>
+                  <p className="text-[10px] text-muted-foreground font-semibold">Message preview</p>
                   <button
                     onClick={handleCopyMessage}
                     className="flex items-center gap-1 text-[10px] font-medium text-foreground hover:text-foreground/70 transition-colors"
@@ -508,7 +508,7 @@ export function BulkShareModal({
                           <span className="text-foreground">•</span>
                           <span className="truncate">{item.title}</span>
                         </span>
-                        <span className="text-xs text-accent-teal ml-4 break-all">
+                        <span className="text-xs text-muted-foreground ml-4 break-all">
                           {getItemLink(item)}
                         </span>
                       </li>
@@ -558,7 +558,7 @@ export function BulkShareModal({
               {/* Divider */}
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Or share individually</span>
+                <span className="text-[10px] text-muted-foreground font-semibold">Or share individually</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
 

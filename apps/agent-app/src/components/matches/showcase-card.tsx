@@ -142,7 +142,7 @@ export function ShowcaseCard({
       {isMain && isCurrent && (
         <>
           <div 
-            className="absolute inset-0 z-30 pointer-events-none rounded-3xl bg-ds-red"
+            className="absolute inset-0 z-30 pointer-events-none rounded-3xl bg-tier-danger"
             style={{
               opacity: actionState === 'discarding' ? 0.35 
                 : (undoType === 'discard' && undoPhase === 'slide') ? 0.35 
@@ -151,7 +151,7 @@ export function ShowcaseCard({
             }}
           />
           <div
-            className="absolute inset-0 z-30 pointer-events-none rounded-3xl bg-ds-green"
+            className="absolute inset-0 z-30 pointer-events-none rounded-3xl bg-tier-success"
             style={{
               opacity: actionState === 'saving' ? 0.45 
                 : (undoType === 'save' && undoPhase === 'slide') ? 0.45 
@@ -230,7 +230,7 @@ export function ShowcaseCard({
               isMain ? "p-5" : "p-3"
             )}>
               {/* Price */}
-              <p className={cn("font-bold mb-1", isMain ? "text-3xl" : "text-lg")}>
+              <p className={cn("font-semibold mb-1", isMain ? "text-3xl" : "text-lg")}>
                 {propertyData.currency}{propertyData.price.toLocaleString()}
               </p>
               
@@ -368,7 +368,7 @@ export function ShowcaseCard({
                 isMain ? "p-5" : "p-3"
               )}>
                 {/* Client name */}
-                <p className={cn("font-bold mb-1", isMain ? "text-3xl" : "text-lg")}>
+                <p className={cn("font-semibold mb-1", isMain ? "text-3xl" : "text-lg")}>
                   {clientData.name}
                 </p>
                 

@@ -203,7 +203,7 @@ export function ExpandableTaskItem({ activity, isNewlyAdded = false, showOpportu
             
             <div 
               className={cn(
-                "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-ds-green flex items-center justify-center",
+                "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-tier-success flex items-center justify-center",
                 isCompleted ? "scale-100" : "scale-0"
               )}
               style={{ transition: "transform 1.5s ease-out" }}
@@ -262,7 +262,7 @@ export function ExpandableTaskItem({ activity, isNewlyAdded = false, showOpportu
                         to={`/opportunities/${activity.opportunityId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent-indigo hover:underline inline-flex items-center gap-1"
+                        className="text-muted-foreground hover:underline inline-flex items-center gap-1"
                       >
                         {activity.opportunityName}
                         <ExternalLink className="w-3 h-3" />
@@ -276,7 +276,7 @@ export function ExpandableTaskItem({ activity, isNewlyAdded = false, showOpportu
                         to={`/clients/${activity.clientId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent-indigo hover:underline inline-flex items-center gap-1"
+                        className="text-muted-foreground hover:underline inline-flex items-center gap-1"
                       >
                         {activity.clientName}
                         <ExternalLink className="w-3 h-3" />
@@ -290,7 +290,7 @@ export function ExpandableTaskItem({ activity, isNewlyAdded = false, showOpportu
                         to={`/my-properties/${activity.propertyId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent-indigo hover:underline inline-flex items-center gap-1"
+                        className="text-muted-foreground hover:underline inline-flex items-center gap-1"
                       >
                         {activity.propertyName}
                         <ExternalLink className="w-3 h-3" />

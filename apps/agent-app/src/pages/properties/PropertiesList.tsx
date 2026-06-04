@@ -418,7 +418,7 @@ export function PropertiesList() {
       <div className="space-y-6">
         <div className="flex justify-between items-center animate-fade-in-fast">
           <div>
-            <h1 className="text-3xl font-bold">Search properties</h1>
+            <h1 className="text-3xl font-semibold">Search properties</h1>
             {showSubtitles && <p className="text-muted-foreground">Browse available properties for sale and lease</p>}
           </div>
         </div>

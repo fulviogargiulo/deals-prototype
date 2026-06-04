@@ -113,15 +113,15 @@ export function PaymentHistory() {
               <div className="flex items-center gap-4">
                 <div
                   className="w-12 h-12 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: 'hsl(var(--ds-green) / 0.1)' }}
+                  className="bg-tier-success-bg"
                 >
-                  <CheckCircle2 className="w-6 h-6" style={{ color: 'hsl(var(--ds-green))' }} />
+                  <CheckCircle2 className="w-6 h-6" className="text-tier-success" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[12px] font-semibold leading-[140%] text-fg-secondary uppercase tracking-wide">
+                  <p className="text-[12px] font-semibold leading-[140%] text-muted-foreground">
                     Deals Paid
                   </p>
-                  <p className="text-[32px] font-semibold leading-[120%] tabular-nums" style={{ color: 'hsl(var(--ds-green))' }}>
+                  <p className="text-[32px] font-semibold leading-[120%] tabular-nums" className="text-tier-success">
                     {totalClosedDeals}
                   </p>
                 </div>
@@ -134,21 +134,18 @@ export function PaymentHistory() {
               onClick={() => setShowPaidInvoices(true)}
             >
               <div className="flex items-center gap-4">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: 'hsl(var(--accent-teal) / 0.1)' }}
-                >
-                  <PiggyBank className="w-6 h-6" style={{ color: 'hsl(var(--accent-teal))' }} />
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-secondary">
+                  <PiggyBank className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div className="space-y-1 flex-1">
-                  <p className="text-[12px] font-semibold leading-[140%] text-fg-secondary uppercase tracking-wide">
+                  <p className="text-[12px] font-semibold leading-[140%] text-muted-foreground">
                     Total Income
                   </p>
-                  <p className="text-[32px] font-semibold leading-[120%] tabular-nums" style={{ color: 'hsl(var(--accent-teal))' }}>
+                  <p className="text-[32px] font-semibold leading-[120%] tabular-nums text-tier-success">
                     €{totalIncome.toLocaleString()}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 text-fg-secondary">
+                <div className="flex items-center gap-1 text-muted-foreground">
                   <span className="text-[12px] font-semibold leading-[140%]">View Details</span>
                   <ChevronRight className="w-4 h-4" />
                 </div>
@@ -166,8 +163,8 @@ export function PaymentHistory() {
             Potential Income from Pipeline
           </h2>
           <div className="flex items-start gap-2 mb-4 px-1">
-            <Info className="w-4 h-4 text-fg-secondary mt-0.5 shrink-0" />
-            <p className="text-[12px] font-normal leading-[140%] text-fg-secondary">
+            <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+            <p className="text-[12px] font-normal leading-[140%] text-muted-foreground">
               Only deals ready for invoicing are shown here, as commission is calculated at that stage. Deals that are recently reported or pending information are not included.
             </p>
           </div>
@@ -176,33 +173,30 @@ export function PaymentHistory() {
             onClick={() => navigate('/deals#all-deals')}
           >
             <div className="flex items-center gap-4">
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: 'hsl(var(--accent-indigo) / 0.1)' }}
-              >
-                <TrendingUp className="w-6 h-6" style={{ color: 'hsl(var(--accent-indigo))' }} />
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-secondary">
+                <TrendingUp className="w-6 h-6 text-muted-foreground" />
               </div>
               <div className="space-y-1 flex-1">
-                <p className="text-[12px] font-semibold leading-[140%] text-fg-secondary uppercase tracking-wide">
+                <p className="text-[12px] font-semibold leading-[140%] text-muted-foreground">
                   {pipelineDeals.length} deals in pipeline
                 </p>
-                <p className="text-[32px] font-semibold leading-[120%] tabular-nums" style={{ color: 'hsl(var(--accent-indigo))' }}>
+                <p className="text-[32px] font-semibold leading-[120%] tabular-nums text-foreground">
                   €{potentialIncome.toLocaleString()}
                 </p>
               </div>
-              <div className="flex items-center gap-1 text-fg-secondary">
+              <div className="flex items-center gap-1 text-muted-foreground">
                 <span className="text-[12px] font-semibold leading-[140%]">View Deals</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
             </div>
 
             {/* Pipeline breakdown */}
-            <div className="mt-6 pt-4 border-t border-border-ds-primary space-y-3">
+            <div className="mt-6 pt-4 border-t border-border space-y-3">
               {pipelineDeals.map(deal => (
                 <div key={deal.id} className="flex items-center justify-between">
                   <div>
                     <p className="text-[14px] font-semibold leading-[140%] text-foreground">{deal.title}</p>
-                    <p className="text-[12px] font-normal leading-[140%] text-fg-secondary">{deal.clientName}</p>
+                    <p className="text-[12px] font-normal leading-[140%] text-muted-foreground">{deal.clientName}</p>
                   </div>
                   <p className="text-[14px] font-semibold leading-[140%] tabular-nums text-foreground">
                     €{resolvedCommission(deal, agentStakeMap).toLocaleString()}

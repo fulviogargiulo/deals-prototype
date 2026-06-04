@@ -1,14 +1,12 @@
 import { OpportunityType } from "@/types";
 import { cn } from "@/lib/utils";
 
-// Import SVG icons (with background circles)
 import BuyIcon from "@/assets/icons/buy-opportunity.svg";
 import RentIcon from "@/assets/icons/rent-opportunity.svg";
 import SellIcon from "@/assets/icons/sell-opportunity.svg";
 import LeaseIcon from "@/assets/icons/lease-opportunity.svg";
 import MortgageIcon from "@/assets/icons/mortgage-opportunity.svg";
 
-// Import bare SVG icons (no background)
 import BuyIconBare from "@/assets/icons/buy-opp-bare.svg";
 import RentIconBare from "@/assets/icons/rent-opp-bare.svg";
 import SellIconBare from "@/assets/icons/sell-opp-bare.svg";
@@ -19,7 +17,6 @@ interface OpportunityIconProps {
   className?: string;
   iconClassName?: string;
   showBackground?: boolean;
-  /** Use bare icon (no background circle) */
   bare?: boolean;
 }
 
@@ -27,77 +24,78 @@ const opportunityConfig = {
   buy: {
     icon: BuyIcon,
     bareIcon: BuyIconBare,
-    color: "bg-huspy-buy",
-    lightBg: "bg-huspy-buy/10",
-    textColor: "text-huspy-buy",
+    color: "bg-opportunity-buy",
+    lightBg: "bg-opp-bg-buy",
+    textColor: "text-opportunity-buy",
     label: "Buy",
-    hslColor: "185 100% 27%",
-    badgeClasses: "bg-huspy-buy/20",
-    iconHex: "#006D77",
+    tokenColor: "var(--teal-600)",
+    alphaBg: "var(--alpha-teal-16)",
+    badgeClasses: "bg-opp-bg-buy",
+    iconHex: "#008894",
   },
   rent: {
     icon: RentIcon,
     bareIcon: RentIconBare,
-    color: "bg-huspy-rent",
-    lightBg: "bg-huspy-rent/10",
-    textColor: "text-huspy-rent",
+    color: "bg-opportunity-rent",
+    lightBg: "bg-opp-bg-rent",
+    textColor: "text-opportunity-rent",
     label: "Rent",
-    hslColor: "240 88% 65%",
-    badgeClasses: "bg-huspy-rent/20",
-    iconHex: "#3F3FB4",
+    tokenColor: "var(--indigo-600)",
+    alphaBg: "var(--alpha-indigo-16)",
+    badgeClasses: "bg-opp-bg-rent",
+    iconHex: "#5959F4",
   },
   sell: {
     icon: SellIcon,
     bareIcon: SellIconBare,
-    color: "bg-huspy-sell",
-    lightBg: "bg-huspy-sell/10",
-    textColor: "text-huspy-sell",
+    color: "bg-opportunity-sell",
+    lightBg: "bg-opp-bg-sell",
+    textColor: "text-opportunity-sell",
     label: "Sell",
-    hslColor: "17 69% 54%",
-    badgeClasses: "bg-huspy-sell/20",
-    iconHex: "#B85C38",
+    tokenColor: "var(--terracota-600)",
+    alphaBg: "var(--alpha-terracota-16)",
+    badgeClasses: "bg-opp-bg-sell",
+    iconHex: "#DB6638",
   },
   lease: {
     icon: LeaseIcon,
     bareIcon: LeaseIconBare,
-    color: "bg-huspy-lease",
-    lightBg: "bg-huspy-lease/10",
-    textColor: "text-huspy-lease",
+    color: "bg-opportunity-lease",
+    lightBg: "bg-opp-bg-lease",
+    textColor: "text-opportunity-lease",
     label: "Lease",
-    hslColor: "304 56% 56%",
-    badgeClasses: "bg-huspy-lease/20",
-    iconHex: "#9C4F96",
+    tokenColor: "var(--orchid-600)",
+    alphaBg: "var(--alpha-orchid-16)",
+    badgeClasses: "bg-opp-bg-lease",
+    iconHex: "#CD52C3",
   },
   mortgage: {
     icon: MortgageIcon,
     bareIcon: null,
-    color: "bg-huspy-mortgage",
-    lightBg: "bg-huspy-mortgage/10",
-    textColor: "text-huspy-mortgage",
+    color: "bg-opportunity-mortgage",
+    lightBg: "bg-opp-bg-mortgage",
+    textColor: "text-opportunity-mortgage",
     label: "Mortgage",
-    hslColor: "99 24% 56%",
-    badgeClasses: "bg-huspy-mortgage/20",
-    iconHex: "#5C6B4F",
+    tokenColor: "var(--olive-600)",
+    alphaBg: "var(--alpha-olive-16)",
+    badgeClasses: "bg-opp-bg-mortgage",
+    iconHex: "#8CA875",
   },
 };
 
 export function OpportunityIcon({ type, className, iconClassName, showBackground = true, bare = false }: OpportunityIconProps) {
   const config = opportunityConfig[type];
-  
-  // Use bare icon if requested and available
   const IconSrc = bare && config.bareIcon ? config.bareIcon : config.icon;
 
-  // The SVG already contains the background circle, so we just render the img
-  // Default size is w-7 h-7, use className to override
   return (
-    <img 
-      src={IconSrc} 
+    <img
+      src={IconSrc}
       alt={`${config.label} opportunity`}
       className={cn(
         bare ? "w-3.5 h-3.5" : "w-7 h-7",
         className,
         iconClassName
-      )} 
+      )}
     />
   );
 }

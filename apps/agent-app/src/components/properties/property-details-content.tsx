@@ -145,7 +145,7 @@ function DetailRow({ label, value }: { label: string; value: string | number }) 
 
 // Section Title component
 function SectionTitle({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <h3 className={cn("text-sm font-semibold text-muted-foreground uppercase", className)}>{children}</h3>;
+  return <h3 className={cn("text-sm font-semibold text-muted-foreground", className)}>{children}</h3>;
 }
 
 // Card Section component for reuse
@@ -438,7 +438,7 @@ export function PropertyDetailsContent({
               )}
             </div>
             <div className="flex items-baseline justify-between mb-2">
-              <span className="text-2xl font-bold">{formattedPrice}</span>
+              <span className="text-2xl font-semibold">{formattedPrice}</span>
               <span className="text-sm text-muted-foreground">2d ago</span>
             </div>
             <h1 className="text-base text-muted-foreground mb-3">{property.title}</h1>

@@ -330,7 +330,7 @@ export function ClientsList() {
         {/* Header with title and New button */}
         <div className="flex justify-between items-center animate-fade-in-fast">
           <div>
-            <h1 className="text-3xl font-bold">Clients</h1>
+            <h1 className="text-3xl font-semibold">Clients</h1>
             {showSubtitles && <p className="text-muted-foreground">Manage your client relationships and opportunities</p>}
           </div>
           <Button onClick={() => setNewClientModalOpen(true)}>

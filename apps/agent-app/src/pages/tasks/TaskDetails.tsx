@@ -21,7 +21,7 @@ export function TaskDetails() {
   if (!task) {
     return (
       <div className="p-6 text-center">
-        <h1 className="text-2xl font-bold mb-4">Task Not Found</h1>
+        <h1 className="text-2xl font-semibold mb-4">Task Not Found</h1>
         <p className="text-muted-foreground mb-4">The task you're looking for doesn't exist.</p>
         <Button onClick={() => navigate('/tasks')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -37,11 +37,11 @@ export function TaskDetails() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-5 h-5 text-status-closed" />;
+        return <CheckCircle className="w-5 h-5 text-tier-success" />;
       case 'in-progress':
-        return <Clock className="w-5 h-5 text-status-active" />;
+        return <Clock className="w-5 h-5 text-tier-info" />;
       case 'overdue':
-        return <AlertTriangle className="w-5 h-5 text-warning" />;
+        return <AlertTriangle className="w-5 h-5 text-tier-warning" />;
       default:
         return <Circle className="w-5 h-5 text-muted-foreground" />;
     }
@@ -52,9 +52,9 @@ export function TaskDetails() {
       case 'urgent':
         return 'bg-destructive text-destructive-foreground';
       case 'high':
-        return 'bg-warning text-warning-foreground';
+        return 'bg-tier-warning-bg text-tier-warning';
       case 'medium':
-        return 'bg-status-active text-status-active-foreground';
+        return 'bg-tier-info-bg text-tier-info';
       case 'low':
         return 'bg-muted text-muted-foreground';
       default:
@@ -85,7 +85,7 @@ export function TaskDetails() {
         <div className="flex items-center gap-3">
           {getStatusIcon(task.status)}
           <TrackedTitle title={task.title}>
-            <h1 className="text-3xl font-bold">{task.title}</h1>
+            <h1 className="text-3xl font-semibold">{task.title}</h1>
           </TrackedTitle>
         </div>
         <div className="flex gap-2">
@@ -117,9 +117,9 @@ export function TaskDetails() {
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Status:</span>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                    task.status === 'completed' ? 'bg-status-closed text-status-closed-foreground' :
-                    task.status === 'in-progress' ? 'bg-status-active text-status-active-foreground' :
-                    task.status === 'overdue' ? 'bg-warning text-warning-foreground' :
+                    task.status === 'completed' ? 'bg-tier-success-bg text-tier-success' :
+                    task.status === 'in-progress' ? 'bg-tier-info-bg text-tier-info' :
+                    task.status === 'overdue' ? 'bg-tier-warning-bg text-tier-warning' :
                     'bg-muted text-muted-foreground'
                   }`}>
                     {task.status === 'in-progress' ? 'In Progress' : task.status}
@@ -139,7 +139,7 @@ export function TaskDetails() {
                   <span className="font-medium">Due Date:</span>
                   <div className="flex items-center gap-2 mt-1">
                     <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className={task.status === 'overdue' ? 'text-warning' : ''}>
+                    <span className={task.status === 'overdue' ? 'text-tier-warning' : ''}>
                       {formatDueDate(task.dueDate)}
                     </span>
                   </div>
@@ -149,7 +149,7 @@ export function TaskDetails() {
                   <div>
                     <span className="font-medium">Completed:</span>
                     <div className="flex items-center gap-2 mt-1">
-                      <CheckCircle className="w-4 h-4 text-status-closed" />
+                      <CheckCircle className="w-4 h-4 text-tier-success" />
                       <span>{formatDate(task.completedAt)}</span>
                     </div>
                   </div>

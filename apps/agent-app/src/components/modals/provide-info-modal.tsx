@@ -82,28 +82,28 @@ export function ProvideInfoModal({ open, onOpenChange, deal, onInfoSubmitted }: 
     >
       <div className="space-y-6">
         {pendingRequirements.length === 0 ? (
-          <p className="text-[14px] text-[hsl(var(--fg-secondary))]">
+          <p className="text-[14px] text-muted-foreground">
             No pending documents for this deal.
           </p>
         ) : (
           pendingRequirements.map((r) => (
             <div key={r.id} className="space-y-1.5">
-              <label className="text-[14px] font-semibold leading-[140%] text-[hsl(var(--fg-primary))]">
+              <label className="text-[14px] font-semibold leading-[140%] text-foreground">
                 {r.label}
-                {r.required && <span className="text-[hsl(var(--ds-red))] ml-0.5">*</span>}
+                {r.required && <span className="text-tier-danger ml-0.5">*</span>}
               </label>
               <Button
                 variant="outline"
                 className={`w-full h-10 justify-start text-[14px] font-normal ${
-                  values[r.id] ? 'text-[hsl(var(--fg-primary))]' : 'text-[hsl(var(--fg-secondary))]'
-                } ${errors[r.id] ? 'border-[hsl(var(--ds-red))]' : ''}`}
+                  values[r.id] ? 'text-foreground' : 'text-muted-foreground'
+                } ${errors[r.id] ? 'border-destructive' : ''}`}
                 onClick={() => handleFileSelect(r.id)}
               >
                 <Upload className="w-4 h-4 mr-2 shrink-0" />
                 {values[r.id] || 'Choose file'}
               </Button>
               {errors[r.id] && (
-                <p className="flex items-center gap-1 text-[12px] text-[hsl(var(--ds-red))] leading-[140%]">
+                <p className="flex items-center gap-1 text-[12px] text-tier-danger leading-[140%]">
                   <AlertCircle className="w-3 h-3 shrink-0" />
                   {errors[r.id]}
                 </p>

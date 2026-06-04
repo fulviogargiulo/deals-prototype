@@ -22,7 +22,7 @@ export function EmptyOpportunitiesState({ onAddOpportunity }: EmptyOpportunities
       </div>
       
       {/* Text content */}
-      <h3 className="text-xl font-bold mb-2">No opportunities yet</h3>
+      <h3 className="text-xl font-semibold mb-2">No opportunities yet</h3>
       <p className="text-sm text-muted-foreground max-w-md">
         Add one to start a new buy, sell, rent, lease or mortgage deal for this client.
       </p>

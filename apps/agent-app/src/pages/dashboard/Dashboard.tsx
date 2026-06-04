@@ -146,19 +146,19 @@ export function Dashboard() {
           </p>
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex items-center gap-2 text-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-status-active" />
-              <Activity className="w-4 h-4 text-status-active" />
-              <span className="text-foreground/80"><span className="font-semibold text-status-active">{activeOpportunities}</span> active deals</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-tier-info" />
+              <Activity className="w-4 h-4 text-tier-info" />
+              <span className="text-foreground/80"><span className="font-semibold text-tier-info">{activeOpportunities}</span> active deals</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-              <Clock className="w-4 h-4 text-warning" />
-              <span className="text-foreground/80"><span className="font-semibold text-warning">3</span> pending tasks</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-tier-warning" />
+              <Clock className="w-4 h-4 text-tier-warning" />
+              <span className="text-foreground/80"><span className="font-semibold text-tier-warning">3</span> pending tasks</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-status-closed" />
-              <DollarSign className="w-4 h-4 text-status-closed" />
-              <span className="text-foreground/80"><span className="font-semibold text-status-closed">€{(monthlyRevenue / 1000).toFixed(0)}K</span> revenue</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-tier-success" />
+              <DollarSign className="w-4 h-4 text-tier-success" />
+              <span className="text-foreground/80"><span className="font-semibold text-tier-success">€{(monthlyRevenue / 1000).toFixed(0)}K</span> revenue</span>
             </div>
           </div>
         </div>
@@ -251,7 +251,7 @@ export function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold mb-2">{allClients.length}</div>
+              <div className="text-3xl font-semibold mb-2">{allClients.length}</div>
               <div className="flex items-center gap-2">
                 {pendingVerification > 0 && (
                   <StatusBadge variant="verification" status="pending">
@@ -271,12 +271,12 @@ export function Dashboard() {
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Active Deals</CardTitle>
-              <div className="p-2 bg-status-active/10 rounded-xl group-hover:bg-status-active/20 transition-colors">
-                <TrendingUp className="h-5 w-5 text-status-active" />
+              <div className="p-2 bg-secondary rounded-xl transition-colors">
+                <TrendingUp className="h-5 w-5 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold mb-2">{activeOpportunities}</div>
+              <div className="text-3xl font-semibold mb-2">{activeOpportunities}</div>
               <div className="text-sm text-muted-foreground">Currently negotiating</div>
             </CardContent>
           </EnhancedCard>
@@ -290,19 +290,19 @@ export function Dashboard() {
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Revenue</CardTitle>
-              <div className="p-2 bg-status-closed/10 rounded-xl group-hover:bg-status-closed/20 transition-colors">
-                <DollarSign className="h-5 w-5 text-status-closed" />
+              <div className="p-2 bg-secondary rounded-xl transition-colors">
+                <DollarSign className="h-5 w-5 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold mb-2">€{(monthlyRevenue / 1000).toFixed(0)}K</div>
+              <div className="text-3xl font-semibold mb-2">€{(monthlyRevenue / 1000).toFixed(0)}K</div>
               <div className="flex items-center gap-1 text-sm">
                 {parseFloat(revenueChange) > 0 ? (
-                  <ArrowUp className="w-3 h-3 text-status-closed" />
+                  <ArrowUp className="w-3 h-3 text-tier-success" />
                 ) : (
                   <ArrowDown className="w-3 h-3 text-destructive" />
                 )}
-                <span className={parseFloat(revenueChange) > 0 ? "text-status-closed" : "text-destructive"}>
+                <span className={parseFloat(revenueChange) > 0 ? "text-tier-success" : "text-destructive"}>
                   {revenueChange}% vs last month
                 </span>
               </div>
@@ -318,12 +318,12 @@ export function Dashboard() {
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Pending Tasks</CardTitle>
-              <div className="p-2 bg-warning/10 rounded-xl group-hover:bg-warning/20 transition-colors">
-                <AlertCircle className="h-5 w-5 text-warning" />
+              <div className="p-2 bg-secondary rounded-xl transition-colors">
+                <AlertCircle className="h-5 w-5 text-muted-foreground" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold mb-2">{pendingTasks + overdueTasks}</div>
+              <div className="text-3xl font-semibold mb-2">{pendingTasks + overdueTasks}</div>
               <div className="text-sm text-muted-foreground">
                 {overdueTasks > 0 ? `${overdueTasks} overdue` : 'All up to date'}
               </div>
@@ -373,14 +373,14 @@ export function Dashboard() {
         <EnhancedCard hover className="cursor-pointer transform transition-all duration-200 hover:scale-105" onClick={() => navigate('/opportunities')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <PieChart className="w-5 h-5 text-huspy-buy" />
+              <PieChart className="w-5 h-5 text-opportunity-buy" />
               Opportunity Breakdown
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {Object.entries(opportunityTypes).map(([type, count], index) => {
-                const colors = ['bg-primary', 'bg-huspy-buy', 'bg-huspy-rent', 'bg-warning'];
+                const colors = ['bg-primary', 'bg-opportunity-buy', 'bg-opportunity-rent', "bg-tier-warning-bg"];
                 const percentage = totalOpportunities > 0 ? ((count / totalOpportunities) * 100).toFixed(1) : '0';
                 return (
                   <div key={type} className="flex items-center justify-between">
@@ -407,14 +407,14 @@ export function Dashboard() {
         <EnhancedCard hover className="cursor-pointer transform transition-all duration-200 hover:scale-105" onClick={() => navigate('/tasks')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-warning" />
+              <Clock className="w-5 h-5 text-muted-foreground" />
               Task Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {Object.entries(taskProgress).map(([status, count], index) => {
-                const colors = ['bg-status-closed', 'bg-status-active', 'bg-muted', 'bg-warning'];
+                const colors = ['bg-tier-success', 'bg-tier-info', 'bg-muted', 'bg-tier-warning'];
                 const labels = ['Completed', 'In Progress', 'To Do', 'Overdue'];
                 const maxCount = Math.max(...Object.values(taskProgress));
                 const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
@@ -445,7 +445,7 @@ export function Dashboard() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-huspy-buy" />
+                <Target className="w-5 h-5 text-opportunity-buy" />
                 Recent Activity
               </CardTitle>
               <span className="text-sm text-muted-foreground">Last 7 days</span>

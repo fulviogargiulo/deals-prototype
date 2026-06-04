@@ -13,7 +13,7 @@ function fmt(amount: number, currency: string): string {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <p className="text-[10px] font-semibold text-fg-secondary uppercase tracking-widest px-4 pt-3 pb-0.5">
+    <p className="text-[10px] font-semibold text-muted-foreground px-4 pt-3 pb-0.5">
       {children}
     </p>
   );
@@ -26,17 +26,17 @@ function Row({
   green?: boolean; red?: boolean; muted?: boolean; indent?: boolean;
 }) {
   const valueClass = green
-    ? 'text-[hsl(var(--ds-green))]'
+    ? 'text-tier-success'
     : red
-    ? 'text-[hsl(var(--ds-red))]'
+    ? 'text-tier-danger'
     : muted
-    ? 'text-fg-secondary'
+    ? 'text-muted-foreground'
     : 'text-foreground';
   return (
     <div className={`flex items-start justify-between gap-4 py-2 ${indent ? 'pl-8 pr-4' : 'px-4'}`}>
       <div className="min-w-0">
-        <p className="text-[13px] text-fg-secondary leading-[140%]">{label}</p>
-        {sublabel && <p className="text-[11px] text-fg-secondary/60 leading-[130%]">{sublabel}</p>}
+        <p className="text-[13px] text-muted-foreground leading-[140%]">{label}</p>
+        {sublabel && <p className="text-[11px] text-muted-foreground/60 leading-[130%]">{sublabel}</p>}
       </div>
       <span className={`text-[13px] font-semibold tabular-nums shrink-0 ${valueClass}`}>{value}</span>
     </div>
@@ -45,9 +45,9 @@ function Row({
 
 function Anchor({ label, value, currency }: { label: string; value: number; currency: string }) {
   return (
-    <div className="px-4 py-2.5 border-t border-border-ds-primary flex items-center justify-between mt-0.5">
+    <div className="px-4 py-2.5 border-t border-border flex items-center justify-between mt-0.5">
       <span className="text-[13px] font-semibold text-foreground">{label}</span>
-      <span className="text-[15px] font-bold text-foreground tabular-nums">{fmt(value, currency)}</span>
+      <span className="text-[15px] font-semibold text-foreground tabular-nums">{fmt(value, currency)}</span>
     </div>
   );
 }
@@ -77,7 +77,7 @@ export function CommissionBreakdown({ deal, stake, projection, agentSplit, perso
   let rateSublabel: string | undefined;
   if (agentSplit && allocatedNet > 0) {
     if (agentSplit.strategyKind === 'flat') {
-      rateLabel = `${Math.round((agentGrossPayout / allocatedNet) * 100)}% of net revenue`;
+      rateLabel = `${Math.round((agentGrossPayout / allocatedNet) * 100)}% of your share of net revenue`;
     } else if (agentSplit.strategyKind === 'slab') {
       rateLabel = 'Tiered slab';
     } else if (agentSplit.strategyKind === 'max') {
@@ -183,17 +183,14 @@ export function CommissionBreakdown({ deal, stake, projection, agentSplit, perso
       )}
 
       {/* Payout total */}
-      <div className="mx-4 border-t border-border-ds-primary mt-1 pt-3 pb-3 flex items-center justify-between">
+      <div className="mx-4 border-t border-border mt-1 pt-3 pb-3 flex items-center justify-between">
         <div>
-          <p className="text-[15px] font-bold text-foreground">Your Commission</p>
+          <p className="text-[15px] font-semibold text-foreground">Your Commission</p>
           {rateLabel !== '—' && (
-            <p className="text-[11px] text-fg-secondary/60 leading-[130%]">{rateLabel}</p>
+            <p className="text-[11px] text-muted-foreground/60 leading-[130%]">{rateLabel}</p>
           )}
         </div>
-        <span
-          className="text-[22px] font-bold tabular-nums"
-          style={{ color: 'hsl(var(--ds-green))' }}
-        >
+        <span className="text-[22px] font-semibold tabular-nums text-tier-success">
           {fmt(personalCommission, currency)}
         </span>
       </div>

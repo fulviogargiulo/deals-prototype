@@ -242,8 +242,8 @@ export const FloatingLabelPhone = React.forwardRef<
             className={cn(
               "flex h-14 w-full rounded-xl border transition-colors duration-500 p-1",
               isFocused || countryPickerOpen ? "border-primary" : "border-input",
-              showError && !isFocused && !countryPickerOpen && "border-[hsl(var(--border-destructive-muted))] bg-[hsl(var(--surface-red-alpha))]",
-              showError && (isFocused || countryPickerOpen) && "border-destructive bg-[hsl(var(--surface-red-alpha))]",
+              showError && !isFocused && !countryPickerOpen && "border-destructive/40 bg-tier-danger-bg",
+              showError && (isFocused || countryPickerOpen) && "border-destructive bg-tier-danger-bg",
               !showError && "bg-background",
               disabled && "cursor-not-allowed opacity-50",
               className
@@ -259,7 +259,7 @@ export const FloatingLabelPhone = React.forwardRef<
                     "flex items-center gap-1.5 px-3 h-full shrink-0 rounded-lg transition-colors",
                     "outline-none ring-0 ring-offset-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0",
                     showError 
-                      ? "bg-[hsl(var(--surface-red-alpha))]" 
+                      ? "bg-tier-danger-bg" 
                       : "bg-card hover:bg-muted/30",
                     disabled && "pointer-events-none"
                   )}

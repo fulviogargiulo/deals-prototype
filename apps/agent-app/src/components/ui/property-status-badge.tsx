@@ -18,9 +18,9 @@ const getPropertyStatusConfig = (status: PropertyStatus, variant: 'card' | 'defa
       return {
         label: 'Published',
         className: isCard 
-          ? 'bg-ds-green/40 hover:bg-ds-green text-white border-0 transition-colors'
-          : 'bg-ds-green/40 hover:bg-ds-green text-foreground hover:text-white border-0 transition-colors',
-        iconClassName: 'text-ds-green',
+          ? 'bg-tier-success/40 hover:bg-tier-success text-white border-0 transition-colors'
+          : 'bg-tier-success/40 hover:bg-tier-success text-foreground hover:text-white border-0 transition-colors',
+        iconClassName: 'text-tier-success',
         Icon: CheckCheck,
       };
     case 'in-review':
@@ -36,18 +36,18 @@ const getPropertyStatusConfig = (status: PropertyStatus, variant: 'card' | 'defa
       return {
         label: 'Draft',
         className: isCard
-          ? 'bg-ds-orange/20 hover:bg-ds-orange text-white border-0 transition-colors'
-          : 'bg-ds-orange/20 hover:bg-ds-orange text-foreground hover:text-white border-0 transition-colors',
-        iconClassName: 'text-ds-orange',
+          ? 'bg-tier-warning/20 hover:bg-tier-warning text-white border-0 transition-colors'
+          : 'bg-tier-warning/20 hover:bg-tier-warning text-foreground hover:text-white border-0 transition-colors',
+        iconClassName: 'text-tier-warning',
         Icon: Pencil,
       };
     case 'rejected':
       return {
         label: 'Rejected',
         className: isCard
-          ? 'bg-ds-red/20 hover:bg-ds-red text-white border-0 transition-colors'
-          : 'bg-ds-red/20 hover:bg-ds-red text-foreground hover:text-white border-0 transition-colors',
-        iconClassName: 'text-ds-red',
+          ? 'bg-tier-danger/20 hover:bg-tier-danger text-white border-0 transition-colors'
+          : 'bg-tier-danger/20 hover:bg-tier-danger text-foreground hover:text-white border-0 transition-colors',
+        iconClassName: 'text-tier-danger',
         Icon: XCircle,
       };
     case 'delisted':

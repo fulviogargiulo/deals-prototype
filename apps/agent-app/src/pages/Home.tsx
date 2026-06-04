@@ -359,7 +359,7 @@ export default function Home() {
   // ===== CONTENT WRAPPER =====
   const contentWrapper = (children: React.ReactNode) =>
   <div className={cn(
-    headerVariant === 'full-gradient' ? "bg-surface-ds-page -mt-4 rounded-t-3xl relative z-10 pt-8" : "pt-8",
+    headerVariant === 'full-gradient' ? "bg-background -mt-4 rounded-t-3xl relative z-10 pt-8" : "pt-8",
     "min-h-[calc(100vh-200px)]"
   )}>
       <PageContainer className="space-y-10 py-0">
@@ -439,13 +439,13 @@ export default function Home() {
         <div className="lg:col-span-3 space-y-5">
           {scheduleElement &&
           <Card className="p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Schedule</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">Schedule</h3>
               {scheduleElement}
             </Card>
           }
           {propertiesElement &&
           <Card className="p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">New in Madrid</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">New in Madrid</h3>
               {propertiesElement}
             </Card>
           }
@@ -505,7 +505,7 @@ export default function Home() {
           {scheduleElement &&
           <div className="hidden lg:flex lg:col-span-4 flex-col">
               <Card className="p-5 space-y-3 sticky top-20">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Activity</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground">Activity</h3>
                 {scheduleElement}
               </Card>
             </div>
@@ -523,7 +523,7 @@ export default function Home() {
   };
 
   return (
-    <div className={cn("min-h-screen bg-surface-ds-page animate-fade-in", headerVariant === 'full-gradient' ? "-mt-16" : "")}>
+    <div className={cn("min-h-screen bg-background animate-fade-in", headerVariant === 'full-gradient' ? "-mt-16" : "")}>
       {headerElement}
       {layoutRenderers[layoutVariant]()}
 

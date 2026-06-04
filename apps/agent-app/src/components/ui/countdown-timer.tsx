@@ -47,10 +47,10 @@ export function CountdownTimer({ expiresAt, onExpire, variant = "light", accentC
     <div className="inline-flex items-center gap-2">
       <TimeUnit value={Math.floor(hours / 10)} dark={isDark} accentColor={accentColor} />
       <TimeUnit value={hours % 10} dark={isDark} accentColor={accentColor} />
-      <span className={cn("text-2xl font-bold", isDark ? "text-white/40" : "text-muted-foreground")}>:</span>
+      <span className={cn("text-2xl font-semibold", isDark ? "text-white/40" : "text-muted-foreground")}>:</span>
       <TimeUnit value={Math.floor(minutes / 10)} dark={isDark} accentColor={accentColor} />
       <TimeUnit value={minutes % 10} dark={isDark} accentColor={accentColor} />
-      <span className={cn("text-2xl font-bold", isDark ? "text-white/40" : "text-muted-foreground")}>:</span>
+      <span className={cn("text-2xl font-semibold", isDark ? "text-white/40" : "text-muted-foreground")}>:</span>
       <TimeUnit value={Math.floor(seconds / 10)} dark={isDark} accentColor={accentColor} />
       <TimeUnit value={seconds % 10} dark={isDark} accentColor={accentColor} />
     </div>
@@ -66,7 +66,7 @@ function TimeUnit({ value, dark, accentColor }: { value: number; dark?: boolean;
       )}
       style={accentColor ? { backgroundColor: accentColor } : undefined}
     >
-      <span className={cn("text-3xl font-bold", dark || accentColor ? "text-white" : "text-foreground")}>{value}</span>
+      <span className={cn("text-3xl font-semibold", dark || accentColor ? "text-white" : "text-foreground")}>{value}</span>
     </div>
   );
 }

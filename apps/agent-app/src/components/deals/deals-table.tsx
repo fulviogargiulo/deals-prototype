@@ -13,17 +13,17 @@ interface DealsTableProps {
   agentStakeMap?: Map<string, PnlEntry>;
 }
 
-const agentStatusConfig: Record<AgentDealStatus, { label: string; color: string; bg: string }> = {
-  "action-required": { label: "Action Required", color: "hsl(35 92% 38%)",    bg: "hsl(35 92% 38% / 0.1)" },
-  "in-progress":     { label: "In Progress",     color: "hsl(221 83% 53%)",   bg: "hsl(221 83% 53% / 0.1)" },
-  "closed":          { label: "Closed",           color: "hsl(142 71% 35%)",   bg: "hsl(142 71% 35% / 0.1)" },
+const agentStatusConfig: Record<AgentDealStatus, { label: string; cls: string }> = {
+  "action-required": { label: "Action Required", cls: "bg-tier-warning-bg text-tier-warning" },
+  "in-progress":     { label: "In Progress",     cls: "bg-tier-info-bg text-tier-info" },
+  "closed":          { label: "Closed",           cls: "bg-tier-success-bg text-tier-success" },
 };
 
 const typeConfig: Record<string, { icon: typeof BuyBareIcon; color: string }> = {
-  buy: { icon: BuyBareIcon, color: '#008A8A' },
-  sell: { icon: SellBareIcon, color: '#D95D28' },
-  rent: { icon: RentBareIcon, color: '#5856D6' },
-  lease: { icon: LeaseBareIcon, color: '#CD52C3' },
+  buy:   { icon: BuyBareIcon,   color: 'var(--teal-600)' },
+  sell:  { icon: SellBareIcon,  color: 'var(--terracota-600)' },
+  rent:  { icon: RentBareIcon,  color: 'var(--indigo-600)' },
+  lease: { icon: LeaseBareIcon, color: 'var(--orchid-600)' },
 };
 
 type SortKey = 'title' | 'dealAmount' | 'grossRevenue' | 'reportDate';
@@ -56,34 +56,34 @@ export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-[20px] font-semibold leading-[120%] text-[hsl(var(--fg-primary))]">All Deals</h2>
-        <p className="text-sm font-medium text-[hsl(var(--fg-secondary))]">{sorted.length} deals</p>
+        <h2 className="text-[20px] font-semibold leading-[120%] text-foreground">All Deals</h2>
+        <p className="text-sm font-medium text-muted-foreground">{sorted.length} deals</p>
       </div>
 
       <div className="bg-card rounded-2xl overflow-hidden">
         {/* Header row */}
-        <div className="grid grid-cols-[32px_1.2fr_0.8fr_100px_120px_130px_100px] px-4 py-3 border-b border-border-ds-primary gap-3 group/header">
+        <div className="grid grid-cols-[32px_1.2fr_0.8fr_100px_120px_130px_100px] px-4 py-3 border-b border-border gap-3 group/header">
           <span />
-          <span className="text-xs font-semibold text-fg-secondary flex items-center cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('title')}>
+          <span className="text-xs font-semibold text-muted-foreground flex items-center cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('title')}>
             Deal{getSortIcon('title')}
           </span>
-          <span className="text-xs font-semibold text-fg-secondary">Client</span>
-          <span className="text-xs font-semibold text-fg-secondary text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('dealAmount')}>
+          <span className="text-xs font-semibold text-muted-foreground">Client</span>
+          <span className="text-xs font-semibold text-muted-foreground text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('dealAmount')}>
             Amount{getSortIcon('dealAmount')}
           </span>
-          <span className="text-xs font-semibold text-fg-secondary text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('grossRevenue')}>
+          <span className="text-xs font-semibold text-muted-foreground text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('grossRevenue')}>
             Commission{getSortIcon('grossRevenue')}
           </span>
-          <span className="text-xs font-semibold text-fg-secondary text-center">Status</span>
-          <span className="text-xs font-semibold text-fg-secondary text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('reportDate')}>
+          <span className="text-xs font-semibold text-muted-foreground text-center">Status</span>
+          <span className="text-xs font-semibold text-muted-foreground text-right flex items-center justify-end cursor-pointer hover:text-foreground select-none" onClick={() => handleHeaderSort('reportDate')}>
             Date{getSortIcon('reportDate')}
           </span>
         </div>
 
         {/* Body */}
-        <div className="divide-y divide-border-ds-primary">
+        <div className="divide-y divide-border">
           {sorted.length === 0 ? (
-            <div className="px-4 py-8 text-center text-[hsl(var(--fg-secondary))] text-sm">No deals found</div>
+            <div className="px-4 py-8 text-center text-muted-foreground text-sm">No deals found</div>
           ) : (
             sorted.map((deal) => {
               const config = typeConfig[deal.type];
@@ -110,7 +110,7 @@ export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
               return (
                 <div
                   key={deal.id}
-                  className="grid grid-cols-[32px_1.2fr_0.8fr_100px_120px_130px_100px] px-4 py-3 items-center gap-3 hover:bg-surface-ds-raised/50 transition-colors group cursor-pointer"
+                  className="grid grid-cols-[32px_1.2fr_0.8fr_100px_120px_130px_100px] px-4 py-3 items-center gap-3 hover:bg-secondary/50 transition-colors group cursor-pointer"
                   onClick={() => navigate(`/deals/${deal.id}`)}
                 >
                   <div className="flex items-center justify-center">
@@ -118,23 +118,21 @@ export function DealsTable({ deals, agentStakeMap }: DealsTableProps) {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate leading-[120%]">{deal.title}</p>
-                    <p className="text-xs text-fg-secondary leading-[140%] capitalize">
+                    <p className="text-xs text-muted-foreground leading-[140%] capitalize">
                       {deal.id} · {deal.type}
-                      {deal.description && <span className="ml-1.5 px-1 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border border-border not-capitalize">{deal.description}</span>}
                     </p>
                   </div>
                   <span className="text-sm text-foreground truncate">{deal.clientName}</span>
                   <span className="text-sm text-foreground text-right tabular-nums font-semibold">{deal.currency}{deal.dealAmount.toLocaleString()}</span>
-                  <span className="text-sm text-right tabular-nums font-semibold" style={{ color: agentCommission !== null ? undefined : 'hsl(var(--fg-secondary))' }}>
+                  <span className={`text-sm text-right tabular-nums font-semibold ${agentCommission === null ? 'text-muted-foreground' : ''}`}>
                     {agentCommission !== null ? `${deal.currency}${agentCommission.toLocaleString()}` : '—'}
                   </span>
                   <div className="flex justify-center">
-                    <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap"
-                      style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}>
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${statusStyle.cls}`}>
                       {statusStyle.label}
                     </span>
                   </div>
-                  <span className="text-xs text-fg-secondary text-right tabular-nums">
+                  <span className="text-xs text-muted-foreground text-right tabular-nums">
                     {deal.reportDate ? new Date(deal.reportDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                   </span>
                 </div>

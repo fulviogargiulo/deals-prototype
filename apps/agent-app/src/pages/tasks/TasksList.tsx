@@ -52,11 +52,11 @@ export function TasksList() {
   const getStatusIcon = (status: TaskStatus) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-status-closed" />;
+        return <CheckCircle className="w-4 h-4 text-tier-success" />;
       case 'in-progress':
-        return <Clock className="w-4 h-4 text-status-active" />;
+        return <Clock className="w-4 h-4 text-tier-info" />;
       case 'overdue':
-        return <AlertTriangle className="w-4 h-4 text-warning" />;
+        return <AlertTriangle className="w-4 h-4 text-tier-warning" />;
       default:
         return <Circle className="w-4 h-4 text-muted-foreground" />;
     }
@@ -67,9 +67,9 @@ export function TasksList() {
       case 'urgent':
         return 'bg-destructive text-destructive-foreground';
       case 'high':
-        return 'bg-warning text-warning-foreground';
+        return 'bg-tier-warning-bg text-tier-warning';
       case 'medium':
-        return 'bg-status-active text-status-active-foreground';
+        return 'bg-tier-info-bg text-tier-info';
       case 'low':
         return 'bg-muted text-muted-foreground';
       default:
@@ -111,7 +111,7 @@ export function TasksList() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Tasks</h1>
+            <h1 className="text-3xl font-semibold">Tasks</h1>
             <p className="text-muted-foreground">Manage your tasks and activities</p>
           </div>
           <Button>
@@ -123,31 +123,31 @@ export function TasksList() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{statusCounts.all}</div>
+            <div className="text-2xl font-semibold">{statusCounts.all}</div>
             <div className="text-sm text-muted-foreground">Total Tasks</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-muted-foreground">{statusCounts.todo}</div>
+            <div className="text-2xl font-semibold text-muted-foreground">{statusCounts.todo}</div>
             <div className="text-sm text-muted-foreground">To Do</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-status-active">{statusCounts['in-progress']}</div>
+            <div className="text-2xl font-semibold text-tier-info">{statusCounts['in-progress']}</div>
             <div className="text-sm text-muted-foreground">In Progress</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-status-closed">{statusCounts.completed}</div>
+            <div className="text-2xl font-semibold text-tier-success">{statusCounts.completed}</div>
             <div className="text-sm text-muted-foreground">Completed</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-warning">{statusCounts.overdue}</div>
+            <div className="text-2xl font-semibold text-tier-warning">{statusCounts.overdue}</div>
             <div className="text-sm text-muted-foreground">Overdue</div>
           </CardContent>
         </Card>
@@ -240,9 +240,9 @@ export function TasksList() {
                   </TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                      task.status === 'completed' ? 'bg-status-closed text-status-closed-foreground' :
-                      task.status === 'in-progress' ? 'bg-status-active text-status-active-foreground' :
-                      task.status === 'overdue' ? 'bg-warning text-warning-foreground' :
+                      task.status === 'completed' ? 'bg-tier-success-bg text-tier-success' :
+                      task.status === 'in-progress' ? 'bg-tier-info-bg text-tier-info' :
+                      task.status === 'overdue' ? 'bg-tier-warning-bg text-tier-warning' :
                       'bg-muted text-muted-foreground'
                     }`}>
                       {task.status === 'in-progress' ? 'In Progress' : task.status}
@@ -266,7 +266,7 @@ export function TasksList() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span className={task.status === 'overdue' ? 'text-warning' : ''}>
+                      <span className={task.status === 'overdue' ? 'text-tier-warning' : ''}>
                         {formatDueDate(task.dueDate)}
                       </span>
                     </div>

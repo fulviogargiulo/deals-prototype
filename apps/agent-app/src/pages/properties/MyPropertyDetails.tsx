@@ -838,7 +838,7 @@ export function MyPropertyDetails() {
                 </div>
               }
             >
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold leading-tight">{property.title}</h1>
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold leading-tight">{property.title}</h1>
             </TrackedTitle>
             
             {/* Desktop CTAs - hidden on mobile */}
@@ -1078,12 +1078,12 @@ export function MyPropertyDetails() {
           {property.status === 'rejected' && (
             <Card className="p-4 bg-card">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-ds-red/10 flex items-center justify-center shrink-0">
-                  <X className="w-5 h-5 text-ds-red" strokeWidth={2} />
+                <div className="w-10 h-10 rounded-full bg-tier-danger-bg flex items-center justify-center shrink-0">
+                  <X className="w-5 h-5 text-tier-danger" strokeWidth={2} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-foreground">Property rejected</h3>
-                  <p className="text-sm text-fg-secondary">
+                  <p className="text-sm text-muted-foreground">
                     This property didn't pass our review and wasn't published.
                   </p>
                 </div>

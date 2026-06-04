@@ -411,7 +411,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                 {defaultSuggestions.map((section, sectionIndex) => (
                   <div key={section.type}>
                     <div className="px-3 py-2 bg-muted/20 border-b">
-                      <h3 className="font-medium text-xs text-muted-foreground uppercase">
+                      <h3 className="font-medium text-xs text-muted-foreground">
                         {section.title}
                       </h3>
                     </div>
@@ -488,7 +488,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                      <div className="px-3 py-2 bg-muted/20 border-b">
                        <div className="flex items-center gap-2">
                          {getResultIcon(type)}
-                         <h3 className="font-medium text-xs text-muted-foreground uppercase">
+                         <h3 className="font-medium text-xs text-muted-foreground">
                            {getTypeTitle(type)} ({typeResults.length})
                          </h3>
                        </div>

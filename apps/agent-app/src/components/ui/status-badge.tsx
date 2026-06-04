@@ -16,42 +16,42 @@ export function StatusBadge({ variant, status, children, count, className }: Sta
     switch (variant) {
       case 'verification':
         if (status === 'pending') {
-          return "bg-pending text-pending-foreground hover:bg-pending/80";
+          return "bg-tier-warning-bg text-tier-warning hover:bg-tier-warning-bg/80";
         }
-        return "bg-verified text-verified-foreground hover:bg-verified/80";
-      
+        return "bg-tier-info-bg text-tier-info hover:bg-tier-info-bg/80";
+
       case 'opportunity-status':
         switch (status) {
           case 'new':
           case 'to-review':
-            return "bg-status-new text-status-new-foreground hover:bg-status-new/80";
+            return "bg-tier-neutral-bg text-tier-neutral hover:bg-tier-neutral-bg/80";
           case 'qualified':
-            return "bg-status-qualified text-status-qualified-foreground hover:bg-status-qualified/80";
+            return "bg-tier-info-bg text-tier-info hover:bg-tier-info-bg/80";
           case 'active':
-            return "bg-status-active text-status-active-foreground hover:bg-status-active/80";
+            return "bg-tier-success-bg text-tier-success hover:bg-tier-success-bg/80";
           case 'under-offer':
-            return "bg-status-under-offer text-status-under-offer-foreground hover:bg-status-under-offer/80";
+            return "bg-tier-warning-bg text-tier-warning hover:bg-tier-warning-bg/80";
           case 'closed':
-            return "bg-status-closed text-status-closed-foreground hover:bg-status-closed/80";
+            return "bg-tier-success-bg text-tier-success hover:bg-tier-success-bg/80";
           default:
             return "bg-muted text-muted-foreground";
         }
-      
+
       case 'opportunity-type':
         if (status) {
           return getOpportunityBadgeClasses(status as OpportunityType);
         }
         return "bg-muted text-muted-foreground";
-      
+
       case 'portal':
         return "bg-portal-badge text-portal-badge-foreground hover:bg-portal-badge/80 font-semibold";
-      
+
       case 'update-count':
-        return "bg-update-count text-update-count-foreground hover:bg-update-count/80 font-semibold min-w-5 h-5 flex items-center justify-center rounded-full text-xs px-1.5";
-      
+        return "bg-tier-danger-bg text-tier-danger hover:bg-tier-danger-bg/80 font-semibold min-w-5 h-5 flex items-center justify-center rounded-full text-xs px-1.5";
+
       case 'tag':
         return "bg-muted text-muted-foreground hover:bg-muted/80";
-      
+
       default:
         return "bg-muted text-muted-foreground";
     }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Ban } from "lucide-react";
-import type { Deal } from "@/data/types";
+import type { Deal, Tranche } from "@/data/types";
 import { sharedInvoices, sharedPostings } from "@huspy/shared-domain";
 import {
   Dialog,
@@ -14,11 +14,12 @@ import {
 interface Props {
   open: boolean;
   deal: Deal;
+  tranche: Tranche;
   onClose: () => void;
   onConfirm: (reason: string) => void;
 }
 
-export function CancelDealDialog({ open, deal, onClose, onConfirm }: Props) {
+export function CancelDealDialog({ open, deal, tranche, onClose, onConfirm }: Props) {
   const [reason, setReason] = useState("");
 
   useEffect(() => {
@@ -28,23 +29,24 @@ export function CancelDealDialog({ open, deal, onClose, onConfirm }: Props) {
   const effects = useMemo<string[]>(() => {
     if (!open) return [];
     const list: string[] = [];
-    const dealInvs = sharedInvoices.filter((i) => i.trancheId === deal.id);
-    const openInvs = dealInvs.filter((i) => i.status === "draft" || i.status === "issued");
+    const trancheInvs = sharedInvoices.filter((i) => i.trancheId === tranche.id);
+    const openInvs = trancheInvs.filter((i) => i.status === "draft" || i.status === "issued");
     if (openInvs.length > 0) {
       const total = openInvs.reduce((s, i) => s + i.subtotal + (i.vatAmount ?? 0), 0);
       list.push(
         `Void ${openInvs.length} open invoice${openInvs.length === 1 ? "" : "s"} (${formatMoney(total, deal.currency ?? "EUR")} total)`
       );
     }
-    const postings = sharedPostings.filter((p) => p.trancheId === deal.id).length;
+    const postings = sharedPostings.filter((p) => p.trancheId === tranche.id).length;
     if (postings > 0) {
       list.push(`Reverse ${postings} accounting posting${postings === 1 ? "" : "s"}`);
     }
     list.push("Notify the agent and finance team");
     list.push("Lock all sections from further edits");
     return list;
-  }, [open, deal.id, deal.currency]);
+  }, [open, tranche.id, deal.currency]);
 
+  const trancheLabel = tranche.label ?? `Tranche ${tranche.index + 1}`;
   const canConfirm = reason.trim().length >= 5;
 
   return (
@@ -57,11 +59,12 @@ export function CancelDealDialog({ open, deal, onClose, onConfirm }: Props) {
             </div>
             <div className="flex-1">
               <DialogTitle className="text-[17px] leading-tight font-semibold tracking-tight">
-                Cancel this deal?
+                Cancel tranche?
               </DialogTitle>
               <DialogDescription className="text-[13.5px] text-muted-foreground leading-relaxed mt-1.5">
-                Cancellation is permanent and cannot be undone.{" "}
-                <span className="font-mono text-[12.5px] text-foreground">{deal.id}</span> will be moved to Canceled.
+                Cancellation is permanent and cannot be undone. Tranche{" "}
+                <span className="font-medium text-foreground">{trancheLabel}</span>{" "}
+                on <span className="font-mono text-[12.5px] text-foreground">{deal.id}</span> will be moved to Canceled.
               </DialogDescription>
             </div>
           </div>

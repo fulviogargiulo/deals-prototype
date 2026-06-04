@@ -62,7 +62,7 @@ export function DealsList() {
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-[32px] font-semibold leading-[120%]">Deals</h1>
           <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-secondary w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               placeholder="Search deals..."
               className="pl-10 bg-card rounded-full h-9 text-sm"

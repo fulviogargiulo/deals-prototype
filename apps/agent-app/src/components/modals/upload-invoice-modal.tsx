@@ -88,14 +88,14 @@ export function UploadInvoiceModal({ open, onOpenChange, statement, agentId, onI
 
         <div className="overflow-y-auto flex-1">
           {/* Header */}
-          <div className="px-6 pt-6 pb-4 border-b border-border-ds-primary">
+          <div className="px-6 pt-6 pb-4 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--accent-teal) / 0.1)' }}>
-                <Upload className="w-5 h-5" style={{ color: 'hsl(var(--accent-teal))' }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-secondary">
+                <Upload className="w-5 h-5 text-muted-foreground" />
               </div>
               <div>
                 <h2 className="text-[20px] font-semibold leading-[120%] text-foreground">Upload your invoice</h2>
-                <p className="text-[12px] font-semibold leading-[140%] text-fg-secondary">Statement: {statement.cycleLabel}</p>
+                <p className="text-[12px] font-semibold leading-[140%] text-muted-foreground">Statement: {statement.cycleLabel}</p>
               </div>
             </div>
           </div>
@@ -103,25 +103,25 @@ export function UploadInvoiceModal({ open, onOpenChange, statement, agentId, onI
           <div className="px-6 py-5 space-y-6">
             {/* File upload */}
             <div>
-              <p className="text-[12px] font-semibold text-fg-secondary uppercase tracking-wide mb-2">Invoice file</p>
+              <p className="text-[12px] font-semibold text-muted-foreground mb-2">Invoice file</p>
               {fileName ? (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border-ds-primary bg-surface-ds-raised">
-                  <FileText className="w-5 h-5 shrink-0" style={{ color: 'hsl(var(--accent-indigo))' }} />
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-secondary">
+                  <FileText className="w-5 h-5 shrink-0 text-muted-foreground" />
                   <span className="text-[14px] font-semibold text-foreground flex-1 truncate">{fileName}</span>
                   <button onClick={() => setFileName(null)}>
-                    <X className="w-4 h-4 text-fg-secondary hover:text-foreground transition-colors" />
+                    <X className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
                   </button>
                 </div>
               ) : (
                 <div
-                  className="border-2 border-dashed border-border-ds-primary rounded-xl px-6 py-8 text-center cursor-pointer hover:border-accent-indigo transition-colors"
+                  className="border-2 border-dashed border-border rounded-xl px-6 py-8 text-center cursor-pointer hover:border-primary transition-colors"
                   onDragOver={e => e.preventDefault()}
                   onDrop={handleFileDrop}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload className="w-8 h-8 mx-auto mb-2 text-fg-secondary" />
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-[14px] font-semibold text-foreground">Drop your invoice PDF here</p>
-                  <p className="text-[12px] text-fg-secondary mt-1">or click to browse</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">or click to browse</p>
                   <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg" className="hidden" onChange={handleFileChange} />
                 </div>
               )}
@@ -129,14 +129,14 @@ export function UploadInvoiceModal({ open, onOpenChange, statement, agentId, onI
 
             {/* Tax breakdown */}
             <div>
-              <p className="text-[12px] font-semibold text-fg-secondary uppercase tracking-wide mb-3">Tax breakdown</p>
+              <p className="text-[12px] font-semibold text-muted-foreground mb-3">Tax breakdown</p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] text-fg-secondary">Subtotal (base imponible)</span>
+                  <span className="text-[13px] text-muted-foreground">Subtotal (base imponible)</span>
                   <span className="text-[13px] font-semibold tabular-nums text-foreground">€{subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] text-fg-secondary">IVA</span>
+                  <span className="text-[13px] text-muted-foreground">IVA</span>
                   <div className="flex items-center gap-2">
                     <Select value={String(ivaRate)} onValueChange={v => setIvaRate(Number(v))}>
                       <SelectTrigger className="h-7 text-[13px] rounded-lg w-20">
@@ -148,11 +148,11 @@ export function UploadInvoiceModal({ open, onOpenChange, statement, agentId, onI
                         ))}
                       </SelectContent>
                     </Select>
-                    <span className="text-[13px] text-fg-secondary">= +€{vatAmount.toLocaleString()}</span>
+                    <span className="text-[13px] text-muted-foreground">= +€{vatAmount.toLocaleString()}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] text-fg-secondary">IRPF withholding</span>
+                  <span className="text-[13px] text-muted-foreground">IRPF withholding</span>
                   <div className="flex items-center gap-2">
                     <Select value={String(irpfRate)} onValueChange={v => setIrpfRate(Number(v))}>
                       <SelectTrigger className="h-7 text-[13px] rounded-lg w-20">
@@ -164,21 +164,21 @@ export function UploadInvoiceModal({ open, onOpenChange, statement, agentId, onI
                         ))}
                       </SelectContent>
                     </Select>
-                    <span className="text-[13px]" style={{ color: 'hsl(var(--ds-red))' }}>= −€{withholdingAmount.toLocaleString()}</span>
+                    <span className="text-[13px]" className="text-tier-danger">= −€{withholdingAmount.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
-              <div className="mt-3 rounded-xl px-4 py-3 flex items-center justify-between" style={{ backgroundColor: 'hsl(var(--accent-teal) / 0.1)' }}>
-                <span className="text-[13px] font-semibold text-fg-secondary">Net payout to you</span>
-                <span className="text-[20px] font-semibold tabular-nums" style={{ color: 'hsl(var(--accent-teal))' }}>€{netPayout.toLocaleString()}</span>
+              <div className="mt-3 rounded-xl px-4 py-3 flex items-center justify-between bg-secondary">
+                <span className="text-[13px] font-semibold text-muted-foreground">Net payout to you</span>
+                <span className="text-[20px] font-semibold tabular-nums text-tier-success">€{netPayout.toLocaleString()}</span>
               </div>
             </div>
 
             {/* Posting lines — all included, non-toggleable */}
             <div>
-              <p className="text-[12px] font-semibold text-fg-secondary uppercase tracking-wide mb-2">
+              <p className="text-[12px] font-semibold text-muted-foreground mb-2">
                 Link to ledger lines
-                <Badge className="ml-2 rounded-full text-[10px] px-2 border-0 bg-surface-ds-raised text-fg-secondary">{statement.lineItems.length} selected</Badge>
+                <Badge className="ml-2 rounded-full text-[10px] px-2 border-0 bg-secondary text-muted-foreground">{statement.lineItems.length} selected</Badge>
               </p>
               <div className="space-y-1">
                 {statement.lineItems.map(item => (
@@ -186,16 +186,13 @@ export function UploadInvoiceModal({ open, onOpenChange, statement, agentId, onI
                     key={item.id}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left"
                   >
-                    <div
-                      className="w-4 h-4 rounded-md border-2 flex items-center justify-center shrink-0"
-                      style={{ borderColor: 'hsl(var(--accent-teal))', backgroundColor: 'hsl(var(--accent-teal))' }}
-                    >
-                      <CheckCircle2 className="w-3 h-3 text-white" />
+                    <div className="w-4 h-4 rounded-md border-2 border-primary bg-primary flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-3 h-3 text-primary-foreground" />
                     </div>
                     <span className="text-[13px] text-foreground flex-1 truncate">{item.description}</span>
                     <span
                       className="text-[13px] font-semibold tabular-nums shrink-0"
-                      style={{ color: item.type === 'credit' ? 'hsl(var(--ds-green))' : 'hsl(var(--ds-red))' }}
+                      style={{ color: item.type === 'credit' ? 'hsl(var(--tier-success-fg))' : 'hsl(var(--tier-danger-fg))' }}
                     >
                       {item.type === 'credit' ? '+' : '−'}€{item.amount.toLocaleString()}
                     </span>
@@ -207,10 +204,10 @@ export function UploadInvoiceModal({ open, onOpenChange, statement, agentId, onI
         </div>
 
         {/* CTA */}
-        <div className="sticky bottom-0 px-6 py-4 border-t border-border-ds-primary bg-card">
+        <div className="sticky bottom-0 px-6 py-4 border-t border-border bg-card">
           <Button
             className="w-full h-11 rounded-full text-[14px] font-semibold"
-            style={{ backgroundColor: canSubmit ? 'hsl(var(--ds-green))' : undefined, color: canSubmit ? 'white' : undefined }}
+            style={{ backgroundColor: canSubmit ? 'hsl(var(--tier-success-fg))' : undefined, color: canSubmit ? 'white' : undefined }}
             disabled={!canSubmit}
             onClick={handleSubmit}
           >

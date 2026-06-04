@@ -77,7 +77,7 @@ export function HeaderBreadcrumbs({ transparentHeader, isScrolled }: HeaderBread
             "h-7 w-7 p-0 rounded-lg transition-all duration-500",
             isTransparentMode
               ? "hover:bg-white/15 text-white/70 hover:text-white"
-              : "hover:bg-muted/60 text-fg-secondary hover:text-foreground"
+              : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
           )}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -90,7 +90,7 @@ export function HeaderBreadcrumbs({ transparentHeader, isScrolled }: HeaderBread
             "h-7 w-7 p-0 rounded-lg transition-all duration-500",
             isTransparentMode
               ? "hover:bg-white/15 text-white/70 hover:text-white"
-              : "hover:bg-muted/60 text-fg-secondary hover:text-foreground"
+              : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
           )}
         >
           <ChevronRight className="h-4 w-4" />
@@ -108,7 +108,7 @@ export function HeaderBreadcrumbs({ transparentHeader, isScrolled }: HeaderBread
                 <ChevronRight
                   className={cn(
                     "h-3 w-3 shrink-0 transition-colors duration-500",
-                    isTransparentMode ? "text-white/40" : "text-fg-secondary/50"
+                    isTransparentMode ? "text-white/40" : "text-muted-foreground/50"
                   )}
                 />
               )}
@@ -128,7 +128,7 @@ export function HeaderBreadcrumbs({ transparentHeader, isScrolled }: HeaderBread
                     "text-sm font-normal truncate transition-colors duration-500 hover:underline",
                     isTransparentMode
                       ? "text-white/60 hover:text-white/80"
-                      : "text-fg-secondary hover:text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {crumb.label}
