@@ -1,0 +1,2487 @@
+{
+  "name": "**Post & Send Revenue Invoices",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo",
+          "mode": "list",
+          "cachedResultName": "REBU invoicing",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2034150190,
+          "mode": "list",
+          "cachedResultName": "v2 JIRA IMPORT",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo/edit#gid=2034150190"
+        },
+        "options": {}
+      },
+      "id": "2ad95a26-88c5-43d6-a464-30174bfbc432",
+      "name": "Read JIRA IMPORT Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        688,
+        400
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nR5nBkszpMsOZcQx",
+          "name": "Martin Torcal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "status",
+              "name": "status",
+              "value": "completed",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "All invoices processed",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5aba27c2-23d6-4a03-8037-7fffa65dd235",
+      "name": "All Rows Processed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "organizationId": "7bde223d-d97b-4456-ab4e-564582a7b27e",
+        "limit": 1,
+        "options": {
+          "where": "={{ 'Reference.StartsWith(\"' + $('Loop Each Row').item.json['importKey'] + '\") AND Status!=\"VOIDED\" AND Status!=\"DELETED\"' }}"
+        }
+      },
+      "id": "eb09e2ff-8648-493e-8a9f-9178f4bbe1c1",
+      "name": "Check Existing Invoice",
+      "type": "n8n-nodes-base.xero",
+      "typeVersion": 1,
+      "position": [
+        688,
+        1040
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "xeroOAuth2Api": {
+          "id": "e7QyPjXUC9WzHMF1",
+          "name": "Xero account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5f32afd5-24fb-4556-8e9f-cff5cf06bfcb",
+              "leftValue": "={{ $json.Invoices?.[0]?.InvoiceID || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fd478b60-3cae-4b23-ba2d-473b1a05f7e3",
+      "name": "Invoice Already Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1632,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "invoiceNumber",
+              "name": "invoiceNumber",
+              "value": "={{ $json.Invoices[0].InvoiceNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "invoiceId",
+              "name": "invoiceId",
+              "value": "={{ $json.Invoices[0].InvoiceID }}",
+              "type": "string"
+            },
+            {
+              "id": "skipCreation",
+              "name": "skipCreation",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "logMessage",
+              "name": "logMessage",
+              "value": "n8n: ya existía",
+              "type": "string"
+            },
+            {
+              "id": "importKey",
+              "name": "importKey",
+              "value": "={{ $('Loop Each Row').item.json['importKey'] }}",
+              "type": "string"
+            },
+            {
+              "id": "rowData",
+              "name": "rowData",
+              "value": "={{ $(\"Loop Each Row\").item.json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bcde0be1-4b8a-4b0d-b993-e0ce54dadec1",
+      "name": "Prepare Existing Invoice Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3152,
+        240
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "3fbe9518-9858-4e8c-b45b-e9f6fcf6c745",
+      "name": "Merge Invoice Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3376,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "getAll",
+        "organizationId": "7bde223d-d97b-4456-ab4e-564582a7b27e",
+        "limit": 1,
+        "options": {
+          "where": "={{ 'Name==\"' + $('Loop Each Row').item.json['*ContactName'] + '\"' }}"
+        }
+      },
+      "id": "71d4a4d4-033b-4fe9-b6e0-9178867204d6",
+      "name": "Find Contact",
+      "type": "n8n-nodes-base.xero",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        528
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "xeroOAuth2Api": {
+          "id": "e7QyPjXUC9WzHMF1",
+          "name": "Xero account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6c630cbb-0618-411e-949c-c7b5ec828d8c",
+              "leftValue": "={{ $json.ContactID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a713d62f-0fbb-444a-a310-f7df2e463725",
+      "name": "Contact Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2032,
+        496
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "c17d03e1-91f4-4b57-a7e6-bb859b2421ac",
+      "name": "Merge Contact Branches",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2688,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "organizationId": "7bde223d-d97b-4456-ab4e-564582a7b27e",
+        "name": "={{ $('Loop Each Row').item.json[\"*ContactName\"] }}",
+        "additionalFields": {
+          "addressesUi": {
+            "addressesValues": [
+              {
+                "type": "POBOX",
+                "line1": "={{ $('Loop Each Row').item.json[\"Direccion fiscal cliente - Calle y número\"] }}",
+                "city": "={{ $('Loop Each Row').item.json.Ciudad }}",
+                "postalCode": "={{ $('Loop Each Row').item.json[\"Código Postal\"] }}",
+                "country": "={{ $('Loop Each Row').item.json[\"País\"] }}"
+              }
+            ]
+          },
+          "taxNumber": "={{ $('Loop Each Row').item.json[\"Customer VAT ID\"] }}"
+        }
+      },
+      "id": "5c7cb454-12de-4d2a-b873-a5dd7e486fa4",
+      "name": "Create Contact",
+      "type": "n8n-nodes-base.xero",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        720
+      ],
+      "credentials": {
+        "xeroOAuth2Api": {
+          "id": "e7QyPjXUC9WzHMF1",
+          "name": "Xero account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "contactId",
+              "name": "contactId",
+              "value": "={{ $json.ContactID }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "471ca918-5148-49c2-bc59-e11d17d2b19f",
+      "name": "Prepare Contact ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2480,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "62681d8b-9c6d-47df-8f71-e4051314ffb0",
+      "name": "Loop Each Row",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1136,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "invoiceNumber",
+              "name": "invoiceNumber",
+              "value": "={{ $json.Invoices[0].InvoiceNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "invoiceId",
+              "name": "invoiceId",
+              "value": "={{ $json.Invoices[0].InvoiceID }}",
+              "type": "string"
+            },
+            {
+              "id": "skipCreation",
+              "name": "skipCreation",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "logMessage",
+              "name": "logMessage",
+              "value": "n8n: facturada y enviada",
+              "type": "string"
+            },
+            {
+              "id": "importKey",
+              "name": "importKey",
+              "value": "={{ $('Loop Each Row').item.json['importKey'] }}",
+              "type": "string"
+            },
+            {
+              "id": "rowData",
+              "name": "rowData",
+              "value": "={{ $(\"Loop Each Row\").item.json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ee89cf56-3820-46c7-a5db-76265a54ffec",
+      "name": "Prepare New Invoice Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3152,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ \"https://api.xero.com/api.xro/2.0/Invoices/\" + $json.invoiceId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "xeroOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/pdf"
+            },
+            {
+              "name": "Xero-Tenant-Id",
+              "value": "7bde223d-d97b-4456-ab4e-564582a7b27e"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "invoicePdf"
+            }
+          }
+        }
+      },
+      "id": "f0d38b3d-7daa-4656-8b06-4e6178a0d53a",
+      "name": "Get Invoice PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3600,
+        432
+      ],
+      "credentials": {
+        "xeroOAuth2Api": {
+          "id": "e7QyPjXUC9WzHMF1",
+          "name": "Xero account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const rowData = $input.item.json.rowData;\n\nconst clean = arr => [...new Set(\n  arr.map(e => String(e || '').trim().toLowerCase()).filter(e => e.includes('@'))\n)];\n\n// TO: el requester (KAM solicitante)\nconst recipients = clean([ rowData['Requester mail'] ]).join(',');\n\n// Nombre legible para el adjunto\nconst bin = { ...$input.item.binary };\nif (bin.invoicePdf) {\n  bin.invoicePdf = {\n    ...bin.invoicePdf,\n    fileName: 'Factura_' + String($input.item.json.invoiceNumber || 'Huspy').replace(/[\\\\/:*?\"<>|]/g, '-') + '.pdf',\n    fileExtension: 'pdf',\n    mimeType: 'application/pdf'\n  };\n}\n\nreturn {\n  json: { ...($input.item.json), recipients: recipients },\n  binary: bin\n};"
+      },
+      "id": "8ec9cdbf-0afe-4cb6-bff3-240d5a5ac672",
+      "name": "Prepare Email Recipients",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3824,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.recipients }}",
+        "subject": "=[Huspy] Factura {{ $json.invoiceNumber }} ({{ $json.rowData['Invoice description'] }})",
+        "message": "={{ \"<p>Buenos días/Buenas tardes:</p><p>Te confirmamos que hemos emitido la factura nº \" + $json.invoiceNumber + \" a nombre de \" + String($json.rowData['*ContactName'] || '').toUpperCase() + \" por un importe de EUR \" + Number($json.rowData['Total Invoice (incluing VAT) ']).toFixed(2) + \"</p>\" + \"<p>Puede realizar el pago con tarjeta en este enlace: <a href=\\\"\" + String($json.rowData['Checkout link'] || '').trim() + \"\\\">Pagar factura</a></p>\" + \"<p>Si tienes alguna pregunta, por favor, no dudes en avisarnos.</p><p>Saludos,<br>Huspy Iberia S.L.</p>\" }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "invoicePdf"
+              }
+            ]
+          },
+          "ccList": "={{ [...new Set(\n  [\n    $json.rowData['Agent supply email'],\n    $json.rowData['Agent sales email'],\n    ...String((\n      $('Read Mapeo Ciudades').all().find(m =>\n        String(m.json.City).trim().toLowerCase() ===\n        String($json.rowData['City'] || '').trim().toLowerCase()\n      )?.json['KAM email']\n    ) || '').split(',')\n  ]\n  .map(e => String(e || '').trim().toLowerCase())\n  .filter(e => e.includes('@'))\n  .filter(e => e !== String($json.recipients || '').trim().toLowerCase())\n)].join(',') }}"
+        }
+      },
+      "id": "5055d3c3-4acc-4b16-a92d-9ec09103c2ca",
+      "name": "Send Invoice Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4256,
+        400
+      ],
+      "webhookId": "b417f555-c6fe-4ce5-ae88-734ca4cb65c3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xhxWy37ODOP7EWBm",
+          "name": "Finanzas REBU"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "AW",
+              "name": "importKey",
+              "value": "={{ $(\"Prepare Email Recipients\").item.json.importKey }}",
+              "type": "string"
+            },
+            {
+              "id": "A",
+              "name": "*Invoice Number",
+              "value": "={{ $(\"Prepare Email Recipients\").item.json.invoiceNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "AM",
+              "name": "ESTADO",
+              "value": "INVOICED",
+              "type": "string"
+            },
+            {
+              "id": "AX",
+              "name": "Log técnico",
+              "value": "={{ (($('Prepare Email Recipients').item.json.rowData['Log técnico'] || '') + ' | ' + $now.setZone('Europe/Madrid').toFormat('dd-MMM HH:mm') + ' · ' + $('Prepare Email Recipients').item.json.logMessage + ' (' + $('Prepare Email Recipients').item.json.invoiceNumber + ')').replace(/^ \\| /, '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e8a85483-673b-4552-92ea-f565478d5684",
+      "name": "Prepare Write-Back Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4480,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo",
+          "mode": "list",
+          "cachedResultName": "REBU invoicing",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "v2 JIRA IMPORT"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "*Invoice Number": "={{ $json['*Invoice Number'] }}",
+            "ESTADO": "={{ $json.ESTADO }}",
+            "Log técnico": "={{ $json['Log técnico'] }}",
+            "importKey": "={{ $json.importKey }}"
+          },
+          "matchingColumns": [
+            "importKey"
+          ],
+          "schema": [
+            {
+              "id": "*Invoice Number",
+              "displayName": "*Invoice Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Jira Ticket",
+              "displayName": "Jira Ticket",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Issuer",
+              "displayName": "Issuer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TYPE",
+              "displayName": "TYPE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TRX Code",
+              "displayName": "TRX Code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TRX Address",
+              "displayName": "TRX Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "*ContactName",
+              "displayName": "*ContactName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Customer VAT ID",
+              "displayName": "Customer VAT ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Direccion fiscal cliente - Calle y número",
+              "displayName": "Direccion fiscal cliente - Calle y número",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Ciudad",
+              "displayName": "Ciudad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Código Postal",
+              "displayName": "Código Postal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "País",
+              "displayName": "País",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Invoice description",
+              "displayName": "Invoice description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Tax Base amount",
+              "displayName": "Tax Base amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Total Invoice (incluing VAT) ",
+              "displayName": "Total Invoice (incluing VAT) ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Invoice requester",
+              "displayName": "Invoice requester",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Requester mail",
+              "displayName": "Requester mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Agent supply email",
+              "displayName": "Agent supply email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Agent sales email",
+              "displayName": "Agent sales email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Mismos datos en escrituras",
+              "displayName": "Mismos datos en escrituras",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Tipo Cliente",
+              "displayName": "Tipo Cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TRX Check",
+              "displayName": "TRX Check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TRX Check ii",
+              "displayName": "TRX Check ii",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Amount check",
+              "displayName": "Amount check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Recheck billing stage",
+              "displayName": "Recheck billing stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Rev Seller (CRM)",
+              "displayName": "Rev Seller (CRM)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Rev Buyer (CRM)",
+              "displayName": "Rev Buyer (CRM)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "% aplicable (CRM)",
+              "displayName": "% aplicable (CRM)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Importe esperado",
+              "displayName": "Importe esperado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Δ vs Tax Base",
+              "displayName": "Δ vs Tax Base",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status TRX (CRM)",
+              "displayName": "Status TRX (CRM)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Ya emitida (conta)",
+              "displayName": "Ya emitida (conta)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha facturación (jueves)",
+              "displayName": "Fecha facturación (jueves)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Facturar/Cerrar ticket",
+              "displayName": "Facturar/Cerrar ticket",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Acción",
+              "displayName": "Acción",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Tipo de error (si incidencia)",
+              "displayName": "Tipo de error (si incidencia)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Comentario a colaborador (si pedir info)",
+              "displayName": "Comentario a colaborador (si pedir info)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ESTADO",
+              "displayName": "ESTADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Última respuesta colab.",
+              "displayName": "Última respuesta colab.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha cierre",
+              "displayName": "Fecha cierre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Resultado cierre",
+              "displayName": "Resultado cierre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Ticket incidencia",
+              "displayName": "Ticket incidencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Estado (Incidencia)",
+              "displayName": "Estado (Incidencia)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Última respuesta colab. (incidencia)",
+              "displayName": "Última respuesta colab. (incidencia)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha cierre (incidencia)",
+              "displayName": "Fecha cierre (incidencia)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Resultado cierre (incidencia",
+              "displayName": "Resultado cierre (incidencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Full Description",
+              "displayName": "Full Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "importKey",
+              "displayName": "importKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Log técnico",
+              "displayName": "Log técnico",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "06bcdd32-68bc-49ad-877f-ac2c63a1708c",
+      "name": "Write Back to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4704,
+        480
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nR5nBkszpMsOZcQx",
+          "name": "Martin Torcal"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da5ace0f-5155-464d-bcf1-44ffe0b18639",
+              "name": "Log técnico",
+              "value": "={{ (($('Loop Each Row').first().json['Log técnico'] || '') + ' | ' + $now.setZone('Europe/Madrid').toFormat('dd-MMM HH:mm') + ' · ERROR n8n: ' + ($json.error?.message || 'Unknown error')).replace(/^ \\| /, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "de84b999-d56a-4899-9ea9-7f2fb5a26f9a",
+              "name": "importKey",
+              "value": "={{ $('Loop Each Row').first().json['importKey'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7776a85c-70dc-4a20-82bc-ef094c13679a",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4800,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo",
+          "mode": "list",
+          "cachedResultName": "REBU invoicing",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "v2 JIRA IMPORT"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "importKey": "={{ $json.importKey }}",
+            "Log técnico": "={{ $json['Log técnico'] }}"
+          },
+          "matchingColumns": [
+            "importKey"
+          ],
+          "schema": [
+            {
+              "id": "*Invoice Number",
+              "displayName": "*Invoice Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Jira Ticket",
+              "displayName": "Jira Ticket",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Issuer",
+              "displayName": "Issuer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TYPE",
+              "displayName": "TYPE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TRX Code",
+              "displayName": "TRX Code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TRX Address",
+              "displayName": "TRX Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "*ContactName",
+              "displayName": "*ContactName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Customer VAT ID",
+              "displayName": "Customer VAT ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Direccion fiscal cliente - Calle y número",
+              "displayName": "Direccion fiscal cliente - Calle y número",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Ciudad",
+              "displayName": "Ciudad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Código Postal",
+              "displayName": "Código Postal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "País",
+              "displayName": "País",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Invoice description",
+              "displayName": "Invoice description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Tax Base amount",
+              "displayName": "Tax Base amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Total Invoice (incluing VAT) ",
+              "displayName": "Total Invoice (incluing VAT) ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Invoice requester",
+              "displayName": "Invoice requester",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Requester mail",
+              "displayName": "Requester mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Agent supply email",
+              "displayName": "Agent supply email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Agent sales email",
+              "displayName": "Agent sales email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Mismos datos en escrituras",
+              "displayName": "Mismos datos en escrituras",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Tipo Cliente",
+              "displayName": "Tipo Cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TRX Check",
+              "displayName": "TRX Check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TRX Check ii",
+              "displayName": "TRX Check ii",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Amount check",
+              "displayName": "Amount check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Recheck billing stage",
+              "displayName": "Recheck billing stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Rev Seller (CRM)",
+              "displayName": "Rev Seller (CRM)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Rev Buyer (CRM)",
+              "displayName": "Rev Buyer (CRM)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "% aplicable (CRM)",
+              "displayName": "% aplicable (CRM)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Importe esperado",
+              "displayName": "Importe esperado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Δ vs Tax Base",
+              "displayName": "Δ vs Tax Base",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status TRX (CRM)",
+              "displayName": "Status TRX (CRM)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Ya emitida (conta)",
+              "displayName": "Ya emitida (conta)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha facturación (jueves)",
+              "displayName": "Fecha facturación (jueves)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Facturar/Cerrar ticket",
+              "displayName": "Facturar/Cerrar ticket",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Acción",
+              "displayName": "Acción",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Tipo de error (si incidencia)",
+              "displayName": "Tipo de error (si incidencia)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Comentario a colaborador (si pedir info)",
+              "displayName": "Comentario a colaborador (si pedir info)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ESTADO",
+              "displayName": "ESTADO",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Última respuesta colab.",
+              "displayName": "Última respuesta colab.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha cierre",
+              "displayName": "Fecha cierre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Resultado cierre",
+              "displayName": "Resultado cierre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Ticket incidencia",
+              "displayName": "Ticket incidencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Estado (Incidencia)",
+              "displayName": "Estado (Incidencia)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Última respuesta colab. (incidencia)",
+              "displayName": "Última respuesta colab. (incidencia)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha cierre (incidencia)",
+              "displayName": "Fecha cierre (incidencia)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Resultado cierre (incidencia",
+              "displayName": "Resultado cierre (incidencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Full Description",
+              "displayName": "Full Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "importKey",
+              "displayName": "importKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Log técnico",
+              "displayName": "Log técnico",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a15966a6-081a-4483-8fe5-8ab0580842f4",
+      "name": "Write Error to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5008,
+        576
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nR5nBkszpMsOZcQx",
+          "name": "Martin Torcal"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                4
+              ],
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "id": "e91a7205-5e44-4c20-9231-bfc72b87e021",
+      "name": "Every Thursday 10:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rebu-invoice",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        272
+      ],
+      "id": "413faae8-bb8d-47d8-bdcf-5143cf9690c5",
+      "name": "Webhook",
+      "webhookId": "290afbbc-b6f1-4605-9569-64541e47c2ea",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NTfz7bgUYO5IRn2v",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "af3610ae-4642-4c86-bc81-72e6a6cabcfd",
+              "leftValue": "={{ $json.ESTADO }}",
+              "rightValue": "=READY_TO_INVOICE",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c29c5273-62d2-42df-b1f8-2eac3c8da65b",
+              "leftValue": "={{ $json[\"Fecha facturación (jueves)\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        912,
+        400
+      ],
+      "id": "1d79cd6c-3b0d-4910-b662-1f49176fa555",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "update",
+        "organizationId": "7bde223d-d97b-4456-ab4e-564582a7b27e",
+        "contactId": "={{ $json.ContactID }}",
+        "updateFields": {
+          "addressesUi": {
+            "addressesValues": [
+              {
+                "type": "POBOX",
+                "line1": "={{ $('Loop Each Row').item.json[\"Direccion fiscal cliente - Calle y número\"] }}",
+                "city": "={{ $('Loop Each Row').item.json.Ciudad }}",
+                "postalCode": "={{ $('Loop Each Row').item.json[\"Código Postal\"] }}",
+                "country": "={{ $('Loop Each Row').item.json[\"País\"] }}"
+              }
+            ]
+          },
+          "taxNumber": "={{ $('Loop Each Row').item.json[\"Customer VAT ID\"] }}"
+        }
+      },
+      "type": "n8n-nodes-base.xero",
+      "typeVersion": 1,
+      "position": [
+        2464,
+        400
+      ],
+      "id": "5d66e7ee-4056-4689-8e3b-6525f4fc71f7",
+      "name": "Update a contact",
+      "credentials": {
+        "xeroOAuth2Api": {
+          "id": "e7QyPjXUC9WzHMF1",
+          "name": "Xero account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.xero.com/api.xro/2.0/Invoices",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "xeroOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "value": "7bde223d-d97b-4456-ab4e-564582a7b27e"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  Type: 'ACCREC',\n  Contact: { ContactID: $json.ContactID || $json.contactId },\n      Reference: String($('Loop Each Row').item.json['Checkout link'] || '').trim(),\n  Date: DateTime.fromFormat($('Loop Each Row').item.json['Fecha facturación (jueves)'], 'dd-MMM-yyyy', { locale: 'en' }).toFormat('yyyy-MM-dd'),\n  DueDate: DateTime.fromFormat($('Loop Each Row').item.json['Fecha facturación (jueves)'], 'dd-MMM-yyyy', { locale: 'en' }).toFormat('yyyy-MM-dd'),\n  LineAmountTypes: 'Exclusive',\n  Status: 'AUTHORISED',\n  CurrencyCode: 'EUR',\n  LineItems: [{\n    Description: $('Loop Each Row').item.json['Invoice description'],\n    Quantity: 1,\n    UnitAmount: Number($('Loop Each Row').item.json['Tax Base amount']),\n    AccountCode: '505000',\n    TaxType: 'TAX001',\n    Tracking: [\n      { Name: 'Locations',\n        Option: ($('Read Mapeo Ciudades').all().find(m =>\n            String(m.json.City).trim().toLowerCase() ===\n            String($('Loop Each Row').item.json.City).trim().toLowerCase()\n          )?.json['Xero Location']) || 'SIN_MAPEO' },\n      { Name: 'Departments',\n        Option: ($('Read Mapeo Ciudades').all().find(m =>\n            String(m.json.City).trim().toLowerCase() ===\n            String($('Loop Each Row').item.json.City).trim().toLowerCase()\n          )?.json['Xero Department']) || 'Residential Sales' }\n    ]\n  }]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        512
+      ],
+      "id": "b73a26de-2361-4b06-b2f8-bca7e0668b38",
+      "name": "Create Invoice",
+      "credentials": {
+        "xeroOAuth2Api": {
+          "id": "e7QyPjXUC9WzHMF1",
+          "name": "Xero account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://api.xero.com/connections",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "xeroOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "value": "Huspy Iberia S.L.U."
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2848,
+        944
+      ],
+      "id": "9ccc73e7-da17-4107-9710-c0679743258e",
+      "name": "[TOOL] Get Xero Tenant",
+      "credentials": {
+        "xeroOAuth2Api": {
+          "id": "e7QyPjXUC9WzHMF1",
+          "name": "Xero account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4819c449-bc2b-41c5-addd-b7a665b0a77c",
+              "leftValue": "={{ $json.rowData['Log técnico'] || '' }}",
+              "rightValue": "=enviada",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4048,
+        400
+      ],
+      "id": "3fa393b3-f709-42de-b291-30b0d7e21d1d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo",
+          "mode": "list",
+          "cachedResultName": "REBU invoicing",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 710981292,
+          "mode": "list",
+          "cachedResultName": "Mapeo Ciudades",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1LKdlMPjhAKUIajgkn4RFBJ1uKle7sgUhXFh6C24QTFo/edit#gid=710981292"
+        },
+        "options": {}
+      },
+      "id": "e6ccfc2d-899e-4bb9-9b41-7902abdbca03",
+      "name": "Read Mapeo Ciudades",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        400
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nR5nBkszpMsOZcQx",
+          "name": "Martin Torcal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "chk-link-1",
+              "leftValue": "={{ String($('Loop Each Row').item.json['Checkout link'] || '').trim() }}",
+              "rightValue": "https://",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "92238dc8-44a7-4e3a-83ce-6fd73dc00644",
+      "name": "Has Checkout Link?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2864,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "err-link",
+              "name": "error",
+              "value": "={{ { message: 'Sin link de pago Checkout en col AY (' + $('Loop Each Row').item.json['importKey'] + ')' } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "13c93588-d325-4a18-b298-1e932a4b480d",
+      "name": "Missing Link Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3184,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.xero.com/api.xro/2.0/Invoices",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "xeroOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "where",
+              "value": "={{ 'Reference==\"' + String($('Loop Each Row').item.json['Checkout link'] || '').trim() + '\" AND Status!=\"VOIDED\" AND Status!=\"DELETED\"' }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Xero-Tenant-Id",
+              "value": "7bde223d-d97b-4456-ab4e-564582a7b27e"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5785956f-add2-4479-8b05-368ea0eebb6b",
+      "name": "Check Existing Invoice (HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1328,
+        912
+      ],
+      "credentials": {
+        "xeroOAuth2Api": {
+          "id": "e7QyPjXUC9WzHMF1",
+          "name": "Xero account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "pinData": {
+    "Every Thursday 10:00": [
+      {
+        "json": {
+          "timestamp": "2026-07-24T11:31:24.713+02:00",
+          "Readable date": "July 24th 2026, 11:31:24 am",
+          "Readable time": "11:31:24 am",
+          "Day of week": "Friday",
+          "Year": "2026",
+          "Month": "July",
+          "Day of month": "24",
+          "Hour": "11",
+          "Minute": "31",
+          "Second": "24",
+          "Timezone": "Europe/Madrid (UTC+02:00)"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Read JIRA IMPORT Sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Invoice": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Invoice Already Exists?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Existing Invoice Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Existing Invoice Data": {
+      "main": [
+        [
+          {
+            "node": "Merge Invoice Branches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Invoice Branches": {
+      "main": [
+        [
+          {
+            "node": "Get Invoice PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Contact": {
+      "main": [
+        [
+          {
+            "node": "Contact Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact Exists?": {
+      "main": [
+        [
+          {
+            "node": "Update a contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Contact Branches": {
+      "main": [
+        [
+          {
+            "node": "Has Checkout Link?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Contact": {
+      "main": [
+        [
+          {
+            "node": "Prepare Contact ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Contact ID": {
+      "main": [
+        [
+          {
+            "node": "Merge Contact Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Loop Each Row": {
+      "main": [
+        [
+          {
+            "node": "All Rows Processed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Existing Invoice (HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare New Invoice Data": {
+      "main": [
+        [
+          {
+            "node": "Merge Invoice Branches",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Invoice PDF": {
+      "main": [
+        [
+          {
+            "node": "Prepare Email Recipients",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email Recipients": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Invoice Email": {
+      "main": [
+        [
+          {
+            "node": "Prepare Write-Back Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Write-Back Data": {
+      "main": [
+        [
+          {
+            "node": "Write Back to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Back to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Each Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Write Error to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every Thursday 10:00": {
+      "main": [
+        [
+          {
+            "node": "Read Mapeo Ciudades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Mapeo Ciudades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Loop Each Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a contact": {
+      "main": [
+        [
+          {
+            "node": "Merge Contact Branches",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Invoice": {
+      "main": [
+        [
+          {
+            "node": "Prepare New Invoice Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Error to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Each Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send Invoice Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Write-Back Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Mapeo Ciudades": {
+      "main": [
+        [
+          {
+            "node": "Read JIRA IMPORT Sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Write Error to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Checkout Link?": {
+      "main": [
+        [
+          {
+            "node": "Create Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Missing Link Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Missing Link Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Invoice (HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Invoice Already Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "Cz4KRJj9F8UOju1p"
+  },
+  "versionId": "45e7923f-f6d6-4c68-aab4-2533f9a0cc06",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "277849fc73be755d45058f3ae486eb58aa2b0e5c95eb11274f2cbd284493157c"
+  },
+  "nodeGroups": [],
+  "id": "Ryu3X8Uo6numBOpn",
+  "tags": []
+}

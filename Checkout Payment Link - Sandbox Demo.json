@@ -1,0 +1,498 @@
+{
+  "name": "Checkout Payment Link - Sandbox",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Run Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "k1",
+              "name": "importKey",
+              "value": "DEMO-2026-0001",
+              "type": "string"
+            },
+            {
+              "id": "k2",
+              "name": "*ContactName",
+              "value": "Mariana Danobeitia",
+              "type": "string"
+            },
+            {
+              "id": "k3",
+              "name": "Invoice description",
+              "value": "Comision de intermediacion - Calle Serrano 21",
+              "type": "string"
+            },
+            {
+              "id": "k4",
+              "name": "Total Invoice (incluing VAT) ",
+              "value": 13766.17,
+              "type": "number"
+            },
+            {
+              "id": "k5",
+              "name": "Customer email",
+              "value": "fulvio.gargiulo@huspy.io",
+              "type": "string"
+            },
+            {
+              "id": "k6",
+              "name": "Checkout expiry days",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "k7",
+              "name": "Checkout methods",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "k8",
+              "name": "Checkout 3DS",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "k9",
+              "name": "Checkout channel",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "k10",
+              "name": "Checkout country",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "k11",
+              "name": "Checkout locale",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Fake Invoice Row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        60,
+        300
+      ],
+      "notes": "One row of the JIRA IMPORT sheet. The 'Checkout ...' columns are OPTIONAL per-row overrides: leave blank to use Checkout Defaults."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://osobjvso.api.sandbox.checkout.com/payment-links",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  const row = $json;\n  const cfg = $('Checkout Defaults').first().json;\n\n  // per-row value if present, otherwise the workflow default\n  const pick = (rowVal, fallback) => {\n    const v = String(rowVal ?? '').trim();\n    return v === '' ? fallback : v;\n  };\n  const bool = (rowVal, fallback) => {\n    const v = String(rowVal ?? '').trim().toLowerCase();\n    if (v === '') return fallback;\n    return ['true','si','sí','yes','1','x'].includes(v);\n  };\n\n  const days = Number(pick(row['Checkout expiry days'], cfg.expiryDays));\n  const methods = pick(row['Checkout methods'], cfg.paymentMethods)\n                    .split(',').map(s => s.trim()).filter(Boolean);\n\n  return JSON.stringify({\n    amount: Math.round(Number(row['Total Invoice (incluing VAT) ']) * 100),\n    currency: pick(row['Checkout currency'], cfg.currency),\n    billing: { address: { country: pick(row['Checkout country'], cfg.country) } },\n\n    processing_channel_id: pick(row['Checkout channel'], cfg.processingChannelId),\n\n    reference: row.importKey,\n    description: row['Invoice description'],\n    metadata: { importKey: row.importKey, contactName: row['*ContactName'] },\n\n    expires_in: days * 86400,\n    locale: pick(row['Checkout locale'], cfg.locale),\n    return_url: pick(row['Checkout return url'], cfg.returnUrl),\n\n    allow_payment_methods: methods,\n    '3ds': { enabled: bool(row['Checkout 3DS'], cfg.threeDs), attempt_n3d: true },\n    capture: bool(row['Checkout capture'], cfg.capture),\n\n    customer: { name: row['*ContactName'], email: row['Customer email'] },\n    payment_method_configuration: { card: { store_payment_details: 'disabled' } }\n  });\n})() }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Create Payment Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        300,
+        300
+      ],
+      "onError": "continueErrorOutput",
+      "notes": "Header Auth credential: sk_sbox_... (sandbox). All settings come from the row, falling back to Checkout Defaults."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "checkoutLink",
+              "value": "={{ $json._links.redirect.href }}",
+              "type": "string"
+            },
+            {
+              "id": "r2",
+              "name": "paymentLinkId",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "r3",
+              "name": "expiresOn",
+              "value": "={{ $json.expires_on }}",
+              "type": "string"
+            },
+            {
+              "id": "r4",
+              "name": "reference",
+              "value": "={{ $json.reference }}",
+              "type": "string"
+            },
+            {
+              "id": "r5",
+              "name": "warnings",
+              "value": "={{ JSON.stringify($json.warnings || []) }}",
+              "type": "string"
+            },
+            {
+              "id": "r6",
+              "name": "hasWarnings",
+              "value": "={{ ($json.warnings || []).length > 0 }}",
+              "type": "boolean"
+            },
+            {
+              "id": "r7",
+              "name": "importKey",
+              "value": "={{ $('Fake Invoice Row').item.json.importKey }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Extract Link",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        200
+      ],
+      "notes": "checkoutLink is what goes in the sheet and the email button."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "error",
+              "value": "={{ 'Checkout link failed: ' + ($json.error?.message || JSON.stringify($json)) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Link Failed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        560,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 1. Credential (SANDBOX)\n\nCredentials -> New -> **Header Auth**\n\n- Name: `Authorization`\n- Value: `sk_sbox_...`\n\nName it `Checkout Sandbox Secret`.\n\nDashboard in **sandbox** mode:\nDevelopers -> Keys -> Create a new key -> **Secret**.\n\nThe Access key will NOT work here: payment-links needs a Secret API key (401 otherwise).\n\nClient ID (sandbox): `cli_osobjvsoahbejavyqegqqkmjdm`\nPrefix: `osobjvso`",
+        "height": 300,
+        "width": 380,
+        "color": 4
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "Note - Credential",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2. The only node that matters\n\n`POST https://{prefix}.api.sandbox.checkout.com/payment-links`\n\n`{prefix}` = first 8 chars of the Client ID after `cli_`\n(Settings -> Account structure). Sandbox and production differ.\n\n**Nothing is hardcoded in the body.** Each value is read from the\ninvoice row, and falls back to `Checkout Defaults` when the row\ncolumn is blank.\n\n| Body field | Row column | Default |\n|---|---|---|\n| amount | Total Invoice (incluing VAT) | required |\n| currency | Checkout currency | EUR |\n| billing.address.country | Checkout country | ES |\n| processing_channel_id | Checkout channel | pc_ais3... |\n| reference | importKey | required |\n| description | Invoice description | required |\n| expires_in | Checkout expiry days | 30 days |\n| locale | Checkout locale | es-ES |\n| return_url | Checkout return url | huspy.com/gracias |\n| allow_payment_methods | Checkout methods (comma separated) | card |\n| 3ds.enabled | Checkout 3DS | true |\n| capture | Checkout capture | true |\n| customer | *ContactName, Customer email | required |\n\nBooleans accept TRUE / SI / YES / 1 / X, case insensitive.\n\n`expires_in` is seconds in the API; the row is in **days**, so it is\nmultiplied by 86400. Max is 60 days.\n\nLinks are **single use**: consumed on first successful payment.",
+        "height": 860,
+        "width": 480,
+        "color": 5
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Note - Request",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 3. What comes back\n\n```\n{\n  \"id\": \"pl_...\",\n  \"expires_on\": \"...\",\n  \"reference\": \"DEMO-2026-0001\",\n  \"warnings\": [],\n  \"_links\": {\n    \"redirect\": { \"href\": \"https://pay.sandbox.checkout.com/link/pl_...\" }\n  }\n}\n```\n\n`_links.redirect.href` is the URL for the **Pagar factura** button.\n\nStore `id` too, so a payment can be traced back later.\n\nCheck `warnings`: a 201 can still say a payment method was unavailable.",
+        "height": 420,
+        "width": 380,
+        "color": 3
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "Note - Response",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        760,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 4. How this slots into Post & Send Revenue Invoices\n\nIn the real flow, `Fake Invoice Row` is replaced by `Loop Each Row`, and this runs **only when column `Checkout link` is empty**:\n\n```\nLoop Each Row\n  -> Has Checkout Link?\n       true  -> use the sheet value\n       false -> Create Payment Link -> write it back to the sheet\n  -> Check Existing Invoice (HTTP)\n```\n\nThe link must be created **before** the invoice, because it is written into Xero `Reference` and used as the dedupe key.\n\nWrite it to the sheet before creating the invoice, or a retry generates a second link and the dedupe misses.",
+        "height": 420,
+        "width": 460,
+        "color": 6
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Note - Integration",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 5. NOT settable per link\n\nThese are **account / processing-channel** configuration in the Checkout dashboard. No API field exists:\n\n- Which card schemes are active (Visa, Mastercard, **Amex**)\n- Card issuing country rules (EEA only)\n- Card type rules (consumer debit / credit)\n- Whether Fraud Detection runs at all\n\nOur commercial agreement allows **EU consumer debit and credit only**, so both layers are needed:\n\n1. `allow_payment_methods` keeps APMs and wallets off the page\n2. **Pre-auth risk rules** are the only thing that can enforce card_country / card_brand / card_type\n\nCurrent sandbox channel: Amex is active and `risk.enabled` is false. Neither restriction is enforced yet.",
+        "height": 420,
+        "width": 420,
+        "color": 3
+      },
+      "id": "a1000000-0000-4000-8000-000000000010",
+      "name": "Note - Account config",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        760,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "processingChannelId",
+              "value": "pc_ais3pm363osenc5wylav3xvhhu",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "currency",
+              "value": "EUR",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "country",
+              "value": "ES",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "locale",
+              "value": "es-ES",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "expiryDays",
+              "value": 30,
+              "type": "number"
+            },
+            {
+              "id": "c6",
+              "name": "paymentMethods",
+              "value": "card",
+              "type": "string"
+            },
+            {
+              "id": "c7",
+              "name": "threeDs",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "c8",
+              "name": "capture",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "c9",
+              "name": "returnUrl",
+              "value": "https://huspy.com/gracias",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000011",
+      "name": "Checkout Defaults",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        460
+      ],
+      "notes": "Workflow-level defaults. Any row column of the same meaning overrides these."
+    },
+    {
+      "parameters": {
+        "content": "## 1b. Where settings come from\n\nTwo layers, so Finance does not edit JSON:\n\n1. **Checkout Defaults** node: the normal case, set once.\n2. **Row columns**: optional per-invoice overrides. Blank = use the default.\n\nTo change behaviour for every invoice, edit the Defaults node.\nTo change one invoice, fill its column in the sheet.\n\nAdd these optional columns to `v2 JIRA IMPORT`:\n`Checkout expiry days`, `Checkout methods`, `Checkout 3DS`,\n`Checkout channel`, `Checkout country`, `Checkout locale`,\n`Checkout capture`, `Checkout return url`\n\nNone are required.",
+        "height": 420,
+        "width": 380,
+        "color": 7
+      },
+      "id": "a1000000-0000-4000-8000-000000000012",
+      "name": "Note - Config layers",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 7. Deactivate Amex\n\n`allow_payment_methods: ['card']` does **not** exclude Amex. Amex is a card scheme, and which schemes are live is account configuration.\n\n**It is not self-service.** Checkout's docs: to change activated payment methods, contact your account manager or raise a support request.\n\n### How\nDashboard -> **?** (help) -> Contact support, or email your account manager. Template:\n\n> Please deactivate **American Express** on processing channel `<pc_id>` for entity **Huspy Iberia SL** (`ent_qpmlvujtfbnawf6slu774vuiy4`), in **sandbox and production**.\n> Per our agreement only **EU consumer debit and credit** cards (Visa and Mastercard) should be active. Please also confirm that Discover, Diners Club, JCB and UnionPay are not enabled, and send back the full list of active schemes per channel.\n\n### Verify afterwards\nCreate a payment link and open it: only Visa and Mastercard logos should render. Or check the session token, which lists `card_schemes`.\n\nOur sandbox currently returns `[\"Visa\",\"Mastercard\",\"Amex\"]`.",
+        "height": 520,
+        "width": 440,
+        "color": 2
+      },
+      "id": "a1000000-0000-4000-8000-000000000021",
+      "name": "Note - Deactivate Amex",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        300,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 8. Fraud Detection and the pre-auth rules\n\nThis is the **only** place the EU-consumer-cards-only commitment can be enforced. No API field does it.\n\nOur sandbox session returns `risk: { enabled: false }`, so nothing is enforced today. A GB-issued card was accepted for 13.766,17 EUR in testing.\n\n### Enable it\nDashboard -> **Payments** -> **Fraud** -> **Strategy**.\nIf Fraud Detection is not available on the account, ask your account manager to enable it.\n\n### Rule to create\nAction: **Decline**, evaluated **pre-authorization**.\n\nDecline when ANY of:\n- `card_country` **not in** the EEA list below\n- `card_brand` **not in** (VISA, MASTERCARD)\n- `card_type` **not in** (Credit, Debit)\n\n### EEA country codes\nAT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE IS LI NO\n\nNote **GB is not in the EEA**. A UK card must decline.\n\n### Test it\n- `4242424242424242` is GB-issued: must decline once the rule is live\n- `345678901234564` is Amex: must decline\n- `6224120000000094` is UnionPay: must decline\n- A Spanish Visa must still pass\n\n### Also worth setting\nSame screen: a **velocity** rule capping attempts per card and per invoice reference limits card-testing abuse on a public payment page.",
+        "height": 620,
+        "width": 480,
+        "color": 2
+      },
+      "id": "a1000000-0000-4000-8000-000000000022",
+      "name": "Note - Fraud rules",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        780,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# SANDBOX - no real money\n\nSafe to run freely. Pay with `4242 4242 4242 4242`, any future expiry, any CVV.\n\n| Setting | Value |\n|---|---|\n| Host | `https://osobjvso.api.sandbox.checkout.com` |\n| Prefix | `osobjvso` |\n| Client ID | `cli_osobjvsoahbejavyqegqqkmjdm` |\n| Processing channel | `pc_ais3pm363osenc5wylav3xvhhu` |\n| Credential | `Checkout Sandbox Secret` (`sk_sbox_...`) |\n\nThe production twin of this workflow is **Checkout Payment Link - PRODUCTION**.\nKeep them separate: never repoint this one at the live host.\n\nKnown sandbox state: Amex is active and Fraud Detection is off,\nso the EU-consumer-cards-only restriction is **not** enforced here.",
+        "height": 420,
+        "width": 520,
+        "color": 4
+      },
+      "id": "a1000000-0000-4000-8000-000000000031",
+      "name": "Note - ENVIRONMENT",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        -120
+      ]
+    }
+  ],
+  "connections": {
+    "Run Manually": {
+      "main": [
+        [
+          {
+            "node": "Environment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fake Invoice Row": {
+      "main": [
+        [
+          {
+            "node": "Create Payment Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Payment Link": {
+      "main": [
+        [
+          {
+            "node": "Extract Link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Link Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checkout Defaults": {
+      "main": [
+        [
+          {
+            "node": "Fake Invoice Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Environment": {
+      "main": [
+        [
+          {
+            "node": "Checkout Defaults",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
