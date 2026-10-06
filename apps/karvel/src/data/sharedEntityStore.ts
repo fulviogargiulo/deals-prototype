@@ -11,7 +11,7 @@ import {
 } from "@huspy/shared-domain";
 
 // Version prefix — bump when fixture shape changes to avoid stale-cache bugs.
-const V = "karvel-v1";
+const V = "karvel-v2";
 
 const KEYS = {
   pnlEntries:      `${V}-pnl-entries`,
